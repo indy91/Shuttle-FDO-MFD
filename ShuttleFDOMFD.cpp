@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD
+  Shuttle FDO MFD
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,16 +22,16 @@
 #include "Orbitersdk.h"
 #include "papi.h"
 #include "OrbMech.h"
-#include "OMPCore.h"
-#include "OMPMFD.h"
-#include "OMPoapiModule.h"
+#include "ShuttleFDOCore.h"
+#include "ShuttleFDOMFD.h"
+#include "ShuttleFDOoapiModule.h"
 
 // ==============================================================
 // Global variables
 
-OMPoapiModule *g_coreMod;
+ShuttleFDOoapiModule *g_coreMod;
 int g_MFDmode; // identifier for new MFD mode
-OMPCore *GCoreData[32];
+ShuttleFDOCore *GCoreData[32];
 OBJHANDLE GCoreVessel[32];
 int nGutsUsed;
 
@@ -39,7 +39,7 @@ int nGutsUsed;
 // MFD class implementation
 
 // Constructor
-OMPMFD::OMPMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
+ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 : MFD2 (w, h, v)
 {
 	font = oapiCreateFont(w / 20, true, "Courier", FONT_NORMAL, 0);
@@ -61,7 +61,7 @@ OMPMFD::OMPMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 	}
 	if (!found)
 	{
-		GCoreData[nGutsUsed] = new OMPCore(v);
+		GCoreData[nGutsUsed] = new ShuttleFDOCore(v);
 		G = GCoreData[nGutsUsed];
 		GCoreVessel[nGutsUsed] = v;
 		nGutsUsed++;
@@ -69,7 +69,7 @@ OMPMFD::OMPMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 }
 
 // Destructor
-OMPMFD::~OMPMFD()
+ShuttleFDOMFD::~ShuttleFDOMFD()
 {
 	oapiReleaseFont(font);
 	oapiReleaseFont(font2);
@@ -77,30 +77,30 @@ OMPMFD::~OMPMFD()
 }
 
 // Return button labels
-char *OMPMFD::ButtonLabel (int bt)
+char *ShuttleFDOMFD::ButtonLabel (int bt)
 {
 	// The labels for the two buttons used by our MFD mode
 	return coreButtons.ButtonLabel(bt);
 }
 
 // Return button menus
-int OMPMFD::ButtonMenu (const MFDBUTTONMENU **menu) const
+int ShuttleFDOMFD::ButtonMenu (const MFDBUTTONMENU **menu) const
 {
 	// The menu descriptions for the two buttons
 	return coreButtons.ButtonMenu(menu);
 }
 
-bool OMPMFD::ConsumeButton(int bt, int event)
+bool ShuttleFDOMFD::ConsumeButton(int bt, int event)
 {
 	return coreButtons.ConsumeButton(this, bt, event);
 }
 
-bool OMPMFD::ConsumeKeyBuffered(DWORD key)
+bool ShuttleFDOMFD::ConsumeKeyBuffered(DWORD key)
 {
 	return coreButtons.ConsumeKeyBuffered(this, key);
 }
 
-void OMPMFD::WriteStatus(FILEHANDLE scn) const
+void ShuttleFDOMFD::WriteStatus(FILEHANDLE scn) const
 {
 	oapiWriteScenario_int(scn, "LAUNCHDATE0", G->launchdate[0]);
 	oapiWriteScenario_int(scn, "LAUNCHDATE1", G->launchdate[1]);
@@ -110,7 +110,7 @@ void OMPMFD::WriteStatus(FILEHANDLE scn) const
 	if (G->target)
 		oapiWriteScenario_string(scn, "TARGET", G->target->GetName());
 }
-void OMPMFD::ReadStatus(FILEHANDLE scn)
+void ShuttleFDOMFD::ReadStatus(FILEHANDLE scn)
 {
 	char *line;
 	char targetbuff[100] = "";
@@ -143,7 +143,7 @@ void OMPMFD::ReadStatus(FILEHANDLE scn)
 }
 
 // Repaint the MFD
-bool OMPMFD::Update(oapi::Sketchpad *skp)
+bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 {
 	Title(skp, "OMP MFD");
 	// Draws the MFD title
@@ -654,31 +654,31 @@ bool OMPMFD::Update(oapi::Sketchpad *skp)
 	return true;
 }
 
-void OMPMFD::menuSetMainMenu()
+void ShuttleFDOMFD::menuSetMainMenu()
 {
 	screen = 0;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::menuSetMCTPage()
+void ShuttleFDOMFD::menuSetMCTPage()
 {
 	screen = 1;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::menuSetMETPage()
+void ShuttleFDOMFD::menuSetMETPage()
 {
 	screen = 2;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::menuSetLaunchWindowPage()
+void ShuttleFDOMFD::menuSetLaunchWindowPage()
 {
 	screen = 3;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::menuSetMTTPage()
+void ShuttleFDOMFD::menuSetMTTPage()
 {
 	screen = 4;
 	coreButtons.SelectPage(this, screen);
@@ -686,39 +686,39 @@ void OMPMFD::menuSetMTTPage()
 	MTTFlag = false;
 }
 
-void OMPMFD::menuSetDMTPage()
+void ShuttleFDOMFD::menuSetDMTPage()
 {
 	screen = 5;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::menuSetOMPExeMenu()
+void ShuttleFDOMFD::menuSetOMPExeMenu()
 {
 	screen = 6;
 	coreButtons.SelectPage(this, screen);
 }
 
-void OMPMFD::MET2String(char *buf, double MET)
+void ShuttleFDOMFD::MET2String(char *buf, double MET)
 {
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
 
-void OMPMFD::DMTMET2String(char *buf, double MET)
+void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
 {
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
 
-void OMPMFD::GMT2String(char *buf, double GMT)
+void ShuttleFDOMFD::GMT2String(char *buf, double GMT)
 {
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + 1.0, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
-double OMPMFD::DDDHHHMMSS2MET(int dd, int hh, int mm, double ss)
+double ShuttleFDOMFD::DDDHHHMMSS2MET(int dd, int hh, int mm, double ss)
 {
 	return ss + 60.0*mm + 3600.0*hh + 24.0*3600.0*dd;
 }
 
-void OMPMFD::SS2HHMMSS(double val, double &hh, double &mm, double &ss)
+void ShuttleFDOMFD::SS2HHMMSS(double val, double &hh, double &mm, double &ss)
 {
 	val = round(val);
 	hh = floor(val / 3600.0);
@@ -726,7 +726,7 @@ void OMPMFD::SS2HHMMSS(double val, double &hh, double &mm, double &ss)
 	ss = fmod(val, 60.0);
 }
 
-void OMPMFD::menuAddOMPManeuver()
+void ShuttleFDOMFD::menuAddOMPManeuver()
 {
 	bool AddOMPManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Add Maneuver (format: type name)", AddOMPManeuverInput, 0, 20, (void*)this);
@@ -738,12 +738,12 @@ bool AddOMPManeuverInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%s %s", type, 32, name, 32) == 2)
 	{
-		return ((OMPMFD*)data)->add_OMPManeuver(type, name, 0);
+		return ((ShuttleFDOMFD*)data)->add_OMPManeuver(type, name, 0);
 	}
 	return false;
 }
 
-bool OMPMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
+bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 {
 	if (strcmp(type, "HA") == 0)
 	{
@@ -789,7 +789,7 @@ bool OMPMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 	return false;
 }
 
-void OMPMFD::menuModifyOMPManeuver()
+void ShuttleFDOMFD::menuModifyOMPManeuver()
 {
 	bool ModifyOMPManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Modify Maneuver (format: ID type name)", ModifyOMPManeuverInput, 0, 20, (void*)this);
@@ -802,12 +802,12 @@ bool ModifyOMPManeuverInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %s %s", &num, type, 32, name, 32) == 3)
 	{
-		return ((OMPMFD*)data)->modify_OMPManeuver(num, type, name);
+		return ((ShuttleFDOMFD*)data)->modify_OMPManeuver(num, type, name);
 	}
 	return false;
 }
 
-bool OMPMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
+bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 {
 	if (strcmp(type, "HA") == 0)
 	{
@@ -853,7 +853,7 @@ bool OMPMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 	return false;
 }
 
-void OMPMFD::menuAddOMPThreshold()
+void ShuttleFDOMFD::menuAddOMPThreshold()
 {
 	bool AddOMPThresholdInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Add Maneuver Threshold (format: Man Type Value)", AddOMPThresholdInput, 0, 20, (void*)this);
@@ -866,12 +866,12 @@ bool AddOMPThresholdInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %s %s", &num, type, 32, time, 32) == 3)
 	{
-		return ((OMPMFD*)data)->add_OMPManeuverThreshold(num, type, time);
+		return ((ShuttleFDOMFD*)data)->add_OMPManeuverThreshold(num, type, time);
 	}
 	return false;
 }
 
-bool OMPMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * str)
+bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * str)
 {
 	if (num <= G->ManeuverConstraintsTable.size() && num >= 1)
 	{
@@ -911,7 +911,7 @@ bool OMPMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * str)
 	return false;
 }
 
-void OMPMFD::menuAddOMPSecondary()
+void ShuttleFDOMFD::menuAddOMPSecondary()
 {
 	bool AddOMPSecondaryInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Add Secondary Constraint (format: Man Type Value)", AddOMPSecondaryInput, 0, 20, (void*)this);
@@ -925,12 +925,12 @@ bool AddOMPSecondaryInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %s %lf", &num, type, 32, &val) == 3)
 	{
-		return ((OMPMFD*)data)->add_OMPManeuverSecondary(num, type, val);
+		return ((ShuttleFDOMFD*)data)->add_OMPManeuverSecondary(num, type, val);
 	}
 	return false;
 }
 
-bool OMPMFD::add_OMPManeuverSecondary(unsigned num, char * str, double val)
+bool ShuttleFDOMFD::add_OMPManeuverSecondary(unsigned num, char * str, double val)
 {
 	if (num <= G->ManeuverConstraintsTable.size() && num >= 1)
 	{
@@ -943,12 +943,12 @@ bool OMPMFD::add_OMPManeuverSecondary(unsigned num, char * str, double val)
 	return false;
 }
 
-void OMPMFD::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
+void ShuttleFDOMFD::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 {
 	G->GetOPMManeuverType(buf, type);
 }
 
-void OMPMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
+void ShuttleFDOMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
 {
 	if (type == OMPDefs::THRESHOLD::T)
 	{
@@ -969,7 +969,7 @@ void OMPMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
 
 }
 
-void OMPMFD::GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD type, double num)
+void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD type, double num)
 {
 	if (type == OMPDefs::THRESHOLD::T)
 	{
@@ -989,7 +989,7 @@ void OMPMFD::GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD type, dou
 	}
 }
 
-void OMPMFD::GetOPMManeuverSecondary(char *buf, char *type, double num)
+void ShuttleFDOMFD::GetOPMManeuverSecondary(char *buf, char *type, double num)
 {
 	if (strlen(type) > 0)
 	{
@@ -1008,7 +1008,7 @@ void OMPMFD::GetOPMManeuverSecondary(char *buf, char *type, double num)
 	}
 }
 
-void OMPMFD::menuDeleteOMPManeuver()
+void ShuttleFDOMFD::menuDeleteOMPManeuver()
 {
 	bool DeleteOMPManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Delete specified maneuver: ", DeleteOMPManeuverInput, 0, 20, (void*)this);
@@ -1020,12 +1020,12 @@ bool DeleteOMPManeuverInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d", &num) == 1)
 	{
-		return ((OMPMFD*)data)->delete_OMPManeuver(num);
+		return ((ShuttleFDOMFD*)data)->delete_OMPManeuver(num);
 	}
 	return false;
 }
 
-bool OMPMFD::delete_OMPManeuver(unsigned num)
+bool ShuttleFDOMFD::delete_OMPManeuver(unsigned num)
 {
 	if (num >= 1 && num <= G->ManeuverConstraintsTable.size())
 	{
@@ -1036,27 +1036,27 @@ bool OMPMFD::delete_OMPManeuver(unsigned num)
 	return false;
 }
 
-void OMPMFD::menuCalculateOMPPlan()
+void ShuttleFDOMFD::menuCalculateOMPPlan()
 {
 	G->CalcMCT();
 }
 
-void OMPMFD::menuCalcLaunchTime()
+void ShuttleFDOMFD::menuCalcLaunchTime()
 {
 	G->CalcLaunchTime();
 }
 
-void OMPMFD::menuTransferToMTT()
+void ShuttleFDOMFD::menuTransferToMTT()
 {
 	G->MET2MTT();
 }
 
-void OMPMFD::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
+void ShuttleFDOMFD::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 {
 	G->GetMTTThrusterType(buf, type);
 }
 
-void OMPMFD::GetMTTGuidanceType(char *buf, OMPDefs::GUID type)
+void ShuttleFDOMFD::GetMTTGuidanceType(char *buf, OMPDefs::GUID type)
 {
 	if (type == OMPDefs::GUID::M50)
 	{
@@ -1072,7 +1072,7 @@ void OMPMFD::GetMTTGuidanceType(char *buf, OMPDefs::GUID type)
 	}
 }
 
-void OMPMFD::menuMTTChangeSlot()
+void ShuttleFDOMFD::menuMTTChangeSlot()
 {
 	bool MTTChangeSlotInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Change maneuver data (format: MNVR SLOT)", MTTChangeSlotInput, 0, 20, (void*)this);
@@ -1085,12 +1085,12 @@ bool MTTChangeSlotInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %d", &mnvr, &slot) == 2)
 	{
-		return ((OMPMFD*)data)->set_MTTManeuverSlot(mnvr, slot);
+		return ((ShuttleFDOMFD*)data)->set_MTTManeuverSlot(mnvr, slot);
 	}
 	return false;
 }
 
-bool OMPMFD::set_MTTManeuverSlot(unsigned mnvr, int slot)
+bool ShuttleFDOMFD::set_MTTManeuverSlot(unsigned mnvr, int slot)
 {
 	if (mnvr >= 1 && mnvr <= G->ManeuverTransferTable.size())
 	{
@@ -1101,13 +1101,13 @@ bool OMPMFD::set_MTTManeuverSlot(unsigned mnvr, int slot)
 	return false;
 }
 
-void OMPMFD::menuExecuteMTT()
+void ShuttleFDOMFD::menuExecuteMTT()
 {
 	G->ExecuteMTT();
 	MTTFlag = true;
 }
 
-void OMPMFD::menuDMTChooseManeuver()
+void ShuttleFDOMFD::menuDMTChooseManeuver()
 {
 	bool DMTChooseManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Choose maneuver from table:", DMTChooseManeuverInput, 0, 20, (void*)this);
@@ -1119,23 +1119,23 @@ bool DMTChooseManeuverInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d", &mnvr) == 1)
 	{
-		((OMPMFD*)data)->set_DMTManeuver(mnvr);
+		((ShuttleFDOMFD*)data)->set_DMTManeuver(mnvr);
 		return true;
 	}
 	return false;
 }
 
-void OMPMFD::set_DMTManeuver(unsigned mnvr)
+void ShuttleFDOMFD::set_DMTManeuver(unsigned mnvr)
 {
 	G->DMT_MNVR = mnvr;
 }
 
-void OMPMFD::menuCalcDMT()
+void ShuttleFDOMFD::menuCalcDMT()
 {
 	G->CalcDMT();
 }
 
-void OMPMFD::menuDeleteOMPSecondary()
+void ShuttleFDOMFD::menuDeleteOMPSecondary()
 {
 	bool DeleteOMPSecondaryInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Choose secondary to delete:", DeleteOMPSecondaryInput, 0, 20, (void*)this);
@@ -1147,12 +1147,12 @@ bool DeleteOMPSecondaryInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %d", &num, &sec) == 2)
 	{
-		return ((OMPMFD*)data)->delete_OMPSecondary(num, sec);
+		return ((ShuttleFDOMFD*)data)->delete_OMPSecondary(num, sec);
 	}
 	return false;
 }
 
-bool OMPMFD::delete_OMPSecondary(unsigned num, unsigned sec)
+bool ShuttleFDOMFD::delete_OMPSecondary(unsigned num, unsigned sec)
 {
 	if (num >= 1 && num <= G->ManeuverConstraintsTable.size())
 	{
@@ -1165,7 +1165,7 @@ bool OMPMFD::delete_OMPSecondary(unsigned num, unsigned sec)
 	return false;
 }
 
-void OMPMFD::menuInsertOMPManeuver()
+void ShuttleFDOMFD::menuInsertOMPManeuver()
 {
 	bool InsertMPManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Insert maneuver at specified ID: ", InsertMPManeuverInput, 0, 20, (void*)this);
@@ -1178,12 +1178,12 @@ bool InsertMPManeuverInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d %s %s", &ins, type, 32, name, 32) == 3)
 	{
-		return ((OMPMFD*)data)->insert_OMPManeuver(ins, type, name);
+		return ((ShuttleFDOMFD*)data)->insert_OMPManeuver(ins, type, name);
 	}
 	return false;
 }
 
-bool OMPMFD::insert_OMPManeuver(unsigned ins, char *type, char *name)
+bool ShuttleFDOMFD::insert_OMPManeuver(unsigned ins, char *type, char *name)
 {
 	if (ins >= 1 && ins <= G->ManeuverConstraintsTable.size() + 1)
 	{
@@ -1192,7 +1192,7 @@ bool OMPMFD::insert_OMPManeuver(unsigned ins, char *type, char *name)
 	return false;
 }
 
-void OMPMFD::menuSetLiftoffTime()
+void ShuttleFDOMFD::menuSetLiftoffTime()
 {
 	bool LiftoffTimeInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Set liftoff time (YYYY:DD:HH:MM:SS)", LiftoffTimeInput, 0, 20, (void*)this);
@@ -1205,18 +1205,18 @@ bool LiftoffTimeInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d:%d:%d:%d:%lf", &yy, &dd, &hh, &mm, &ss) == 5)
 	{
-		((OMPMFD*)data)->set_LiftoffTime(yy, dd, hh, mm, ss);
+		((ShuttleFDOMFD*)data)->set_LiftoffTime(yy, dd, hh, mm, ss);
 		return true;
 	}
 	return false;
 }
 
-void OMPMFD::set_LiftoffTime(int YY, int DD, int HH, int MM, double SS)
+void ShuttleFDOMFD::set_LiftoffTime(int YY, int DD, int HH, int MM, double SS)
 {
 	G->SetLaunchMJD(YY, DD, HH, MM, SS);
 }
 
-void OMPMFD::set_target()
+void ShuttleFDOMFD::set_target()
 {
 	int vesselcount;
 
@@ -1234,12 +1234,12 @@ void OMPMFD::set_target()
 	G->target = oapiGetVesselInterface(oapiGetVesselByIndex(G->targetnumber));
 }
 
-void OMPMFD::menuCycleGravityOption()
+void ShuttleFDOMFD::menuCycleGravityOption()
 {
 	G->useNonSphericalGravity = !G->useNonSphericalGravity;
 }
 
-void OMPMFD::GetOMPError(char *buf, int err)
+void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 {
 	if (err == 1)
 	{

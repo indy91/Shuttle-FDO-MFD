@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD Module (Header)
+  Shuttle FDO MFD Buttons (Header)
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,17 +20,13 @@
 
 #pragma once
 
-#include "Orbitersdk.h"
+class ShuttleFDOMFD;
 
-class OMPoapiModule : public oapi::Module {
+class ShuttleFDOMFDButtons : public EnjoLib::MFDGoodies::MFDButtonPage<ShuttleFDOMFD>
+{
 public:
-	OMPoapiModule(HINSTANCE hDLL);
-	~OMPoapiModule();
-	void clbkSimulationStart(RenderMode mode);
-	void clbkSimulationEnd();
-	void clbkPreStep(double simt, double simdt, double mjd);
-	void clbkPostStep(double simt, double simdt, double mjd);
-	void clbkDeleteVessel(OBJHANDLE hVessel);
-	static int MsgProc(UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam);
-
+	ShuttleFDOMFDButtons();
+protected:
+	bool SearchForKeysInOtherPages() const;
+private:
 };

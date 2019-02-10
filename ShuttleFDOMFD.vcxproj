@@ -12,7 +12,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FDD37414-3C8F-4322-8B45-BAAEC4B23F38}</ProjectGuid>
-    <ProjectName>OMPMFD</ProjectName>
+    <ProjectName>ShuttleFDOMFD</ProjectName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -108,18 +108,18 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="OMPoapiModule.cpp" />
-    <ClCompile Include="OMPCore.cpp" />
-    <ClCompile Include="OMPMFD.cpp" />
-    <ClCompile Include="OMPMFDButtons.cpp" />
+    <ClCompile Include="ShuttleFDOoapiModule.cpp" />
+    <ClCompile Include="ShuttleFDOCore.cpp" />
+    <ClCompile Include="ShuttleFDOMFD.cpp" />
+    <ClCompile Include="ShuttleFDOMFDButtons.cpp" />
     <ClCompile Include="OrbMech.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="OMPoapiModule.h" />
+    <ClInclude Include="ShuttleFDOoapiModule.h" />
     <ClInclude Include="MFDButtonPage.hpp" />
-    <ClInclude Include="OMPCore.h" />
-    <ClInclude Include="OMPMFD.h" />
-    <ClInclude Include="OMPMFDButtons.h" />
+    <ClInclude Include="ShuttleFDOCore.h" />
+    <ClInclude Include="ShuttleFDOMFD.h" />
+    <ClInclude Include="ShuttleFDOMFDButtons.h" />
     <ClInclude Include="OrbMech.h" />
     <ClInclude Include="papi.h" />
   </ItemGroup>

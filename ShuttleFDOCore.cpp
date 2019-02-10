@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD Core
+  Shuttle FDO MFD Core
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,14 +20,14 @@
 
 #include "Orbitersdk.h"
 #include "OrbMech.h"
-#include "OMPCore.h"
+#include "ShuttleFDOCore.h"
 
 static DWORD WINAPI OMPMFD_Trampoline(LPVOID ptr) {
-	OMPCore *core = (OMPCore *)ptr;
+	ShuttleFDOCore *core = (ShuttleFDOCore *)ptr;
 	return(core->subThread());
 }
 
-OMPCore::OMPCore(VESSEL* v)
+ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 {
 	vessel = v;
 
@@ -144,7 +144,7 @@ OMPCore::OMPCore(VESSEL* v)
 	MTTSlotData[8].RREF = true;
 	MTTSlotData[8].ROLL = 0;
 
-	MTTSlotData[9].SLOT = 9;
+	MTTSlotData[9].SLOT = 10;
 	MTTSlotData[9].thrusters = OMPDefs::THRUSTERS::OL;
 	MTTSlotData[9].guid = OMPDefs::GUID::P7;
 	MTTSlotData[9].ITER = false;
@@ -173,22 +173,22 @@ OMPCore::OMPCore(VESSEL* v)
 	DMT.WEIGHT = 0.0;
 }
 
-OMPCore::~OMPCore()
+ShuttleFDOCore::~ShuttleFDOCore()
 {
 
 }
 
-void OMPCore::MinorCycle(double SimT, double SimDT, double mjd)
+void ShuttleFDOCore::MinorCycle(double SimT, double SimDT, double mjd)
 {
 
 }
 
-void OMPCore::CalcMCT()
+void ShuttleFDOCore::CalcMCT()
 {
 	startSubthread(1);
 }
 
-void OMPCore::LoadPlanC()
+void ShuttleFDOCore::LoadPlanC()
 {
 	ManeuverConstraintsTable.clear();
 
@@ -232,7 +232,7 @@ void OMPCore::LoadPlanC()
 	AddManeuverSecondary(7, "CXYZ", 0.2962);
 }
 
-void OMPCore::LoadPlanCNoNPC()
+void ShuttleFDOCore::LoadPlanCNoNPC()
 {
 	ManeuverConstraintsTable.clear();
 
@@ -271,7 +271,7 @@ void OMPCore::LoadPlanCNoNPC()
 	AddManeuverSecondary(6, "CXYZ", 0.2962);
 }
 
-SV OMPCore::StateVectorCalc(VESSEL *vessel, double SVMJD)
+SV ShuttleFDOCore::StateVectorCalc(VESSEL *vessel, double SVMJD)
 {
 	VECTOR3 R, V;
 	double dt;
@@ -299,7 +299,7 @@ SV OMPCore::StateVectorCalc(VESSEL *vessel, double SVMJD)
 	return sv1;
 }
 
-SV OMPCore::coast(SV sv0, double dt)
+SV ShuttleFDOCore::coast(SV sv0, double dt)
 {
 	SV sv1;
 
@@ -310,7 +310,7 @@ SV OMPCore::coast(SV sv0, double dt)
 	return sv1;
 }
 
-SV OMPCore::coast_osc(SV sv0, double dt)
+SV ShuttleFDOCore::coast_osc(SV sv0, double dt)
 {
 	SV sv1;
 
@@ -321,7 +321,7 @@ SV OMPCore::coast_osc(SV sv0, double dt)
 	return sv1;
 }
 
-SV OMPCore::coast_auto(SV sv0, double dt)
+SV ShuttleFDOCore::coast_auto(SV sv0, double dt)
 {
 	if (useNonSphericalGravity)
 	{
@@ -333,7 +333,7 @@ SV OMPCore::coast_auto(SV sv0, double dt)
 	}
 }
 
-void OMPCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
+void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 {
 	OrbMech::OELEMENTS coe;
 	bool lowecclogic;
@@ -378,7 +378,7 @@ void OMPCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 	}
 }
 
-SV OMPCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param)
+SV ShuttleFDOCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param)
 {
 	//Update to the given time
 	if (opt == 0)
@@ -495,7 +495,7 @@ SV OMPCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param)
 	return sv0;
 }
 
-void OMPCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
+void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
 {
 	OrbMech::OELEMENTS coe;
 	SV sv[3];
@@ -538,7 +538,7 @@ void OMPCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double
 
 }
 
-VECTOR3 OMPCore::SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off)
+VECTOR3 ShuttleFDOCore::SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off)
 {
 	SV sv_A1, sv_P2;
 	VECTOR3 RP2_off, VA1_apo, DV;
@@ -556,7 +556,7 @@ VECTOR3 OMPCore::SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 o
 	return DV;
 }
 
-VECTOR3 OMPCore::SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off)
+VECTOR3 ShuttleFDOCore::SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off)
 {
 	SV sv_A1, sv_P1, sv_P2;
 	VECTOR3 VA1_apo, DV, RP2_off;
@@ -577,7 +577,7 @@ VECTOR3 OMPCore::SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off)
 	return DV;
 }
 
-VECTOR3 OMPCore::LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off, double dt, int N, bool prog)
+VECTOR3 ShuttleFDOCore::LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off, double dt, int N, bool prog)
 {
 	if (useNonSphericalGravity)
 	{
@@ -589,7 +589,7 @@ VECTOR3 OMPCore::LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off
 	}
 }
 
-void OMPCore::AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins)
+void ShuttleFDOCore::AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins)
 {
 	ManeuverConstraints man;
 
@@ -608,7 +608,7 @@ void OMPCore::AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins)
 	}
 }
 
-void OMPCore::ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *name)
+void ShuttleFDOCore::ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *name)
 {
 	if (num >= 0 && num < ManeuverConstraintsTable.size())
 	{
@@ -620,13 +620,13 @@ void OMPCore::ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *name)
 	}
 }
 
-void OMPCore::AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time)
+void ShuttleFDOCore::AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time)
 {
 	ManeuverConstraintsTable[num].threshold = type;
 	ManeuverConstraintsTable[num].thresh_num = time;
 }
 
-void OMPCore::AddManeuverSecondary(unsigned num, char *type, double value)
+void ShuttleFDOCore::AddManeuverSecondary(unsigned num, char *type, double value)
 {
 	SecData sec;
 
@@ -635,7 +635,7 @@ void OMPCore::AddManeuverSecondary(unsigned num, char *type, double value)
 	ManeuverConstraintsTable[num].secondaries.push_back(sec);
 }
 
-int OMPCore::CalculateOMPPlan()
+int ShuttleFDOCore::CalculateOMPPlan()
 {
 	if (ManeuverConstraintsTable.size() < 1) return 1;	//Error 1: No maneuvers in constraint table
 	if (ManeuverConstraintsTable[0].threshold != OMPDefs::THRESHOLD::T) return 2;	//Error 2: First maneuver needs a T as threshold
@@ -1186,7 +1186,7 @@ int OMPCore::CalculateOMPPlan()
 	return 0;
 }
 
-void OMPCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
+void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 {
 	SV sv_cur, sv_Pcur;
 	VECTOR3 DV, u, R, Rtemp, Vtemp, R_REL, V_REL;
@@ -1265,7 +1265,7 @@ void OMPCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 	}
 }
 
-void OMPCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
+void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 {
 	if (type == OMPDefs::MANTYPE::HA)
 	{
@@ -1306,7 +1306,7 @@ void OMPCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 
 }
 
-VECTOR3 OMPCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
+VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 {
 	VECTOR3 u1, u2, DV_PC_LV, V2;
 	double Y_C_dot;
@@ -1324,7 +1324,7 @@ VECTOR3 OMPCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 	return V2 - sv_A.V;
 }
 
-double OMPCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
+double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 {
 	SV sv_A1;
 	VECTOR3 u1, u2, u_node[2];
@@ -1365,7 +1365,7 @@ double OMPCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 	return dt_abs;
 }
 
-double OMPCore::CalculateInPlaneTime()
+double ShuttleFDOCore::CalculateInPlaneTime()
 {
 	SV sv_P;
 	VECTOR3 u_A, u_P, R_equ, R_ecl, V_A, n_A, n_P;
@@ -1408,7 +1408,7 @@ double OMPCore::CalculateInPlaneTime()
 	return MJD + dt_bias / 24.0 / 3600.0;
 }
 
-void OMPCore::CalcLaunchTime()
+void ShuttleFDOCore::CalcLaunchTime()
 {
 	double intpart;
 	double MJD = CalculateInPlaneTime();
@@ -1416,7 +1416,7 @@ void OMPCore::CalcLaunchTime()
 	InPlaneGMT = modf(MJD, &intpart)*24.0*3600.0;
 }
 
-int OMPCore::subThread()
+int ShuttleFDOCore::subThread()
 {
 	int Result = 0;
 
@@ -1441,7 +1441,7 @@ int OMPCore::subThread()
 	return(0);
 }
 
-int OMPCore::startSubthread(int fcn) {
+int ShuttleFDOCore::startSubthread(int fcn) {
 	if (subThreadStatus < 1) {
 		// Punt thread
 		subThreadMode = fcn;
@@ -1462,7 +1462,7 @@ int OMPCore::startSubthread(int fcn) {
 	return(0);
 }
 
-void OMPCore::MET2MTT()
+void ShuttleFDOCore::MET2MTT()
 {
 	if (ManeuverEvaluationTable.size() < 1) return;
 
@@ -1481,7 +1481,7 @@ void OMPCore::MET2MTT()
 	}
 }
 
-void OMPCore::LoadMTTSlotData(MANTRANSDATA &man, int slot)
+void ShuttleFDOCore::LoadMTTSlotData(MANTRANSDATA &man, int slot)
 {
 	if (slot < 1 || slot > 10) return;
 
@@ -1494,12 +1494,12 @@ void OMPCore::LoadMTTSlotData(MANTRANSDATA &man, int slot)
 	man.ROLL = MTTSlotData[slot - 1].ROLL;
 }
 
-void OMPCore::ChangeMTTManeuverSlot(unsigned mnvr, int slot)
+void ShuttleFDOCore::ChangeMTTManeuverSlot(unsigned mnvr, int slot)
 {
 	LoadMTTSlotData(ManeuverTransferTable[mnvr], slot);
 }
 
-void OMPCore::ExecuteMTT()
+void ShuttleFDOCore::ExecuteMTT()
 {
 	//Sanity checks
 	if (ManeuverTransferTable.size() < 1) return;
@@ -1555,7 +1555,7 @@ void OMPCore::ExecuteMTT()
 	}
 }
 
-void OMPCore::CalcDMT()
+void ShuttleFDOCore::CalcDMT()
 {
 	if (DMT_MNVR < 1 || DMT_MNVR > DMTInputTable.size()) return;
 
@@ -1593,7 +1593,7 @@ void OMPCore::CalcDMT()
 	DMT.TGT_HP = 0.0;
 }
 
-void OMPCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
+void ShuttleFDOCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
 {
 	if (type == OMPDefs::THRUSTERS::OBP)
 	{
@@ -1622,7 +1622,7 @@ void OMPCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
 	}
 }
 
-void OMPCore::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
+void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 {
 	if (type == OMPDefs::THRUSTERS::PX4)
 	{
@@ -1686,7 +1686,7 @@ void OMPCore::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 	}
 }
 
-void OMPCore::GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type)
+void ShuttleFDOCore::GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 {
 	if (type == OMPDefs::THRUSTERS::PX4 || type == OMPDefs::THRUSTERS::PX3)
 	{
@@ -1746,7 +1746,7 @@ void OMPCore::GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 	}
 }
 
-void OMPCore::GetDMTManeuverID(char *buf, char *name)
+void ShuttleFDOCore::GetDMTManeuverID(char *buf, char *name)
 {
 	if (strcmp(name, "OMS-1") == 0)
 	{
@@ -1766,7 +1766,7 @@ void OMPCore::GetDMTManeuverID(char *buf, char *name)
 	}
 }
 
-void OMPCore::SetLaunchMJD(int Y, int D, int H, int M, double S)
+void ShuttleFDOCore::SetLaunchMJD(int Y, int D, int H, int M, double S)
 {
 	launchdate[0] = Y;
 	launchdate[1] = D;

@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD Module
+  Shuttle FDO Module
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #define ORBITER_MODULE
 
 #include "orbitersdk.h"
-#include "OMPMFD.h"
-#include "OMPoapiModule.h"
+#include "ShuttleFDOMFD.h"
+#include "ShuttleFDOoapiModule.h"
 
 //
 // ==============================================================
@@ -31,8 +31,8 @@
 // ==============================================================
 //
 
-extern OMPoapiModule *g_coreMod;
-extern OMPCore *GCoreData[32];
+extern ShuttleFDOoapiModule *g_coreMod;
+extern ShuttleFDOCore *GCoreData[32];
 extern OBJHANDLE GCoreVessel[32];
 extern int nGutsUsed;
 extern int g_MFDmode;
@@ -49,7 +49,7 @@ DLLCLBK void InitModule(HINSTANCE hDLL) {          // Called by Orbiter when mod
 	spec.name = name;
 	spec.key = OAPI_KEY_T;                // MFD mode selection key
 	spec.context = NULL;
-	spec.msgproc = OMPoapiModule::MsgProc;  // MFD mode callback function
+	spec.msgproc = ShuttleFDOoapiModule::MsgProc;  // MFD mode callback function
 
 	// Register the new MFD mode with Orbiter
 	g_MFDmode = oapiRegisterMFDMode(spec);
@@ -63,20 +63,20 @@ DLLCLBK void ExitModule(HINSTANCE hDLL) {          // Called by Orbiter when mod
 	nGutsUsed = 0;
 }
 
-int OMPoapiModule::MsgProc(UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam) {  // Message parser, handling MFD open requests
+int ShuttleFDOoapiModule::MsgProc(UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam) {  // Message parser, handling MFD open requests
 	switch (msg) {
 	case OAPI_MSG_MFD_OPENED:
-		return (int)(new OMPMFD(LOWORD(wparam), HIWORD(wparam), (VESSEL*)lparam, mfd));    // Open an ephemeral instance each time we make a new OMP MFD, plus F8, etc/ 
+		return (int)(new ShuttleFDOMFD(LOWORD(wparam), HIWORD(wparam), (VESSEL*)lparam, mfd));    // Open an ephemeral instance each time we make a new OMP MFD, plus F8, etc/ 
 	}
 	return 0;
 }
 
-OMPoapiModule::OMPoapiModule(HINSTANCE hDLL) : oapi::Module(hDLL) {}
-OMPoapiModule::~OMPoapiModule() {}
+ShuttleFDOoapiModule::ShuttleFDOoapiModule(HINSTANCE hDLL) : oapi::Module(hDLL) {}
+ShuttleFDOoapiModule::~ShuttleFDOoapiModule() {}
 
-void OMPoapiModule::clbkSimulationStart(RenderMode mode) {}
+void ShuttleFDOoapiModule::clbkSimulationStart(RenderMode mode) {}
 
-void OMPoapiModule::clbkSimulationEnd() {                                      // When we exit sim back to Launchpad, make sure we tidy things up properly
+void ShuttleFDOoapiModule::clbkSimulationEnd() {                                      // When we exit sim back to Launchpad, make sure we tidy things up properly
 	for (int i = 0;i < nGutsUsed;i++) {
 		delete GCoreData[i];
 		GCoreVessel[i] = NULL;
@@ -84,16 +84,16 @@ void OMPoapiModule::clbkSimulationEnd() {                                      /
 	nGutsUsed = 0;
 	return;
 }
-void OMPoapiModule::clbkPreStep(double simt, double simdt, double mjd) {      // Called on each iteration of the calc engine (more often than the MFD Update
+void ShuttleFDOoapiModule::clbkPreStep(double simt, double simdt, double mjd) {      // Called on each iteration of the calc engine (more often than the MFD Update
 	for (int i = 0;i < nGutsUsed;i++) {
 		//if (GCoreData[i]->isInit)GCoreData[i]->MinorCycle(simt, simdt);
 	}
 	return;
 }
 
-void OMPoapiModule::clbkPostStep(double simt, double simdt, double mjd) {}
+void ShuttleFDOoapiModule::clbkPostStep(double simt, double simdt, double mjd) {}
 
-void OMPoapiModule::clbkDeleteVessel(OBJHANDLE hVessel) {                     // Tidy up when a vessel is deleted (stops clbkPreStep calling a dead vessel)
+void ShuttleFDOoapiModule::clbkDeleteVessel(OBJHANDLE hVessel) {                     // Tidy up when a vessel is deleted (stops clbkPreStep calling a dead vessel)
 	for (int i = 0;i < nGutsUsed;i++) {
 		if (GCoreVessel[i] == hVessel) {
 			delete GCoreData[i];

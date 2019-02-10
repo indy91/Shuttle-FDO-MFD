@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD Core (Header)
+  Shuttle FDO MFD Core (Header)
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #pragma once
 
 #include "MFDButtonPage.hpp"
-#include "OMPMFDButtons.h"
+#include "ShuttleFDOMFDButtons.h"
 
 const double OMS_THRUST = 26700.0;
 const double OMS_ISP0 = 316 * 9.80665;
@@ -179,10 +179,10 @@ struct DetailedManeuverTable
 	double TGT_HP;
 };
 
-class OMPCore {
+class ShuttleFDOCore {
 public:
-	OMPCore(VESSEL* v);
-	~OMPCore();
+	ShuttleFDOCore(VESSEL* v);
+	~ShuttleFDOCore();
 
 	void MinorCycle(double SimT, double SimDT, double mjd);
 	int subThread();

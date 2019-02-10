@@ -2,7 +2,7 @@
   This file is part of OMP MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD (Header)
+  Shuttle FDO MFD (Header)
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,12 +20,12 @@
 
 #pragma once
 
-#include "OMPCore.h"
+#include "ShuttleFDOCore.h"
 
-class OMPMFD : public MFD2 {
+class ShuttleFDOMFD : public MFD2 {
 public:
-	OMPMFD(DWORD w, DWORD h, VESSEL *v, UINT im);
-	~OMPMFD();
+	ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im);
+	~ShuttleFDOMFD();
 	char *ButtonLabel (int bt);
 	int ButtonMenu (const MFDBUTTONMENU **menu) const;
 	bool Update(oapi::Sketchpad *skp);
@@ -92,8 +92,8 @@ protected:
 
 	int screen;
 
-	OMPMFDButtons coreButtons;
-	OMPCore* G;
+	ShuttleFDOMFDButtons coreButtons;
+	ShuttleFDOCore* G;
 
 	char Buffer[100];
 
