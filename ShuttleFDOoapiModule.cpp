@@ -44,7 +44,7 @@ extern int g_MFDmode;
 //
 
 DLLCLBK void InitModule(HINSTANCE hDLL) {          // Called by Orbiter when module selected in the Launchpad
-	static char *name = "OMP MFD";   // MFD mode name
+	static char *name = "Shuttle FDO MFD";   // MFD mode name
 	MFDMODESPECEX spec;
 	spec.name = name;
 	spec.key = OAPI_KEY_T;                // MFD mode selection key
