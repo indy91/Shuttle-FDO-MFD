@@ -1,5 +1,5 @@
 /****************************************************************************
-  This file is part of OMP MFD for Orbiter Space Flight Simulator
+  This file is part of Shuttle FDO MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
   Shuttle FDO MFD Module (Header)

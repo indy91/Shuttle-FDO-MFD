@@ -1,5 +1,5 @@
 /****************************************************************************
-  This file is part of OMP MFD for Orbiter Space Flight Simulator
+  This file is part of the Shuttle FDO MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
   Shuttle FDO MFD
@@ -145,7 +145,7 @@ void ShuttleFDOMFD::ReadStatus(FILEHANDLE scn)
 // Repaint the MFD
 bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 {
-	Title(skp, "OMP MFD");
+	Title(skp, "Shuttle FDO MFD");
 	// Draws the MFD title
 
 	skp->SetFont(font);

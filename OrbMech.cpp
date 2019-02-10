@@ -1,8 +1,8 @@
 /****************************************************************************
-  This file is part of OMP MFD for Orbiter Space Flight Simulator
+  This file is part of Shuttle FDO MFD for Orbiter Space Flight Simulator
   Copyright (C) 2019 Niklas Beug
 
-  OMP MFD Orbital Mechanics Calculations
+  Shuttle FDO MFD Orbital Mechanics Calculations
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

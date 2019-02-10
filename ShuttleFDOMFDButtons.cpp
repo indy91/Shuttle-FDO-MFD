@@ -1,5 +1,5 @@
 /****************************************************************************
-  This file is part of OMP MFD for Orbiter Spaceflight Simulator
+  This file is part of Shuttle FDO MFD for Orbiter Spaceflight Simulator
   Copyright (C) 2019 Niklas Beug
 
   Shuttle FDO MFD Buttons
