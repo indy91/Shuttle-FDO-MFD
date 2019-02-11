@@ -581,7 +581,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	}
 	else if (screen == 6)
 	{
-		skp->Text(10 * W / 32, 1 * H / 32, "OMP Executive Menu", 18);
+		skp->Text(12 * W / 32, 1 * H / 32, "OMP Executive Menu", 18);
 
 		skp->Text(1 * W / 8, 2 * H / 14, "Chaser:", 7);
 		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
