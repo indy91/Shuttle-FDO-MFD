@@ -845,6 +845,24 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			}
 			if (found < 3) return 10; //Error 10: Not enough CXYZ components specified
 		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
+		{
+			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
+			{
+				if(strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DV") == 0)
+				{
+					add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value*0.3048;
+				}
+				else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "PIT") == 0)
+				{
+					add_constraint[i].y = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+				}
+				else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "YAW") == 0)
+				{
+					add_constraint[i].z = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+				}
+			}
+		}
 	}
 
 	//CHECK AND LOAD TIG MODIFIERS
@@ -951,8 +969,8 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					{
 						dt = FindCommonNode(sv_bef_table[i], add_constraint[i]);
 					}
-					
-					
+
+
 					sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
 				}
 			}
@@ -967,15 +985,11 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				dh = oapiGetSize(hEarth) + add_constraint[i].x - length(Rtemp);
 				DV = OrbMech::HeightManeuver(sv_bef_table[i].R, sv_bef_table[i].V, dh, mu);
 				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
 			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
 			{
-				
+
 				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
 			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
 			{
@@ -995,17 +1009,12 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 				DV = SOIManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].MJD, ddt, add_constraint[i + 1]);
 				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
 			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOR)
 			{
 				DV = SORManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].MJD, add_constraint[i]);
 				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
-
 			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
 			{
 				VECTOR3 H_P;
@@ -1022,8 +1031,6 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 				DV = NPCManeuver(sv_bef_table[i], H_P);
 				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
 			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NCC)
 			{
@@ -1043,9 +1050,31 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 				DV = SOIManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].MJD, ddt, add_constraint[i + 1]);
 				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-				sv_aft_table[i] = sv_bef_table[i];
-				sv_aft_table[i].V += DV;
 			}
+			//Apsidal Shift
+			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::APSO)
+			{
+				double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
+				dv_table[i] = _V(0, 0, -2.0*r_dot);
+				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+			}
+			//Circularization
+			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::CIRC)
+			{
+				DV = CircManeuver(sv_bef_table[i]);
+				dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
+			}
+			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
+			{
+				double dv = add_constraint[i].x;
+				double pit = add_constraint[i].y;
+				double yaw = add_constraint[i].z;
+				dv_table[i] = _V(dv*cos(pit)*cos(yaw), dv*sin(yaw), -dv*sin(pit)*cos(yaw));
+				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+			}
+
+			sv_aft_table[i] = sv_bef_table[i];
+			sv_aft_table[i].V += DV;
 
 			sv_cur = sv_aft_table[i];
 			sv_P_cur = coast_auto(sv_P_cur, (sv_aft_table[i].MJD - sv_P_cur.MJD)*24.0*3600.0);
@@ -1322,6 +1351,19 @@ VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 	V2 = sv_A.V + tmul(OrbMech::LVLH_Matrix(sv_A.R, sv_A.V), DV_PC_LV);
 	V2 = unit(V2)*length(sv_A.V);
 	return V2 - sv_A.V;
+}
+
+VECTOR3 ShuttleFDOCore::CircManeuver(SV sv_A)
+{
+	//TBD: nonspherical logic
+	VECTOR3 U_H, U_hor, V_apo;
+	double v_circ;
+
+	U_H = unit(crossp(sv_A.R, sv_A.V));
+	U_hor = unit(crossp(U_H, unit(sv_A.R)));
+	v_circ = sqrt(mu / length(sv_A.R));
+	V_apo = U_hor * v_circ;
+	return V_apo - sv_A.V;
 }
 
 double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
