@@ -233,9 +233,9 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "", 0, ' ' },
 		{ "Set target", 0, 'T' },
 		{ "Set liftoff time", 0, 'S' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Gravity option", 0, 'G' },
+		{ "Save to file", 0, 'A' },
+		{ "Load from file", 0, 'L' },
 
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -251,11 +251,11 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("TGT", OAPI_KEY_T, &ShuttleFDOMFD::set_target);
 	RegisterFunction("TLO", OAPI_KEY_S, &ShuttleFDOMFD::menuSetLiftoffTime);
 	RegisterFunction("GRA", OAPI_KEY_G, &ShuttleFDOMFD::menuCycleGravityOption);
-	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("SAV", OAPI_KEY_A, &ShuttleFDOMFD::menuSaveState);
+	RegisterFunction("LOA", OAPI_KEY_L, &ShuttleFDOMFD::menuLoadState);
 
+	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);

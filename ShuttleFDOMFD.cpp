@@ -19,6 +19,9 @@
   **************************************************************************/
 
 #include "windows.h"
+#include <iostream>
+#include <fstream>
+#include <string>
 #include "Orbitersdk.h"
 #include "papi.h"
 #include "OrbMech.h"
@@ -98,48 +101,6 @@ bool ShuttleFDOMFD::ConsumeButton(int bt, int event)
 bool ShuttleFDOMFD::ConsumeKeyBuffered(DWORD key)
 {
 	return coreButtons.ConsumeKeyBuffered(this, key);
-}
-
-void ShuttleFDOMFD::WriteStatus(FILEHANDLE scn) const
-{
-	oapiWriteScenario_int(scn, "LAUNCHDATE0", G->launchdate[0]);
-	oapiWriteScenario_int(scn, "LAUNCHDATE1", G->launchdate[1]);
-	oapiWriteScenario_int(scn, "LAUNCHDATE2", G->launchdate[2]);
-	oapiWriteScenario_int(scn, "LAUNCHDATE3", G->launchdate[3]);
-	papiWriteScenario_double(scn, "LAUNCHDATE4", G->launchdateSec);
-	if (G->target)
-		oapiWriteScenario_string(scn, "TARGET", G->target->GetName());
-}
-void ShuttleFDOMFD::ReadStatus(FILEHANDLE scn)
-{
-	char *line;
-	char targetbuff[100] = "";
-
-	while (oapiReadScenario_nextline(scn, line)) {
-		if (!_strnicmp(line, "END_MFD", 7))
-			return;
-
-		papiReadScenario_int(line, "LAUNCHDATE0", G->launchdate[0]);
-		papiReadScenario_int(line, "LAUNCHDATE1", G->launchdate[1]);
-		papiReadScenario_int(line, "LAUNCHDATE2", G->launchdate[2]);
-		papiReadScenario_int(line, "LAUNCHDATE3", G->launchdate[3]);
-		papiReadScenario_double(line, "LAUNCHDATE4", G->launchdateSec);
-		papiReadScenario_string(line, "TARGET", targetbuff);
-	}
-
-	G->SetLaunchMJD(G->launchdate[0], G->launchdate[1], G->launchdate[2], G->launchdate[3], G->launchdateSec);
-	OBJHANDLE hTarget = oapiGetVesselByName(targetbuff);
-	if (hTarget)
-	{
-		G->target = oapiGetVesselInterface(hTarget);
-		for (unsigned i = 0;i < oapiGetVesselCount();i++)
-		{
-			if (hTarget == oapiGetVesselByIndex(i))
-			{
-				G->targetnumber = i;
-			}
-		}
-	}
 }
 
 // Repaint the MFD
@@ -626,6 +587,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
 		skp->Text(1 * W / 8, 6 * H / 14, "Liftoff Time:", 13);
 		skp->Text(1 * W / 8, 8 * H / 14, "Propagation:", 13);
+		skp->Text(1 * W / 8, 10 * H / 14, "Save to file", 12);
+		skp->Text(1 * W / 8, 12 * H / 14, "Load from file", 14);
 
 		if (G->vessel)
 		{
@@ -1309,4 +1272,91 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	{
 		sprintf_s(buf, 100, "");
 	}
+}
+
+void ShuttleFDOMFD::menuSaveState()
+{
+	bool SaveStateInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Choose mission name:", SaveStateInput, 0, 20, (void*)this);
+}
+
+bool SaveStateInput(void *id, char *str, void *data)
+{
+	return ((ShuttleFDOMFD*)data)->SaveState(str);
+}
+
+bool ShuttleFDOMFD::SaveState(char *filename)
+{
+	char Buffer[128];
+	sprintf_s(Buffer, ".\\Config\\MFD\\ShuttleFDOMFD\\%s.txt", filename);
+	std::ofstream myfile;
+	myfile.open(Buffer);
+	if (myfile.is_open())
+	{
+		papiWriteLine_int(myfile, "LAUNCHDATE0", G->launchdate[0]);
+		papiWriteLine_int(myfile, "LAUNCHDATE1", G->launchdate[1]);
+		papiWriteLine_int(myfile, "LAUNCHDATE2", G->launchdate[2]);
+		papiWriteLine_int(myfile, "LAUNCHDATE3", G->launchdate[3]);
+		papiWriteLine_double(myfile, "LAUNCHDATE4", G->launchdateSec);
+		if (G->target)
+			papiWriteLine_string(myfile, "TARGET", G->target->GetName());
+
+		myfile.close();
+	}
+
+	return true;
+}
+
+void ShuttleFDOMFD::menuLoadState()
+{
+	bool LoadStateInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Choose mission name:", LoadStateInput, 0, 20, (void*)this);
+}
+
+bool LoadStateInput(void *id, char *str, void *data)
+{
+	return ((ShuttleFDOMFD*)data)->LoadState(str);
+}
+
+bool ShuttleFDOMFD::LoadState(char *filename)
+{
+	char Buffer[128];
+	char targetbuff[100] = "";
+	sprintf_s(Buffer, ".\\Config\\MFD\\ShuttleFDOMFD\\%s.txt", filename);
+	std::ifstream myfile;
+	myfile.open(Buffer);
+	if (myfile.is_open())
+	{
+		std::string line;
+		while (std::getline(myfile, line))
+		{
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE0", G->launchdate[0]);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE1", G->launchdate[1]);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", G->launchdate[2]);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", G->launchdate[3]);
+			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", G->launchdateSec);
+			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
+		}
+
+		myfile.close();
+
+		//Processing
+		G->SetLaunchMJD(G->launchdate[0], G->launchdate[1], G->launchdate[2], G->launchdate[3], G->launchdateSec);
+		OBJHANDLE hTarget = oapiGetVesselByName(targetbuff);
+		if (hTarget)
+		{
+			G->target = oapiGetVesselInterface(hTarget);
+			for (unsigned i = 0;i < oapiGetVesselCount();i++)
+			{
+				if (hTarget == oapiGetVesselByIndex(i))
+				{
+					G->targetnumber = i;
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	return false;
 }

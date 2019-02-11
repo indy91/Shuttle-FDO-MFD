@@ -20,6 +20,21 @@
 
 #pragma once
 
+static inline void papiWriteLine_int(std::ofstream &file, char *item, int i)
+{
+	file << item << " " << i << std::endl;
+}
+
+static inline void papiWriteLine_double(std::ofstream &file, char *item, double d)
+{
+	file << item << " " << d << std::endl;
+}
+
+static inline void papiWriteLine_string(std::ofstream &file, char *item, const char *s)
+{
+	file << item << " " << s << std::endl;
+}
+
 static inline void papiWriteScenario_bool(FILEHANDLE scn, char *item, bool b) {
 
 	oapiWriteScenario_int(scn, item, (b ? 1 : 0));
@@ -65,7 +80,7 @@ static inline bool papiReadScenario_bool(char *line, char *item, bool &b) {
 	return false;
 }
 
-static inline bool papiReadScenario_int(char *line, char *item, int &i) {
+static inline bool papiReadScenario_int(const char *line, char *item, int &i) {
 
 	char buffer[256];
 	int j;
@@ -81,7 +96,7 @@ static inline bool papiReadScenario_int(char *line, char *item, int &i) {
 	return false;
 }
 
-static inline bool papiReadScenario_double(char *line, char *item, double &d) {
+static inline bool papiReadScenario_double(const char *line, char *item, double &d) {
 
 	char buffer[256];
 	double e;
@@ -214,7 +229,7 @@ static inline bool papiReadScenario_doublearr(char *line, char *item, double *v,
 	return false;
 }
 
-static inline bool papiReadScenario_string(char *line, char *item, char *i) {
+static inline bool papiReadScenario_string(const char *line, char *item, char *i) {
 
 	char buffer[256];
 

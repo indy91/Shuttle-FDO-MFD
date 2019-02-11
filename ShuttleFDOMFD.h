@@ -31,8 +31,11 @@ public:
 	bool Update(oapi::Sketchpad *skp);
 	bool ConsumeButton(int bt, int event);
 	bool ConsumeKeyBuffered(DWORD key);
-	void WriteStatus(FILEHANDLE scn) const;
-	void ReadStatus(FILEHANDLE scn);
+
+	void menuSaveState();
+	bool SaveState(char *filename);
+	void menuLoadState();
+	bool LoadState(char *filename);
 
 	void menuVoid() {};
 	void menuAddOMPManeuver();
