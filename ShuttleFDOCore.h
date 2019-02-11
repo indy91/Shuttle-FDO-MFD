@@ -225,6 +225,8 @@ public:
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();
+	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
+	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
 
 	std::vector<MANEUVER> ManeuverTable;
 	std::vector<ManeuverConstraints> ManeuverConstraintsTable;

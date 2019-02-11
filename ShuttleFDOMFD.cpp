@@ -559,7 +559,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "HA");
 		skp->Text(15 * W / 32, 29 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "HP");
-		skp->Text(18 * W / 32, 29 * H / 32, Buffer, strlen(Buffer));
+		skp->Text(37 * W / 64, 29 * H / 32, Buffer, strlen(Buffer));
 
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
@@ -593,11 +593,11 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(21 * W / 32, 19 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.1f", G->DMT.PEG7_DV.z);
 		skp->Text(21 * W / 32, 20 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.0f", G->DMT.BURN_ATT.x);
+		sprintf_s(Buffer, "%03.0f", G->DMT.BURN_ATT.x);
 		skp->Text(21 * W / 32, 21 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.0f", G->DMT.BURN_ATT.y);
+		sprintf_s(Buffer, "%03.0f", G->DMT.BURN_ATT.y);
 		skp->Text(21 * W / 32, 22 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.0f", G->DMT.BURN_ATT.z);
+		sprintf_s(Buffer, "%03.0f", G->DMT.BURN_ATT.z);
 		skp->Text(21 * W / 32, 23 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.1f", G->DMT.DVTOT);
 		skp->Text(21 * W / 32, 24 * H / 32, Buffer, strlen(Buffer));
@@ -612,7 +612,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "%.2f", G->DMT.VGO.z);
 		skp->Text(21 * W / 32, 28 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.0f", G->DMT.TGT_HA);
-		skp->Text(17 * W / 32, 29 * H / 32, Buffer, strlen(Buffer));
+		skp->Text(18 * W / 32, 29 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.0f", G->DMT.TGT_HP);
 		skp->Text(21 * W / 32, 29 * H / 32, Buffer, strlen(Buffer));
 

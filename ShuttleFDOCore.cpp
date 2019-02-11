@@ -1561,7 +1561,8 @@ void ShuttleFDOCore::CalcDMT()
 
 	DMTINPUT input = DMTInputTable[DMT_MNVR - 1];
 	MATRIX3 Rot;
-	double F, isp;
+	VECTOR3 u_A;
+	double F, isp, P, LY, RY, p_T, y_T;
 	char Buffer[100], Buffer2[100];
 
 	GetDMTThrusterType(Buffer, input.thrusters);
@@ -1569,9 +1570,45 @@ void ShuttleFDOCore::CalcDMT()
 
 	sprintf_s(DMT.CODE, "%sE%02d%s", Buffer, DMT_MNVR, Buffer2);
 	DMT.TV_ROLL = input.TV_ROLL*DEG;
-	DMT.TRIMS_P = 0.0;
-	DMT.TRIMS_LY = 0.0;
-	DMT.TRIMS_RY = 0.0;
+	if (input.thrusters == OMPDefs::THRUSTERS::OBP)
+	{
+		OMSTVC(_V(1071.75429, 0.0, 364.71665), true, P, LY, RY);
+
+		DMT.TRIMS_P = P * DEG;
+		DMT.TRIMS_LY = LY * DEG;
+		DMT.TRIMS_RY = RY * DEG;
+
+		p_T = P - 15.82*RAD;
+		y_T = 0.0;
+	}
+	else if (input.thrusters == OMPDefs::THRUSTERS::OL || input.thrusters == OMPDefs::THRUSTERS::OR)
+	{
+		OMSTVC(_V(1071.75429, 0.0, 364.71665), false, P, LY, RY);
+
+		DMT.TRIMS_P = P * DEG;
+		DMT.TRIMS_LY = LY * DEG;
+		DMT.TRIMS_RY = RY * RAD;
+
+		if (input.thrusters == OMPDefs::THRUSTERS::OL)
+		{
+			p_T = P - 15.82*RAD;
+			y_T = LY + 6.5*RAD;
+		}
+		else
+		{
+			p_T = P - 15.82*RAD;
+			y_T = RY - 6.5*RAD;
+		}
+	}
+	else
+	{
+		DMT.TRIMS_P = 0.0;
+		DMT.TRIMS_LY = 0.0;
+		DMT.TRIMS_RY = 0.0;
+
+		p_T = 0.0;
+		y_T = 0.0;
+	}
 	DMT.WEIGHT = input.sv_tig.mass / LBM2KG;
 	DMT.TIG = OrbMech::GETfromMJD(input.sv_tig.MJD, LaunchMJD);
 	
@@ -1583,14 +1620,65 @@ void ShuttleFDOCore::CalcDMT()
 
 	Rot = OrbMech::LVLH_Matrix(input.sv_tig.R, input.sv_tig.V);
 	DMT.PEG7_DV = mul(Rot, input.DV_iner)*MPS2FPS;
-	DMT.BURN_ATT = _V(0, 0, 0);
+
+	u_A = _V(cos(y_T)*cos(p_T), sin(y_T), -cos(y_T)*sin(p_T));
+
+	MATRIX3 MTP;
+	VECTOR3 u_D, VEC_BOD, RR_BOD, VEC_M50, RR_M50, YN, YT, vec_A, vec_B, RORB, VORB, Att;
+	double ROLL;
+
+	u_D = unit(input.DV_iner);
+	VEC_BOD = u_A;
+	if (abs(sin(y_T)) <= 0.999848)
+	{
+		RR_BOD = _V(0, 1, 0);
+	}
+	else
+	{
+		RR_BOD = _V(0, 0, -1);
+	}
+	RORB = OrbMech::Ecl2M50(hEarth, input.sv_tig.R);
+	VORB = OrbMech::Ecl2M50(hEarth, input.sv_tig.V);
+	VEC_M50 = OrbMech::Ecl2M50(hEarth, u_D);
+	ROLL = input.TV_ROLL + PI05;
+	RR_M50 = -unit(crossp(RORB, VORB));
+	YN = unit(crossp(VEC_BOD, RR_BOD));
+	YT = unit(crossp(VEC_M50, RR_M50))*sin(ROLL) - crossp(VEC_M50, unit(crossp(VEC_M50, RR_M50)))*cos(ROLL);
+	vec_A = crossp(VEC_BOD, YN);
+	vec_B = crossp(VEC_M50, YT);
+	
+	MTP = mul(OrbMech::tmat(_M(VEC_BOD.x, VEC_BOD.y, VEC_BOD.z, vec_A.x, vec_A.y, vec_A.z, -YN.x, -YN.y, -YN.z)), _M(VEC_M50.x, VEC_M50.y, VEC_M50.z, vec_B.x, vec_B.y, vec_B.z, -YT.x, -YT.y, -YT.z));
+
+	Att.z = asin(MTP.m12);
+	if (abs(cos(Att.z)) < 0.005)
+	{
+		Att.x = 0.0;
+		Att.y = atan2(MTP.m31, MTP.m33);
+	}
+	else
+	{
+		Att.y = atan2(-MTP.m13, MTP.m11);
+		Att.x = atan2(-MTP.m32, MTP.m22);
+	}
+
+	for (int i = 0;i < 3;i++)
+	{
+		if (Att.data[i] < 0) Att.data[i] += PI2;
+	}
+
+	DMT.BURN_ATT = Att * DEG;
 	DMT.DVTOT = length(input.DV_iner)*MPS2FPS;
 
 	GetThrusterData(input.thrusters, F, isp);
 	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(input.DV_iner) / isp));
-	DMT.VGO = _V(0, 0, 0);
-	DMT.TGT_HA = 0.0;
-	DMT.TGT_HP = 0.0;
+	DMT.VGO = u_A*DMT.DVTOT;
+
+	double apo, peri;
+	OrbMech::periapo(input.sv_tig.R, input.sv_tig.V + input.DV_iner, mu, apo, peri);
+
+
+	DMT.TGT_HA = (apo - R_E) / 1852.0;
+	DMT.TGT_HP = (peri - R_E) / 1852.0;
 }
 
 void ShuttleFDOCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
@@ -1776,4 +1864,28 @@ void ShuttleFDOCore::SetLaunchMJD(int Y, int D, int H, int M, double S)
 
 	LaunchMJD = OrbMech::Date2MJD(Y, D, H, M, S);
 	//sprintf(oapiDebugString(), "%f", LaunchMJD);
+}
+
+void ShuttleFDOCore::OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY)
+{
+	double A, B, C, D, R1;
+
+	A = 1518.0 - CG.x;
+	B = CG.y - 88.0;
+	C = 492.0 - CG.z;
+	D = CG.y + 88.0;
+	R1 = sqrt(A*A + C*C);
+
+	if (parallel == false)
+	{
+		P = 15.82*RAD - atan2(C, A);
+		LY = -6.5*RAD + atan2(D, R1);
+		RY = 6.5*RAD + atan2(B, R1);
+	}
+	else
+	{
+		P = 15.82*RAD - atan2(C, A);
+		LY = -5.7*RAD + atan2(CG.y, R1);
+		RY = 5.7*RAD + atan2(CG.y, R1);
+	}
 }

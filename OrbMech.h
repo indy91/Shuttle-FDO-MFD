@@ -76,6 +76,7 @@ namespace OrbMech
 	double MJDfromGET(double GET, double GETBase);
 	int Date2JD(int Y, int M, int D);
 	double Date2MJD(int Y, int D, int H, int M, double S);
+	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl);
 
 	//Math
 	double stumpS(double z);
@@ -96,6 +97,7 @@ namespace OrbMech
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle);
 	MATRIX3 inverse(MATRIX3 a);
 	double determinant(MATRIX3 a);
+	MATRIX3 tmat(MATRIX3 a);
 
 	class CoastIntegrator
 	{

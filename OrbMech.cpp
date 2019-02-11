@@ -1328,6 +1328,14 @@ namespace OrbMech
 		return a.m11*a.m22*a.m33 + a.m12*a.m23*a.m31 + a.m13*a.m21*a.m32 - a.m13*a.m22*a.m31 - a.m12*a.m21*a.m33 - a.m11*a.m23*a.m32;
 	}
 
+	MATRIX3 tmat(MATRIX3 a)
+	{
+		MATRIX3 b;
+
+		b = _M(a.m11, a.m21, a.m31, a.m12, a.m22, a.m32, a.m13, a.m23, a.m33);
+		return b;
+	}
+
 	double MJDToDate(double MJD)
 	{
 		double fSimGMT = (fmod(MJD - 41317, 365))*86400.0; //MJD 40952 == Jan. 1, 1970, 00:00:00
@@ -1373,6 +1381,13 @@ namespace OrbMech
 		timeofday /= 24.0*3600.0;
 		MJD = MJD + timeofday - 0.5;
 		return MJD;
+	}
+
+	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl)
+	{
+		MATRIX3 obliquityMat;
+		oapiGetPlanetObliquityMatrix(hEarth, &obliquityMat);
+		return rhtmul(obliquityMat, ecl);
 	}
 
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu)
