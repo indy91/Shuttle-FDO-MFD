@@ -30,3 +30,53 @@
 *.exe
 *.out
 *.app
+
+# SVN files
+.svn/
+
+# Project ignores
+!/Config
+/Config/*
+!/Doc
+/Doc/*
+/Html
+!/Meshes/
+/Meshes/*
+!/Script
+/Script/*
+/Missions/
+/Orbitersdk/
+!/Orbitersdk/samples/ShuttleFDOMFD/
+/Scenarios
+!/Sound
+/Sound/*
+/Textures/
+!/Textures/ProjectApollo/
+
+# Other stuff
+/Constell.bin
+/Constell2.bin
+/D3D9Client.cfg
+/Device.dat
+/Flights/
+/Images/
+/LuaInline.dll
+/LuaInterpreter.dll
+/Modules/
+/Orbiter.cfg
+/Orbiter.ico
+/Orbiter.log
+/OrbiterSound_Log.txt
+/Orbiter_NG.cfg
+/Star.bin
+/Textures2/
+/Utils/
+/dxdiag.log
+/install.log
+/keymap.cfg
+/keymap2006.cfg
+/lua5.1.dll
+/Data/
+SSUAnimation.log
+SSU Readme First.txt
+/readme.txt
