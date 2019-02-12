@@ -43,6 +43,8 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	launchdate[3] = 55;
 	launchdateSec = 18.0;
 	SetLaunchMJD(launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
+	
+	target = NULL;
 	OBJHANDLE hTarget = oapiGetVesselByName("ISS");
 	if (hTarget)
 	{
@@ -876,6 +878,12 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				tigmodifiers[i].type = OMPDefs::SECONDARIES::APO;
 				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
 			}
+			//Maneuver at apogee
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "PER") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::PER;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
+			}
 			//Initial guess
 			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DV") == 0)
 			{
@@ -954,6 +962,18 @@ int ShuttleFDOCore::CalculateOMPPlan()
 						sv_bef_table[i] = coast_auto(sv_bef_table[i], dt_P);
 					}
 					dt = OrbMech::timetoapo(sv_bef_table[i].R, sv_bef_table[i].V, mu, 1);
+					sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
+				}
+				else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::PER)
+				{
+					double dt_P = 0.0;
+					if (tigmodifiers[i].value > 1.0)
+					{
+						double P = OrbMech::period(sv_bef_table[i].R, sv_bef_table[i].V, mu);
+						dt_P = P * tigmodifiers[i].value - 1.0;
+						sv_bef_table[i] = coast_auto(sv_bef_table[i], dt_P);
+					}
+					dt = OrbMech::timetoperi(sv_bef_table[i].R, sv_bef_table[i].V, mu, 1);
 					sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
 				}
 				else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::CN)
@@ -1328,6 +1348,14 @@ void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 	{
 		sprintf_s(buf, 100, "NCC");
 	}
+	else if (type == OMPDefs::MANTYPE::APSO)
+	{
+		sprintf_s(buf, 100, "APSO");
+	}
+	else if (type == OMPDefs::MANTYPE::CIRC)
+	{
+		sprintf_s(buf, 100, "CIRC");
+	}
 	else
 	{
 		sprintf_s(buf, 100, "N/A");
@@ -1402,6 +1430,10 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 		sv_A1 = coast_auto(sv_A1, ddt);
 		dt_abs += ddt;
 		i++;
+
+		//If wedge angle is below 0.01° or 10 iterations have been done, go back
+		if (acos(dotp(u1, u2)) < 0.01*RAD || i >= 10) break;
+
 	} while (abs(ddt) > 0.1);
 
 	return dt_abs;

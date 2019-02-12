@@ -74,6 +74,8 @@ public:
 	bool delete_OMPSecondary(unsigned num, unsigned sec);
 	bool insert_OMPManeuver(unsigned ins, char *type, char *name);
 	void set_LiftoffTime(int YY, int DD, int HH, int MM, double SS);
+	void WriteMCTLine(std::ofstream &file, ManeuverConstraints &constr);
+	void ReadMCTLine(const char *line);
 
 	void MET2String(char *buf, double MET);
 	void DMTMET2String(char *buf, double MET);

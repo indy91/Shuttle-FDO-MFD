@@ -45,6 +45,7 @@ namespace OrbMech
 	void fDot_and_gDot_ta(VECTOR3 R0, VECTOR3 V0, double dt, double &fdot, double &gdot, double mu);
 	double period(VECTOR3 R, VECTOR3 V, double mu);
 	double timetoapo(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
+	double timetoperi(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
 	double kepler_U_equation(double x, double ro, double vro, double a, double mu);
 	void REVUP(VECTOR3 R, VECTOR3 V, double n, double mu, VECTOR3 &R1, VECTOR3 &V1, double &t);
 	void RADUP(VECTOR3 R_W, VECTOR3 V_W, VECTOR3 R_C, double mu, VECTOR3 &R_W1, VECTOR3 &V_W1);

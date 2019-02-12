@@ -29,6 +29,7 @@ const double RCS_THRUST = 7740.0;
 const double RCS_ISP0 = OMS_ISP0;
 const double LBM2KG = 0.45359237;
 const double MPS2FPS = 3.280839895;
+const int MAXSECONDARIES = 4;
 
 struct SV
 {

@@ -503,9 +503,14 @@ namespace OrbMech
 			cos_dE = 1.0 - r / a * (1.0 - f);
 			sin_dE = -r * r1*fdot / sqrt(mu*a);
 			dE = atan2(sin_dE, cos_dE);
-			if (future && dE < 0) dE += PI2;
 
 			dt = g + sqrt(power(a, 3.0) / mu)*(dE - sin_dE);
+
+			if (future && dt < 0)
+			{
+				double T_P = period(R, V, mu);
+				dt += T_P;
+			}
 		}
 		else if (alpha == 0.0)
 		{
@@ -1340,7 +1345,7 @@ namespace OrbMech
 	{
 		double fSimGMT = (fmod(MJD - 41317, 365))*86400.0; //MJD 40952 == Jan. 1, 1970, 00:00:00
 		int Days = (int)(MJD - 41317.0);
-		int leap_days = Days / 1460;
+		int leap_days = Days / 1460 + 1;
 		fSimGMT -= leap_days * 86400.0; //compensate for leap years
 		return fSimGMT;
 	}
@@ -1545,6 +1550,49 @@ namespace OrbMech
 		double E_0;
 		E_0 = 2 * atan(sqrt((1.0 - coe.e) / (1.0 + coe.e))*tan(coe.TA / 2.0));
 		chi = sqrt(a)*(PI - E_0);
+
+		alpha = 1.0 / a;
+
+		r0 = length(R);
+		vr0 = dotp(R, V) / r0;
+		dt = kepler_U_equation(chi, r0, vr0, alpha, mu);
+
+		if (s == 0 || dt >= 0)
+		{
+			return dt;
+		}
+
+		double T_P = period(R, V, mu);
+
+		return dt + T_P;
+	}
+
+	double timetoperi(VECTOR3 R, VECTOR3 V, double mu, int s)
+	{
+		OELEMENTS coe;
+		double a, chi, alpha, r0, vr0, dt;
+
+		coe = coe_from_sv(R, V, mu);
+		//[h e RA incl w TA a]
+
+		a = coe.h*coe.h / mu / (1.0 - coe.e*coe.e);
+
+		if (coe.e > 1.0)
+		{
+			double F;
+			F = log((sqrt(coe.e + 1.0) + sqrt(coe.e - 1.0)*tan(coe.TA / 2.0)) / (sqrt(coe.e + 1.0) - sqrt(coe.e - 1.0)*tan(coe.TA / 2.0)));
+			chi = -sqrt(-a)*F;
+		}
+		else if (coe.e == 1)
+		{
+			chi = -coe.h / sqrt(mu)*tan(coe.TA / 2.0);
+		}
+		else
+		{
+			double E_0;
+			E_0 = 2.0 * atan(sqrt((1.0 - coe.e) / (1.0 + coe.e))*tan(coe.TA / 2.0));
+			chi = -sqrt(a)*E_0;
+		}
 
 		alpha = 1.0 / a;
 

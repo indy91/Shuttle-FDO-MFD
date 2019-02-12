@@ -748,6 +748,16 @@ bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 		G->AddManeuver(OMPDefs::NCC, name, ins);
 		return true;
 	}
+	else if (strcmp(type, "APSO") == 0)
+	{
+		G->AddManeuver(OMPDefs::APSO, name, ins);
+		return true;
+	}
+	else if (strcmp(type, "CIRC") == 0)
+	{
+		G->AddManeuver(OMPDefs::CIRC, name, ins);
+		return true;
+	}
 
 	return false;
 }
@@ -810,6 +820,16 @@ bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 	else if (strcmp(type, "NCC") == 0)
 	{
 		G->ModifyManeuver(num - 1, OMPDefs::NCC, name);
+		return true;
+	}
+	else if (strcmp(type, "APSO") == 0)
+	{
+		G->ModifyManeuver(num - 1, OMPDefs::APSO, name);
+		return true;
+	}
+	else if (strcmp(type, "CIRC") == 0)
+	{
+		G->ModifyManeuver(num - 1, OMPDefs::CIRC, name);
 		return true;
 	}
 
@@ -1300,11 +1320,17 @@ bool ShuttleFDOMFD::SaveState(char *filename)
 		papiWriteLine_double(myfile, "LAUNCHDATE4", G->launchdateSec);
 		if (G->target)
 			papiWriteLine_string(myfile, "TARGET", G->target->GetName());
+		myfile << "START_MCT" << std::endl;
+		for (unsigned i = 0;i < G->ManeuverConstraintsTable.size();i++)
+		{
+			WriteMCTLine(myfile, G->ManeuverConstraintsTable[i]);
+		}
+		myfile << "END_MCT" << std::endl;
 
 		myfile.close();
 	}
 
-	return true;
+return true;
 }
 
 void ShuttleFDOMFD::menuLoadState()
@@ -1320,6 +1346,7 @@ bool LoadStateInput(void *id, char *str, void *data)
 
 bool ShuttleFDOMFD::LoadState(char *filename)
 {
+	bool isMCT = false;
 	char Buffer[128];
 	char targetbuff[100] = "";
 	sprintf_s(Buffer, ".\\Config\\MFD\\ShuttleFDOMFD\\%s.txt", filename);
@@ -1327,6 +1354,8 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 	myfile.open(Buffer);
 	if (myfile.is_open())
 	{
+		G->ManeuverConstraintsTable.clear();
+
 		std::string line;
 		while (std::getline(myfile, line))
 		{
@@ -1335,7 +1364,10 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", G->launchdate[2]);
 			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", G->launchdate[3]);
 			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", G->launchdateSec);
-			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
+			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
+			if (strcmp(line.c_str(), "END_MCT") == 0) isMCT = false;
+			if (isMCT) ReadMCTLine(line.c_str());
+			if (strcmp(line.c_str(), "START_MCT") == 0) isMCT = true;
 		}
 
 		myfile.close();
@@ -1354,9 +1386,56 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 				}
 			}
 		}
-		
+
 		return true;
 	}
 
 	return false;
+}
+
+void ShuttleFDOMFD::WriteMCTLine(std::ofstream &file, ManeuverConstraints &constr)
+{
+	char sectype[MAXSECONDARIES][5];
+	double secnum[MAXSECONDARIES];
+	for (unsigned i = 0;i < MAXSECONDARIES;i++)
+	{
+		sprintf_s(sectype[i], 5, "NSEC");
+		secnum[i] = 0.0;
+	}
+	for (unsigned i = 0;i < constr.secondaries.size();i++)
+	{
+		sprintf_s(sectype[i], 5, constr.secondaries[i].type);
+		secnum[i] = constr.secondaries[i].value;
+	}
+
+	sprintf_s(Buffer, 100, "%s %d %d %lf %s %lf %s %lf %s %lf %s %lf", constr.name, constr.type, constr.threshold, constr.thresh_num,
+		sectype[0], secnum[0], sectype[1], secnum[1], sectype[2], secnum[2], sectype[3], secnum[3]);
+	file << Buffer << std::endl;
+}
+
+void ShuttleFDOMFD::ReadMCTLine(const char *line)
+{
+	SecData sec;
+	unsigned i = 0;
+	char sectype[MAXSECONDARIES][5];
+	double secnum[MAXSECONDARIES];
+	for (i = 0;i < MAXSECONDARIES;i++)
+	{
+		sprintf_s(sectype[i], 5, "NSEC");
+		secnum[i] = 0.0;
+	}
+	ManeuverConstraints temp;
+	if (sscanf_s(line, "%s %d %d %lf %s %lf %s %lf %s %lf %s %lf", temp.name, 64, &temp.type, &temp.threshold, &temp.thresh_num,
+		sectype[0], 5, &secnum[0], sectype[1], 5, &secnum[1], sectype[2], 5, &secnum[2], sectype[3], 5, &secnum[3]) == 12)
+	{
+		i = 0;
+		G->ManeuverConstraintsTable.push_back(temp);
+		while (strcmp(sectype[i], "NSEC"))
+		{
+			sprintf_s(sec.type, sectype[i]);
+			sec.value = secnum[i];
+			G->ManeuverConstraintsTable.back().secondaries.push_back(sec);
+			i++;
+		}
+	}
 }
