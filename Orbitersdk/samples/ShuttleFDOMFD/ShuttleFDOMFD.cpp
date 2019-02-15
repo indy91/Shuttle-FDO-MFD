@@ -109,6 +109,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	Title(skp, "Shuttle FDO MFD");
 	// Draws the MFD title
 
+	SV sv = G->StateVectorCalc(G->target);
+
 	skp->SetFont(font);
 	//skp->SetTextAlign (oapi::Sketchpad::CENTER, oapi::Sketchpad::BASELINE);
 	//skp->SetTextColor (0x00FFFF);
@@ -135,7 +137,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "SECONDARIES");
 		skp->Text(17 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 
-		if (G->OMPErrorCode)
+		if (G->subThreadStatus)
+		{
+			sprintf_s(Buffer, "Iterating...");
+			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
+		}
+		else if (G->OMPErrorCode)
 		{
 			GetOMPError(Buffer, G->OMPErrorCode);
 			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));

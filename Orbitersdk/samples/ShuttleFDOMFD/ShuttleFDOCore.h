@@ -87,6 +87,7 @@ struct ITERSTATE
 	double dvo = 0.0;
 	double err = 0.0;
 	double erro = 0.0;
+	bool converged = false;
 };
 
 struct MANEUVER
@@ -225,6 +226,9 @@ public:
 	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off);
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
 	VECTOR3 CircManeuver(SV sv_A);
+	SV timetoapo_auto(SV sv_A, double revs);
+	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
+	SV DeltaOrbitsAuto(SV sv0, double M);
 
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();
@@ -258,15 +262,16 @@ public:
 	bool useNonSphericalGravity;
 	int OMPErrorCode;
 
+	OBJHANDLE hEarth;
+	double mu;
 protected:
 	int CalculateOMPPlan();
+	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
 
 	double LaunchMJD;
-	double mu;
 	double R_E;
 	double w_E;
-	OBJHANDLE hEarth;
 
 	SV sv_chaser, sv_target;
 };

@@ -32,6 +32,26 @@ namespace OrbMech
 		double TA = 0.0;
 	};
 
+	//Classical elements
+	struct CELEMENTS
+	{
+		//Semi-major axis
+		double a = 0.0;
+		//Eccentricity
+		double e = 0.0;
+		//Inclination
+		double i = 0.0;
+		//Longitude of the ascending node
+		double h = 0.0;
+		//Argument of pericenter
+		double g = 0.0;
+		//Mean Anomaly
+		double l = 0.0;
+
+		CELEMENTS operator+(const CELEMENTS&) const;
+		CELEMENTS operator-(const CELEMENTS&) const;
+	};
+
 	//Trajectory computations
 	void oneclickcoast(VECTOR3 R0, VECTOR3 V0, double mjd0, double dt, VECTOR3 &R1, VECTOR3 &V1);
 	void rv_from_r0v0(VECTOR3 R0, VECTOR3 V0, double t, VECTOR3 &R1, VECTOR3 &V1, double mu, double x = 0.0);
@@ -39,12 +59,14 @@ namespace OrbMech
 	double kepler_U(double dt, double ro, double vro, double a, double mu, double x0);
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu);
 	void fDot_and_gDot(double x, double r, double ro, double a, double &fdot, double &gdot, double mu);
-	double kepler_E(double e, double M);
+	double kepler_E(double e, double M, double error2 = 1.e-8);
 	double time_theta(VECTOR3 R, VECTOR3 V, double dtheta, double mu, bool future = true);
 	void f_and_g_ta(VECTOR3 R0, VECTOR3 V0, double dt, double &f, double &g, double mu);
 	void fDot_and_gDot_ta(VECTOR3 R0, VECTOR3 V0, double dt, double &fdot, double &gdot, double mu);
 	double period(VECTOR3 R, VECTOR3 V, double mu);
 	double timetoapo(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
+	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double MJD);
+	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R2, VECTOR3 &V2);
 	double timetoperi(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
 	double kepler_U_equation(double x, double ro, double vro, double a, double mu);
 	void REVUP(VECTOR3 R, VECTOR3 V, double n, double mu, VECTOR3 &R1, VECTOR3 &V1, double &t);
@@ -58,10 +80,15 @@ namespace OrbMech
 	void umbra(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool rise, double &v1);
 	double sunrise(VECTOR3 R, VECTOR3 V, double MJD, OBJHANDLE planet, OBJHANDLE planet2, bool rise, bool midnight, bool future = false);
 	void orbitmidnight(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool night, double &v1);
+	void BrouwerSecularRates(CELEMENTS mean, double mu, double &l_dot, double &g_dot, double &h_dot, double &n0);
+	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime);
+	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double MJD, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &MJD_out);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
 	void sv_from_coe(OELEMENTS el, double mu, VECTOR3 &R, VECTOR3 &V);
+	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu);
+	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V);
 	MATRIX3 GetObliquityMatrix(OBJHANDLE plan, double t);
 	MATRIX3 GetRotationMatrix(OBJHANDLE plan, double t);
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng);
@@ -78,6 +105,18 @@ namespace OrbMech
 	int Date2JD(int Y, int M, int D);
 	double Date2MJD(int Y, int D, int H, int M, double S);
 	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl);
+	double JD2MJD(double jd);
+	double MJD2JD(double mjd);
+	CELEMENTS BrouwerMeanLongToOsculatingElements(CELEMENTS mean);
+	CELEMENTS CartesianToBrouwerMeanLong(VECTOR3 R, VECTOR3 V, double mu);
+	CELEMENTS OsculatingToBrouwerMeanLong(CELEMENTS osc, double mu);
+	double MeanToTrueAnomaly(double meanAnom, double eccdp, double error2 = 1e-12);
+	double TrueToMeanAnomaly(double ta, double eccdp);
+	double TrueToEccentricAnomaly(double ta, double ecc);
+	VECTOR3 EclipticToECI(VECTOR3 v, double MJD);
+	void EclipticToECI(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ECI, VECTOR3 &V_ECI);
+	VECTOR3 ECIToEcliptic(VECTOR3 v, double MJD);
+	void ECIToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl);
 
 	//Math
 	double stumpS(double z);

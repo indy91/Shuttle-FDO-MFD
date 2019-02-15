@@ -427,9 +427,9 @@ namespace OrbMech
 		return x;
 	}
 
-	double kepler_E(double e, double M)
+	double kepler_E(double e, double M, double error2)
 	{
-		double error2, ratio, E;
+		double ratio, E;
 		//{
 		//	This function uses Newton's method to solve Kepler's
 		//		equation E - e*sin(E) = M for the eccentric anomaly,
@@ -440,7 +440,6 @@ namespace OrbMech
 		//}
 		// ----------------------------------------------
 
-		error2 = 1.e-8;
 		ratio = 1.0;
 
 		if (M < PI)
@@ -459,6 +458,84 @@ namespace OrbMech
 		}
 		return E;
 	} //kepler_E
+
+	double MeanToTrueAnomaly(double meanAnom, double eccdp, double error2)
+	{
+		double ta;
+
+		double E = kepler_E(eccdp, meanAnom, error2);
+		if (E < 0.0)
+			E = E + PI2;
+		double c = abs(E - PI);
+		if (c >= 1.0e-8)
+		{
+			ta = 2.0 * atan(sqrt((1.0 + eccdp) / (1.0 - eccdp))*tan(E / 2.0));
+		}
+		else
+		{
+			ta = E;
+		}
+
+		if (ta < 0)
+			ta += PI2;
+
+		return ta;
+	}
+
+	double TrueToMeanAnomaly(double ta, double eccdp)
+	{
+		double ma = 0.0;
+		double E = TrueToEccentricAnomaly(ta, eccdp);
+		ma = E - eccdp * sin(E);
+		if (ma < 0.0)
+			ma = ma + PI2;
+		return ma;
+	}
+
+	double TrueToEccentricAnomaly(double ta, double ecc)
+	{
+		double ea;
+		double cosTa = cos(ta);
+		double eccCosTa = ecc * cosTa;
+		double sinEa = (sqrt(1.0 - ecc * ecc)*sin(ta)) / (1.0 + eccCosTa);
+		double cosEa = (ecc + cosTa) / (1.0 + eccCosTa);
+		ea = atan2(sinEa, cosEa);
+
+		if (ea < 0.0)
+			ea = ea + PI2;
+
+		return ea;
+	}
+
+	VECTOR3 EclipticToECI(VECTOR3 v, double MJD)
+	{
+		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
+		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		return rhtmul(Rot, v);
+	}
+
+	void EclipticToECI(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ECI, VECTOR3 &V_ECI)
+	{
+		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
+		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		R_ECI = rhtmul(Rot, R);
+		V_ECI = rhtmul(Rot, V);
+	}
+
+	VECTOR3 ECIToEcliptic(VECTOR3 v, double MJD)
+	{
+		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
+		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		return rhmul(Rot, v);
+	}
+
+	void ECIToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl)
+	{
+		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
+		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		R_ecl = rhmul(Rot, R);
+		V_ecl = rhmul(Rot, V);
+	}
 
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu)	//calculates the Lagrange f and g coefficients
 	{
@@ -1343,11 +1420,17 @@ namespace OrbMech
 
 	double MJDToDate(double MJD)
 	{
-		double fSimGMT = (fmod(MJD - 41317, 365))*86400.0; //MJD 40952 == Jan. 1, 1970, 00:00:00
-		int Days = (int)(MJD - 41317.0);
-		int leap_days = Days / 1460 + 1;
-		fSimGMT -= leap_days * 86400.0; //compensate for leap years
-		return fSimGMT;
+		double JD, temp, JDint, JDfrac, tu, year, leapyrs, days;
+
+		JD = MJD2JD(MJD);
+		JDfrac = modf(JD, &JDint);
+		temp = JDint - 2415019.5;
+		tu = temp / 365.25;
+		year = 1900 + (int)floor(tu);
+		leapyrs = (int)floor((year - 1901) * 0.25);
+		days = floor(temp - ((year - 1900) * 365.0 + leapyrs));
+
+		return (days + JDfrac - 0.5)*24.0*3600.0;
 	}
 
 	MATRIX3 LVLH_Matrix(VECTOR3 R, VECTOR3 V)
@@ -1387,6 +1470,16 @@ namespace OrbMech
 		MJD = MJD + timeofday - 0.5;
 		return MJD;
 	}
+
+	double JD2MJD(double jd)
+	{
+		return jd - 2400000.5;
+	}
+
+	double MJD2JD(double mjd)
+	{
+		return mjd + 2400000.5;
+	}	
 
 	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl)
 	{
@@ -1535,6 +1628,705 @@ namespace OrbMech
 		V = tmul(Q_Xp, vp);
 	}
 
+	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu)
+	{
+		CELEMENTS out;
+		OELEMENTS coe = coe_from_sv(R, V, mu);
+
+		out.a = coe.h*coe.h / (mu*(1.0 - coe.e*coe.e));
+		out.e = coe.e;
+		out.i = coe.i;
+		out.g = coe.w;
+		out.h = coe.RA;
+		out.l = TrueToMeanAnomaly(coe.TA, coe.e);
+
+		return out;
+	}
+
+	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V)
+	{
+		OELEMENTS el;
+
+		el.e = coe.e;
+		el.h = sqrt(coe.a*mu*(1.0 - coe.e*coe.e));
+		el.i = coe.i;
+		el.RA = coe.h;
+		el.TA = MeanToTrueAnomaly(coe.l, coe.e);
+		el.w = coe.g;
+
+		sv_from_coe(el, mu, R, V);
+	}
+
+	CELEMENTS BrouwerMeanLongToOsculatingElements(CELEMENTS mean)
+	{
+		CELEMENTS out = mean;
+
+		int pseudostate = 0;
+
+		//Earth radius
+		double re = 6.37101e6;
+		double j2 = 1082.6269e-6;
+		double j3 = -2.51e-6;
+		double j4 = -1.60e-6;
+		double j5 = -0.15e-6;
+
+		//GMAT
+		/*double re = 6.3781363e6;
+		double j2 = 1.082626925638815e-03;
+		double j3 = -0.2532307818191774e-5;
+		double j4 = -0.1620429990000000e-5;
+		double j5 = -0.2270711043920343e-6;*/
+
+		//Earth radius
+		double ae = 1.0;
+		//Semi-major axis in Earth radii
+		double smadp = mean.a / re;
+		double eccdp = mean.e;
+		double incdp = mean.i;
+		double raandp = mean.h;
+		double aopdp = mean.g;
+		double meanAnom = mean.l;
+
+		if (incdp > 175.0*RAD)
+		{
+			incdp = PI - incdp;
+			raandp = -raandp;
+			pseudostate = 1;
+		}
+		if (eccdp > 0.99)
+		{
+			//Error
+			return out;
+		}
+		double radper = mean.a*(1.0 - mean.e);
+		if (radper < 3000.0e3)
+		{
+			//Error
+			return out;
+		}
+		if (mean.i > PI)
+		{
+			//Error
+			return out;
+		}
+		raandp = fmod(raandp, PI2);
+		aopdp = fmod(aopdp, PI2);
+		meanAnom = fmod(meanAnom, PI2);
+		if (raandp < 0.0)
+		{
+			raandp = raandp + PI2;
+		}
+		if (aopdp < 0.0)
+		{
+			aopdp = aopdp + PI2;
+		}
+		if (meanAnom < 0.0)
+		{
+			meanAnom = meanAnom + PI2;
+		}
+
+		double bk2 = (1.0 / 2.0)*(j2*ae*ae);
+		double bk3 = -j3 * pow(ae, 3.0);
+		double bk4 = -(3.0 / 8.0)*j4*pow(ae, 4.0);
+		double bk5 = -j5 * pow(ae, 5.0);
+		double eccdp2 = eccdp * eccdp;
+		double cn2 = 1.0 - eccdp2;
+		double cn = sqrt(cn2);
+
+		double gm2 = bk2 / pow(smadp, 2.0);
+		double gmp2 = gm2 / (cn2*cn2);
+		double gm3 = bk3 / pow(smadp, 3.0);
+		double gmp3 = gm3 / (cn2*cn2*cn2);
+		double gm4 = bk4 / pow(smadp, 4.0);
+		double gmp4 = gm4 / pow(cn, 8.0);
+		double gm5 = bk5 / pow(smadp, 5.0);
+		double gmp5 = gm5 / pow(cn, 10.0);
+
+		double g3dg2 = gmp3 / gmp2;
+		double g4dg2 = gmp4 / gmp2;
+		double g5dg2 = gmp5 / gmp2;
+
+		double theta = cos(incdp);
+		double theta2 = theta * theta;
+		double theta4 = theta2 * theta2;
+
+		double sinMADP = sin(meanAnom);
+		double cosMADP = cos(meanAnom);
+		double sinraandp = sin(raandp);
+		double cosraandp = cos(raandp);
+
+		double tadp = MeanToTrueAnomaly(meanAnom, eccdp, 1e-12);
+
+		double rp = smadp * (1.0 - eccdp * eccdp) / (1.0 + eccdp * cos(tadp));
+		double adr = smadp / rp;
+		double sinta = sin(tadp);
+		double costa = cos(tadp);
+		double cs2gta = cos(2.0*aopdp + 2.0*tadp);
+		double adr2 = adr * adr;
+		double adr3 = adr2 * adr;
+		double costa2 = costa * costa;
+
+		double a1 = ((1.0 / 8.0)*gmp2*cn2)*(1.0 - 11.0*theta2 - ((40.0*theta4) / (1.0 - 5.0*theta2)));
+		double a2 = ((5.0 / 12.0)*g4dg2*cn2)*(1.0 - ((8.0*theta4) / (1.0 - 5.0*theta2)) - 3.0*theta2);
+		double a3 = g5dg2 * ((3.0*eccdp2) + 4.0);
+		double a4 = g5dg2 * (1.0 - (24.0*theta4) / (1.0 - 5.0*theta2) - 9.0*theta2);
+		double a5 = (g5dg2*(3.0*eccdp2 + 4.0))*(1.0 - (24.0*theta4) / (1.0 - 5.0*theta2) - 9.0*theta2);
+		double a6 = g3dg2 * (1.0 / 4.0);
+		double sinI = sin(incdp);
+		double a10 = cn2 * sinI;
+		double a7 = a6*a10;
+		double a8p = g5dg2 * eccdp*(1.0 - (16.0*theta4) / (1.0 - 5.0*theta2) - 5.0*theta2);
+		double a8 = a8p * eccdp;
+
+		double b13 = eccdp * (a1 - a2);
+		double b14 = a7 + (5.0 / 64.0)*a5*a10;
+		double b15 = a8 * a10*(35.0 / 384.0);
+
+		double a11 = 2.0 + eccdp2;
+		double a12 = 3.0*eccdp2 + 2.0;
+		double a13 = theta2 * a12;
+		double a14 = (5.0*eccdp2 + 2.0)*(theta4 / (1.0 - 5.0*theta2));
+		double a17 = theta4 / ((1.0 - 5.0*theta2)*(1.0 - 5.0*theta2));
+		double a15 = (eccdp2*theta4*theta2) / ((1.0 - 5.0*theta2)*(1.0 - 5.0*theta2));
+		double a16 = theta2 / (1.0 - 5.0*theta2);
+		double a18 = eccdp * sinI;
+		double a19 = a18 / (1.0 + cn);
+		double a21 = eccdp * theta;
+		double a22 = eccdp2 * theta;
+		double sinI2 = sin(incdp / 2.0);
+		double cosI2 = cos(incdp / 2.0);
+		double tanI2 = tan(incdp / 2.0);
+		double a26 = 16.0*a16 + 40.0*a17 + 3.0;
+		double a27 = a22 * (1.0 / 8.0)*(11.0 + 200.0*a17 + 80.0*a16);
+
+		double b1 = cn * (a1 - a2) - ((a11 - 400.0*a15 - 40.0*a14 - 11.0*a13)*(1.0 / 16.0) + (11.0 + 200.0*a17 + 80.0*a16)*a22*(1.0 / 8.0))*gmp2 + ((-80.0*a15 - 8.0*a14 - 3.0*a13 + a11)*(5.0 / 24.0) + (5.0 / 12.0)*a26*a22)*g4dg2;
+		double b2 = a6 * a19*(2.0 + cn - eccdp2) + (5.0 / 64.0)*a5*a19*cn2 - (15.0 / 32.0)*a4*a18*cn*cn2 + ((5.0 / 64.0)*a5 + a6)*a21*tanI2 + (9.0*eccdp2 + 26.0)*(5.0 / 64.0)*a4*a18 + (15.0 / 32.0)*a3*a21*a26*sinI*(1.0 - theta);
+		double b3 = ((80.0*a17 + 5.0 + 32.0*a16)*a22*sinI*(theta - 1.0)*(35.0 / 576.0)*g5dg2*eccdp) - ((a22*tanI2 + (2.0*eccdp2 + 3.0*(1.0 - cn2 * cn))*sinI)*(35.0 / 1152.0)*a8p);
+		double b4 = cn * eccdp*(a1 - a2);
+		double b5 = ((9.0*eccdp2 + 4.0)*a10*a4*(5.0 / 64.0) + a7)*cn;
+		double b6 = (35.0 / 384.0)*a8*cn2*cn*sinI;
+		double b7 = ((cn2*a18) / (1.0 - 5.0*theta2))*((1.0 / 8.0)*gmp2*(1.0 - 15.0*theta2) + (1.0 - 7.0*theta2)*g4dg2*(-(5.0 / 12.0)));
+		double b8 = (5.0 / 64.0)*(a3*cn2*(1.0 - 9.0*theta2 - (24.0*theta4 / (1.0 - 5.0*theta2)))) + a6 * cn2;
+		double b9 = a8 * (35.0 / 384.0)*cn2;
+		double b10 = sinI * (a22*a26*g4dg2*(5.0 / 12.0) - a27 * gmp2);
+		double b11 = a21 * (a5*(5.0 / 64.0) + a6 + a3 * a26*(15.0 / 32.0)*sinI*sinI);
+		double b12 = -((80.0*a17 + 32.0*a16 + 5.0)*(a22*eccdp*sinI*sinI*(35.0 / 576.0)*g5dg2) + (a8*a21*(35.0 / 1152.0)));
+
+		double sma = smadp * (1.0 + gm2 * ((3.0*theta2 - 1.0)*(eccdp2 / (cn2*cn2*cn2))*(cn + (1.0 / (1.0 + cn))) + ((3.0*theta2 - 1.0) / (cn2*cn2*cn2))*(eccdp*costa)*(3.0 + 3.0*eccdp*costa + eccdp2 * costa2) + 3.0*(1.0 - theta2)*adr3*cs2gta));
+		double sn2gta = sin(2.0*aopdp + 2.0*tadp);
+		double snf2gd = sin(2.0*aopdp + tadp);
+		double csf2gd = cos(2.0*aopdp + tadp);
+		double sn2gd = sin(2.0*aopdp);
+		double cs2gd = cos(2.0*aopdp);
+		double sin3gd = sin(3.0*aopdp);
+		double cs3gd = cos(3.0*aopdp);
+		double sn3fgd = sin(3.0*tadp + 2.0*aopdp);
+		double cs3fgd = cos(3.0*tadp + 2.0*aopdp);
+		double sinGD = sin(aopdp);
+		double cosGD = cos(aopdp);
+
+		double bisubc = pow((1.0 - 5.0*theta2), -2.0)*((25.0*theta4*theta)*(gmp2*eccdp2));
+		double blghp, eccdpdl, dltI, sinDH, dlt1e;
+
+		if (bisubc >= 0.001)
+		{
+			dlt1e = 0.0;
+			blghp = 0.0;
+			eccdpdl = 0.0;
+			dltI = 0.0;
+			sinDH = 0.0;
+		}
+		else
+		{
+			blghp = raandp + aopdp + meanAnom + b3 * cs3gd + b1 * sn2gd + b2 * cosGD;
+			blghp = fmod(blghp, PI2);
+			if (blghp < 0.0)
+			{
+				blghp = blghp + PI2;
+			}
+			dlt1e = b14 * sinGD + b13 * cs2gd - b15 * sin3gd;
+			eccdpdl = b4 * sn2gd - b5 * cosGD + b6 * cs3gd - (1.0 / 4.0)*cn2*cn*gmp2*(2.0*(3.0*theta2 - 1.0)*(adr2*cn2 + adr + 1.0)*sinta + 3.0*(1.0 - theta2)*((-adr2 * cn2 - adr + 1.0)*snf2gd + (adr2*cn2 + adr + (1.0 / 3.0))*sn3fgd));
+			dltI = (1.0 / 2.0)*theta*gmp2*sinI*(eccdp*cs3fgd + 3.0*(eccdp*csf2gd + cs2gta)) - (a21 / cn2)*(b8*sinGD + b7 * cs2gd - b9 * sin3gd);
+			sinDH = (1.0 / cosI2)*((1.0 / 2.0)*(b12*cs3gd + b11 * cosGD + b10 * sn2gd - ((1.0 / 2.0)*gmp2*theta*sinI*(6.0*(eccdp*sinta - meanAnom + tadp) - (3.0*(sn2gta + eccdp * snf2gd) + eccdp * sn3fgd)))));
+		}
+
+		double blgh = blghp + ((1.0 / (cn + 1.0))*(1.0 / 4.0)*eccdp*gmp2*cn2*(3.0*(1.0 - theta2)*(sn3fgd*((1.0 / 3.0) + adr2 * cn2 + adr) + snf2gd * (1.0 - (adr2*cn2 + adr))) + 2.0*sinta*(3.0*theta2 - 1.0)*(adr2*cn2 + adr + 1.0)))
+			+ gmp2 * (3.0 / 2.0)*((-2.0*theta - 1.0 + 5.0*theta2)*(eccdp*sinta + tadp - meanAnom)) + (3.0 + 2.0*theta - 5.0*theta2)*(gmp2*(1.0 / 4.0)*(eccdp*sn3fgd + 3.0*(sn2gta + eccdp * snf2gd)));
+		blgh = fmod(blgh, PI2);
+		if (blgh < 0.0)
+		{
+			blgh = blgh + PI2;
+		}
+
+		double dlte = dlt1e + ((1.0 / 2.0)*cn2*((3.0*(1.0 / (cn2*cn2*cn2))*gm2*(1.0 - theta2)*cs2gta*(3.0*eccdp*costa2 + 3.0*costa + eccdp2 * costa*costa2 + eccdp))
+			- (gmp2*(1.0 - theta2)*(3.0*csf2gd + cs3fgd)) + (3.0*theta2 - 1.0)*gm2*(1.0 / (cn2*cn2*cn2))*(eccdp*cn + (eccdp / (1.0 + cn)) + 3.0*eccdp*costa2 + 3.0*costa + eccdp2 * costa*costa2)));
+		double eccdpdl2 = eccdpdl * eccdpdl;
+		double eccdpde2 = (eccdp + dlte)*(eccdp + dlte);
+
+		double ecc = sqrt(eccdpdl2 + eccdpde2);
+		double sinDH2 = sinDH * sinDH;
+		double squar = (dltI*cosI2*(1.0 / 2.0) + sinI2)*(dltI*cosI2*(1.0 / 2.0) + sinI2);
+		double sqrI = sqrt(sinDH2 + squar);
+
+		double inc = 2 * asin(sqrI);
+		inc = fmod(inc, PI2);
+
+		double ma, raan, aop;
+		if (ecc <= 1.0e-11)
+		{
+			aop = 0.0;
+			if (inc <= 1.0e-7)
+			{
+				raan = 0.0;
+				ma = blgh;
+			}
+			else
+			{
+				double arg1 = sinDH * cosraandp + sinraandp * ((1.0 / 2.0)*dltI*cosI2 + sinI2);
+				double arg2 = cosraandp * ((1.0 / 2.0)*dltI*cosI2 + sinI2) - (sinDH*sinraandp);
+				raan = atan2(arg1, arg2);
+				ma = blgh - aop - raan;
+			}
+		}
+		else
+		{
+			double arg1 = eccdpdl * cosMADP + (eccdp + dlte)*sinMADP;
+			double arg2 = (eccdp + dlte)*cosMADP - (eccdpdl*sinMADP);
+			ma = atan2(arg1, arg2);
+			ma = fmod(ma, PI2);
+
+			if (inc <= 1.0e-7)
+			{
+				raan = 0.0;
+				aop = blgh - raan - ma;
+			}
+			else
+			{
+				double arg1 = sinDH * cosraandp + sinraandp * ((1.0 / 2.0)*dltI*cosI2 + sinI2);
+				double arg2 = cosraandp * ((1.0 / 2.0)*dltI*cosI2 + sinI2) - (sinDH*sinraandp);
+				raan = atan2(arg1, arg2);
+				aop = blgh - ma - raan;
+			}
+		}
+
+		if (ma < 0.0)
+		{
+			ma = ma + PI2;
+		}
+
+		raan = fmod(raan, PI2);
+		if (raan < 0)
+		{
+			raan = raan + PI2;
+		}
+
+		aop = fmod(aop, PI2);
+		if (aop < 0.0)
+		{
+			aop = aop + PI2;
+		}
+
+		out.a = sma * re;
+		out.e = ecc;
+		out.g = aop;
+		out.h = raan;
+		out.i = inc;
+		out.l = ma;
+
+		if (pseudostate != 0)
+		{
+			out.i = PI - out.i;
+			out.h = PI2 - out.h;
+		}
+
+		return out;
+	}
+
+	void BrouwerSecularRates(CELEMENTS mean, double mu, double &l_dot, double &g_dot, double &h_dot, double &n0)
+	{
+		//Orbiter 2016
+		double re = 6.37101e6;
+		double j2 = 1082.6269e-6;
+		double j4 = -1.60e-6;
+
+		double ae = 1.0;
+		double smadp = mean.a / re;
+		double eccdp = mean.e;
+		double incdp = mean.i;
+
+		n0 = sqrt(mu / (pow(mean.a, 3.0)));
+		double eccdp2 = eccdp * eccdp;
+		double cn2 = 1.0 - eccdp2;
+		double cn = sqrt(cn2);
+		double bk2 = (1.0 / 2.0)*(j2*ae*ae);
+		double bk4 = -(3.0 / 8.0)*j4*pow(ae, 4.0);
+		double gm2 = bk2 / pow(smadp, 2.0);
+		double gmp2 = gm2 / (cn2*cn2);
+		double gm4 = bk4 / pow(smadp, 4.0);
+		double gmp4 = gm4 / pow(cn, 8.0);
+		double theta = cos(incdp);
+		double theta2 = theta * theta;
+		double theta3 = theta2 * theta;
+		double theta4 = theta2 * theta2;
+
+		l_dot = n0 * cn*(gmp2*((3.0 / 2.0)*(3.0*theta2 - 1.0) + (3.0 / 32.0)*gmp2*(25.0*cn2 + 16.0*cn - 15.0 + (30.0 - 96.0*cn - 90.0*cn2)*theta2 +
+			(105.0 + 144.0*cn + 25.0*cn2)*theta4)) + (15.0 / 16.0)*gmp4*eccdp2*(3.0 - 30.0*theta2 + 35.0*theta4));
+		g_dot = n0 * (gmp2*((3.0 / 2.0)*(5.0*theta2 - 1.0) + (3.0 / 32.0)*gmp2*(25.0*cn2 + 24.0*cn - 35.0
+			+ (90.0 - 192.0*cn - 126.0*cn2)*theta2 + (385.0 + 360.0*cn + 45.0*cn2)*theta4))
+			+ (5.0 / 16.0)*gmp4*(21.0 - 9.0*cn2 + (126.0*cn2 - 270.0)*theta2 + (385.0 - 189.0*cn2)*theta4));
+		h_dot = n0 * (gmp2*((3.0 / 8.0)*gmp2*((9.0*cn2 + 12.0*cn - 5.0)*theta - (35.0 + 36.0*cn + 5.0*cn2)*theta3) - 3.0*theta)
+			+ (5.0 / 4.0)*gmp4*theta*(5.0 - 3.0*cn2)*(3.0 - 7.0*theta2));
+	}
+
+	CELEMENTS OsculatingToBrouwerMeanLong(CELEMENTS osc, double mu)
+	{
+		VECTOR3 R, V;
+		KeplerianToCartesian(osc, mu, R, V);
+		return CartesianToBrouwerMeanLong(R, V, mu);
+	}
+
+	CELEMENTS CartesianToBrouwerMeanLong(VECTOR3 R, VECTOR3 V, double mu)
+	{
+		VECTOR3 R0, V0;
+		CELEMENTS out;
+		double tol = 1.0e-8;
+		int maxiter = 75;
+		R0 = R;
+		V0 = V;
+
+		CELEMENTS kep = CartesianToKeplerian(R, V, mu);
+		out = kep;
+
+		if ((kep.e > 0.99) || (kep.e < 0.0))
+		{
+			//Error
+			return out;
+		}
+		double radper = (kep.a*(1.0 - kep.e));
+		if (radper < 3000.0e3)
+		{
+			//Error
+			return out;
+		}
+		if (kep.i > PI)
+		{
+			//Error
+			return out;
+		}
+		int pseudostate = 0;
+		if (kep.i > 175.0*RAD)
+		{
+			kep.i = PI - kep.i;
+			kep.h = -kep.h;
+			KeplerianToCartesian(kep, mu, R0, V0);
+			pseudostate = 1;
+		}
+
+		CELEMENTS blmean = kep;
+		CELEMENTS kep2;
+		kep2 = BrouwerMeanLongToOsculatingElements(kep);
+		CELEMENTS blmean2;
+
+		CELEMENTS aeq, aeq2, aeqmean, aeqmean2;
+
+		aeq.a = kep.a;
+		aeq.e = kep.e*sin(kep.g + kep.h);
+		aeq.i = kep.e*cos(kep.g + kep.h);
+		aeq.h = sin(kep.i / 2.0)*sin(kep.h);
+		aeq.g = sin(kep.i / 2.0)*cos(kep.h);
+		aeq.l = kep.h + kep.g + kep.l;
+
+		aeq2.a = kep2.a;
+		aeq2.e = kep2.e*sin(kep2.g + kep2.h);
+		aeq2.i = kep2.e*cos(kep2.g + kep2.h);
+		aeq2.h = sin(kep2.i / 2.0)*sin(kep2.h);
+		aeq2.g = sin(kep2.i / 2.0)*cos(kep2.h);
+		aeq2.l = kep2.h + kep2.g + kep2.l;
+
+		aeqmean.a = blmean.a;
+		aeqmean.e = blmean.e*sin(blmean.g + blmean.h);
+		aeqmean.i = blmean.e*cos(blmean.g + blmean.h);
+		aeqmean.h = sin(blmean.i / 2.0)*sin(blmean.h);
+		aeqmean.g = sin(blmean.i / 2.0)*cos(blmean.h);
+		aeqmean.l = blmean.h + blmean.g + blmean.l;
+
+		aeqmean2 = aeqmean + (aeq - aeq2);
+
+		double emag = 0.9;
+		double emag_old = 1.0;
+		int ii = 0;
+		VECTOR3 R2, V2, Rtemp, Vtemp;
+
+		while (emag > tol)
+		{
+			blmean2.a = aeqmean2.a;
+			blmean2.e = sqrt(aeqmean2.e*aeqmean2.e + aeqmean2.i*aeqmean2.i);
+			if ((aeqmean2.h*aeqmean2.h + aeqmean2.g*aeqmean2.g) <= 1.0)
+				blmean2.i = acos2(1.0 - 2.0*(aeqmean2.h*aeqmean2.h + aeqmean2.g*aeqmean2.g));
+			if ((aeqmean2.h*aeqmean2.h + aeqmean2.g*aeqmean2.g) > 1.0)
+				blmean2.i = acos2(1.0 - 2.0*1.0);
+
+			blmean2.h = atan2(aeqmean2.h, aeqmean2.g);
+			if (blmean2.h < 0)
+			{
+				blmean2.h = blmean2.h + PI2;
+			}
+			blmean2.g = atan2(aeqmean2.e, aeqmean2.i) - blmean2.h;
+			blmean2.l = aeqmean2.l - atan2(aeqmean2.e, aeqmean2.i);
+
+			kep2 = BrouwerMeanLongToOsculatingElements(blmean2);
+			KeplerianToCartesian(kep2, mu, R2, V2);
+			Rtemp = R0 - R2;
+			Vtemp = V0 - V2;
+
+			emag = sqrt(pow(Rtemp.x, 2.0) + pow(Rtemp.y, 2.0) + pow(Rtemp.z, 2.0) + pow(Vtemp.x, 2.0) + pow(Vtemp.y, 2.0) + pow(Vtemp.z, 2.0)) / sqrt(pow(R0.x, 2.0) + pow(R0.y, 2.0)
+				+ pow(R0.z, 2.0) + pow(V0.x, 2.0) + pow(V0.y, 2.0) + pow(V0.z, 2.0));
+
+			if (emag_old > emag)
+			{
+				emag_old = emag;
+
+				aeq2.a = kep2.a;
+				aeq2.e = kep2.e*sin(kep2.g + kep2.h);
+				aeq2.i = kep2.e*cos(kep2.g + kep2.h);
+				aeq2.h = sin(kep2.i / 2.0)*sin(kep2.h);
+				aeq2.g = sin(kep2.i / 2.0)*cos(kep2.h);
+				aeq2.l = kep2.h + kep2.g + kep2.l;
+
+				aeqmean = aeqmean2;
+				aeqmean2 = aeqmean + (aeq - aeq2);
+			}
+			else
+			{
+				//Error
+				break;
+			}
+			if (ii > maxiter)
+			{
+				//Error
+				break;
+			}
+			ii = ii + 1;
+		}
+
+		blmean.a = aeqmean.a;
+		blmean.e = sqrt(aeqmean.e*aeqmean.e + aeqmean.i*aeqmean.i);
+		if ((aeqmean.h*aeqmean.h + aeqmean.g*aeqmean.g) <= 1.0)
+			blmean.i = acos2(1.0 - 2.0*(aeqmean.h*aeqmean.h + aeqmean.g*aeqmean.g));
+		if ((aeqmean.h*aeqmean.h + aeqmean.g*aeqmean.g) > 1.0)
+			blmean.i = acos2(1.0 - 2.0*1.0);
+
+		blmean.h = atan2(aeqmean.h, aeqmean.g);
+		if (blmean.h < 0)
+		{
+			blmean.h = blmean.h + PI2;
+		}
+		blmean.g = atan2(aeqmean.e, aeqmean.i) - blmean.h;
+		blmean.l = aeqmean.l - atan2(aeqmean.e, aeqmean.i);
+
+		if (pseudostate != 0)
+		{
+			blmean.i = PI - blmean.i;
+			blmean.h = -blmean.h;
+		}
+
+		blmean.h = fmod(blmean.h, PI2);
+		blmean.g = fmod(blmean.g, PI2);
+		blmean.l = fmod(blmean.l, PI2);
+		if (blmean.h < 0.0)
+		{
+			blmean.h = blmean.h + PI2;
+		}
+		if (blmean.g < 0.0)
+		{
+			blmean.g = blmean.g + PI2;
+		}
+		if (blmean.l < 0.0)
+		{
+			blmean.l = blmean.l + PI2;
+		}
+
+		return blmean;
+	}
+
+	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double MJD, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &MJD_out)
+	{
+		VECTOR3 R_equ0, V_equ0, R_equ1, V_equ1;
+		double DeltaTime;
+		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
+
+		EclipticToECI(R, V, MJD, R_equ0, V_equ0);
+		double mu = GGRAV * oapiGetMass(hEarth);
+		CELEMENTS osc0 = CartesianToKeplerian(R_equ0, V_equ0, mu);
+
+		CELEMENTS osc1 = AnalyticEphemerisGenerator(osc0, opt, dval, DN, mu, DeltaTime);
+
+		KeplerianToCartesian(osc1, mu, R_equ1, V_equ1);
+		ECIToEcliptic(R_equ1, V_equ1, MJD, R2, V2);
+		MJD_out = MJD + DeltaTime / 24.0 / 3600.0;
+	}
+
+	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime)
+	{
+		//INPUT:
+		//opt: 0 = update to time, 1 = update to mean anomaly, 2 = update to argument of latitude, 3 = update to maneuver counter line
+
+		double l_dot, g_dot, h_dot, n0, dt, ll_dot;
+		CELEMENTS mean0, mean1, osc1;
+
+		mean0 = OsculatingToBrouwerMeanLong(osc0, mu);
+		BrouwerSecularRates(mean0, mu, l_dot, g_dot, h_dot, n0);
+		ll_dot = l_dot + n0;
+
+		if (opt == 0)
+		{
+			dt = dval;
+
+			mean1.a = mean0.a;
+			mean1.e = mean0.e;
+			mean1.i = mean0.i;
+			mean1.l = ll_dot * dt + mean0.l;
+			mean1.g = g_dot * dt + mean0.g;
+			mean1.h = h_dot * dt + mean0.h;
+			DeltaTime = dt;
+		}
+		else
+		{
+			double DX_L, X_L, X_L_dot, ddt, L_D;
+			int LINE, COUNT;
+			bool DH;
+
+			osc1 = osc0;
+			if (opt != 3)
+			{
+				L_D = dval;
+			}
+			else
+			{
+				double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
+				u = fmod(u, PI2);
+				if (u < 0)
+					u += PI2;
+				L_D = u;
+			}
+			DX_L = 1.0;
+			DH = DN > 0.0;
+			dt = 0.0;
+			LINE = 0;
+			COUNT = 24;
+
+			do
+			{
+				//Mean anomaly
+				if (opt == 1)
+				{
+					X_L = osc1.l;
+					X_L_dot = ll_dot;
+				}
+				//Argument of latitude
+				else if (opt == 2)
+				{
+					double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
+					u = fmod(u, PI2);
+					if (u < 0)
+						u += PI2;
+
+					X_L = u;
+					X_L_dot = ll_dot + g_dot;
+				}
+				//Maneuver line
+				else
+				{
+					double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
+					u = fmod(u, PI2);
+					if (u < 0)
+						u += PI2;
+
+					X_L = u;
+					X_L_dot = ll_dot + g_dot;
+					LINE = 2;
+				}
+
+				if (DH)
+				{
+					double DN_apo = DN * PI2;
+					ddt = DN_apo / ll_dot;
+					DH = false;
+
+					if (LINE != 0)
+					{
+						L_D = L_D + g_dot * ddt + DN_apo;
+						while (L_D < 0) L_D += PI2;
+						while (L_D >= PI2) L_D -= PI2;
+					}
+					else
+					{
+						ddt += (L_D - X_L) / X_L_dot;
+					}
+				}
+				else
+				{
+					DX_L = L_D - X_L;
+					if (abs(DX_L) - PI >= 0)
+					{
+						if (DX_L > 0)
+						{
+							DX_L -= PI2;
+						}
+						else
+						{
+							DX_L += PI2;
+						}
+					}
+					ddt = DX_L / X_L_dot;
+					if (LINE != 0)
+					{
+						L_D = L_D + ddt * g_dot;
+					}
+				}
+
+				
+				dt += ddt;
+
+				mean1.a = mean0.a;
+				mean1.e = mean0.e;
+				mean1.i = mean0.i;
+				mean1.l = ll_dot * dt + mean0.l;
+				mean1.g = g_dot * dt + mean0.g;
+				mean1.h = h_dot * dt + mean0.h;
+
+				osc1 = BrouwerMeanLongToOsculatingElements(mean1);
+
+				COUNT--;
+
+			} while (abs(DX_L) > 0.0005 && COUNT > 0);
+
+			DeltaTime = dt;
+		}
+
+		mean1.l = fmod(mean1.l, PI2);
+		if (mean1.l < 0)
+		{
+			mean1.l = mean1.l + PI2;
+		}
+
+		mean1.g = fmod(mean1.g, PI2);
+		if (mean1.g < 0)
+		{
+			mean1.g = mean1.g + PI2;
+		}
+
+		mean1.h = fmod(mean1.h, PI2);
+		if (mean1.h < 0)
+		{
+			mean1.h = mean1.h + PI2;
+		}
+
+		osc1 = BrouwerMeanLongToOsculatingElements(mean1);
+
+		return osc1;
+	}
+
 	double timetoapo(VECTOR3 R, VECTOR3 V, double mu, int s)
 	{
 		//s = 1: ensure the next apoapsis is returned
@@ -1608,6 +2400,139 @@ namespace OrbMech
 		double T_P = period(R, V, mu);
 
 		return dt + T_P;
+	}
+
+	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double MJD)
+	{
+		VECTOR3 R2, V2;
+
+		return timetoapo_integ(R, V, MJD, R2, V2);
+	}
+
+	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R2, VECTOR3 &V2)
+	{
+		OBJHANDLE hEarth;
+		OELEMENTS coe;
+		VECTOR3 R0, V0, R1, V1;
+		double mu, dt, dt_total, T_p;
+		int n, nmax;
+
+		hEarth = oapiGetObjectByName("Earth");
+		mu = GGRAV * oapiGetMass(hEarth);
+		dt_total = 0.0;
+		n = 0;
+		nmax = 20;
+
+		R0 = R;
+		V0 = V;
+
+		coe = coe_from_sv(R0, V0, mu);
+		T_p = period(R0, V0, mu);
+
+		if (coe.e > 0.005)
+		{
+			dt = timetoapo(R0, V0, mu, 1);
+			oneclickcoast(R, V, MJD, dt, R1, V1);
+
+			dt_total += dt;
+
+			do
+			{
+				dt = timetoapo(R1, V1, mu);
+				T_p = period(R1, V1, mu);
+				if (dt_total + dt > T_p)
+				{
+					dt -= T_p;
+				}
+				oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, dt, R1, V1);
+				dt_total += dt;
+				n++;
+			} while (abs(dt) > 0.01 && nmax >= n);
+
+		}
+		else
+		{
+			MATRIX3 Rot;
+			VECTOR3 Rt[3], Vt[3], Rt_equ, Vt_equ, R11, R12, V11, V12;
+			double u[3], r[3], gamma, u0, ux, uy, du1, du2, dt1, dt2, vr;
+
+			R1 = R0;
+			V1 = V0;
+
+			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, 0.0*60.0, Rt[0], Vt[0]);
+			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, 15.0*60.0, Rt[1], Vt[1]);
+			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, 30.0*60.0, Rt[2], Vt[2]);
+
+			Rot = GetObliquityMatrix(hEarth, MJD + dt_total / 24.0 / 3600.0);
+
+			for (int i = 0;i < 3;i++)
+			{
+				Rt_equ = rhtmul(Rot, Rt[i]);
+				Vt_equ = rhtmul(Rot, Vt[i]);
+				coe = coe_from_sv(Rt_equ, Vt_equ, mu);
+
+				r[i] = length(Rt_equ);
+				u[i] = fmod(coe.w + coe.TA, PI2);
+			}
+
+			gamma = (r[0] - r[1]) / (r[0] - r[2]);
+			u0 = atan2(sin(u[0]) - sin(u[1]) - gamma * (sin(u[0]) - sin(u[2])), gamma*(cos(u[2]) - cos(u[0])) - cos(u[1]) + cos(u[0]));
+
+			ux = u0 + PI05;
+			uy = u0 - PI05;
+
+			du1 = fmod(ux - u[0], PI2);
+			du2 = fmod(uy - u[0], PI2);
+
+			dt1 = time_theta(R1, V1, du1, mu);
+			if (dt1 < 0 && n == 0)
+			{
+				dt1 += T_p;
+			}
+			dt2 = time_theta(R1, V1, du2, mu);
+			if (dt2 < 0 && n == 0)
+			{
+				dt2 += T_p;
+			}
+
+			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, dt1, R11, V11);
+			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, dt2, R12, V12);
+
+			if (length(R11) > length(R12))
+			{
+				dt = dt1;
+				R1 = R11;
+				V1 = V11;
+			}
+			else
+			{
+				dt = dt2;
+				R1 = R12;
+				V1 = V12;
+			}
+
+			dt_total += dt;
+
+			dt = 10.0;
+
+			do
+			{
+				oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, dt, R1, V1);
+				dt_total += dt;
+				vr = dotp(R1, V1) / length(R1);
+				if (dt*vr < 0)
+				{
+					dt = -dt * 0.5;
+				}
+
+				n++;
+			} while (abs(dt) > 0.01);
+		}
+
+		R2 = R1;
+		V2 = V1;
+
+		return dt_total;
 	}
 
 	double kepler_U_equation(double x, double ro, double vro, double a, double mu)
@@ -1692,7 +2617,7 @@ namespace OrbMech
 			else
 			{
 				p = (e - eo) / (x - xo);
-				if (c > 15)
+				if (c > 20)
 				{
 					s = 1;
 				}
@@ -1703,6 +2628,34 @@ namespace OrbMech
 				}
 			}
 		}
+	}
+
+	CELEMENTS CELEMENTS::operator+(const CELEMENTS& c) const
+	{
+		CELEMENTS result;
+
+		result.a = this->a + c.a;
+		result.e = this->e + c.e;
+		result.i = this->i + c.i;
+		result.h = this->h + c.h;
+		result.g = this->g + c.g;
+		result.l = this->l + c.l;
+
+		return result;
+	}
+
+	CELEMENTS CELEMENTS::operator-(const CELEMENTS& c) const
+	{
+		CELEMENTS result;
+
+		result.a = this->a - c.a;
+		result.e = this->e - c.e;
+		result.i = this->i - c.i;
+		result.h = this->h - c.h;
+		result.g = this->g - c.g;
+		result.l = this->l - c.l;
+
+		return result;
 	}
 
 	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double mjd0, double deltat)
