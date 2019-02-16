@@ -661,6 +661,8 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	if (ManeuverConstraintsTable.size() < 1) return 1;	//Error 1: No maneuvers in constraint table
 	if (ManeuverConstraintsTable[0].threshold != OMPDefs::THRESHOLD::THRES_T) return 2;	//Error 2: First maneuver needs a T as threshold
 
+	ManeuverEvaluationTable.clear();
+
 	SV *sv_bef_table, *sv_aft_table, *sv_P_table;
 	VECTOR3 DV;
 	VECTOR3 *dv_table;
@@ -1269,7 +1271,6 @@ void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 	double apo, peri, dt1, dt2;
 	OBJHANDLE hSun;
 	MANEVALDATA man;
-	ManeuverEvaluationTable.clear();
 
 	sv_cur = sv_A0;
 	hSun = oapiGetObjectByName("hSun");
