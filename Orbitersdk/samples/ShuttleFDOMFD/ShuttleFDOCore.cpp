@@ -693,91 +693,82 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		add_constraint[i] = _V(0, 0, 0);
 	}
 
+	ITERCONSTR con;
 	bool npcflag = false;
 	int found;
 	//SET UP ITERATORS and CHECK THAT THRESHOLDS EXIST
 	for (i = 0;i < TAB;i++)
 	{
-		found = 0;
 		if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::NOTHR) return 5;	//Error 5: Maneuver doesn't have a threshold
 		
-		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC)
+		//Look through all secondary constraints
+		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
 		{
-			ITERCONSTR con;
+			found = 0;
 
-			for (k = i + 1;k < TAB;k++)
+			//DR constraint found
+			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DR") == 0)
 			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
+				for (k = i - 1;k >= 0;k--)
 				{
-					if (!_strnicmp(ManeuverConstraintsTable[k].secondaries[j].type, "DR", 4))
+					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NC)
 					{
 						found = 1;
-						con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
 					}
 					if (found) break;
 				}
-				if (found) break;
+
+				if (!found) return 7;	//Error 7: didn't find NC constraint
+
+				con.man = k;
+				con.type = 1;
+				con.constr = i;
+				con.value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
+
+				iterators.push_back(con);
 			}
-			if (!found) return 7;	//Error 7 didn't find NC constraint
-
-			con.man = i;
-			con.type = 1;
-			con.constr = k;
-
-			iterators.push_back(con);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
-		{
-			ITERCONSTR con;
-
-			for (k = i + 1;k < TAB;k++)
+			//DH constraint found
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DH") == 0)
 			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
+				for (k = i - 1;k >= 0;k--)
 				{
-					if (!_strnicmp(ManeuverConstraintsTable[k].secondaries[j].type, "DH", 4))
+					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NH)
 					{
 						found = 1;
-						con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
 					}
 					if (found) break;
 				}
-				if (found) break;
+
+				if (!found) return 8;	//Error 8: didn't find NH constraint
+
+				con.man = k;
+				con.type = 2;
+				con.constr = i;
+				con.value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
+
+				iterators.push_back(con);
 			}
-			if (!found) return 8;	//Error 7 didn't find NH constraint
-
-			con.man = i;
-			con.type = 2;
-			con.constr = k;
-
-			iterators.push_back(con);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
-		{
-			if (npcflag) return 22;	//Error 22: More than one NPC maneuver specified
-			//Allow only one NPC maneuver
-			npcflag = true;
-
-			ITERCONSTR con;
-
-			for (k = i + 1;k < TAB;k++)
+			//WEDG constraint found
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "WEDG") == 0)
 			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
+				for (k = i - 1;k >= 0;k--)
 				{
-					if (!_strnicmp(ManeuverConstraintsTable[k].secondaries[j].type, "WEDG", 4))
+					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NPC)
 					{
+						//if (npcflag) return 22;	//Error 22: More than one NPC maneuver specified
+						//Allow only one NPC maneuver
+						//npcflag = true;
 						found = 1;
-						con.value = ManeuverConstraintsTable[k].secondaries[j].value*RAD;
 					}
 					if (found) break;
 				}
-				if (found) break;
-			}
-			//Only set up the iterator if WEDG was specified and nonspherical gravity enabled
-			if (found && useNonSphericalGravity)
-			{
-				con.man = i;
+
+				if (!found) return 8;	//Error 8: didn't find NH constraint
+
+				con.man = k;
 				con.type = 3;
-				con.constr = k;
+				con.constr = i;
+				con.value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
 
 				iterators.push_back(con);
 			}
@@ -909,10 +900,17 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			{
 				dv_table[i] = _V(ManeuverConstraintsTable[i].secondaries[j].value*0.3048, 0, 0);
 			}
+			//Common Node
 			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "CN") == 0)
 			{
 				if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NPC) return 14;	//Error 14: CN secondary only applies to NPC
 				tigmodifiers[i].type = OMPDefs::SECONDARIES::CN;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
+			}
+			//Maneuver at nth upcoming apsis
+			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "APS") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::SEC_APS;
 				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
 			}
 		}
@@ -1237,6 +1235,10 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 		
 		i++;
+		if (i == TAB && IsOMPConverged(iterstate, iterators.size()) == false)
+		{
+			i = 0;
+		}
 	} while (i < TAB || IsOMPConverged(iterstate, iterators.size()) == false);
 
 	MANEUVER man;
