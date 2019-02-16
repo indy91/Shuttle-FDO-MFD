@@ -409,7 +409,7 @@ SV ShuttleFDOCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param, d
 
 		n0 = sqrt(mu / (osc0.a*osc0.a*osc0.a));
 		ll_dot = n0;
-		g_dot = n0 * (-(3.0 / 4.0)*(J20*R_E*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
+		g_dot = n0 * ((3.0 / 4.0)*(J20*R_E*R_E*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
 
 		osc1 = osc0;
 		if (opt != 3)
