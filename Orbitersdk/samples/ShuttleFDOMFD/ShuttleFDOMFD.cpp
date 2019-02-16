@@ -252,45 +252,45 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		for (unsigned i = 0;i < G->ManeuverEvaluationTable.size();i++)
 		{
 			sprintf_s(Buffer, "%d", i + 1);
-			skp->Text(1 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable[i].type);
-			skp->Text(3 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(3 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable[i].name);
-			skp->Text(1 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable[i].DVMag);
-			skp->Text(1 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 
 			GMT2String(Buffer, G->ManeuverEvaluationTable[i].GMTIG);
-			skp->Text(6 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 			MET2String(Buffer, G->ManeuverEvaluationTable[i].METIG);
-			skp->Text(6 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 			MET2String(Buffer, G->ManeuverEvaluationTable[i].DT);
-			skp->Text(6 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].DV.x);
-			skp->Text(16 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].DV.y);
-			skp->Text(16 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].DV.z);
-			skp->Text(16 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].HA);
-			skp->Text(19 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].HP);
-			skp->Text(19 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable[i].DH);
-			skp->Text(19 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable[i].RANGE);
-			skp->Text(24 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable[i].PHASE);
-			skp->Text(24 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 			SS2HHMMSS(G->ManeuverEvaluationTable[i].TTN, hh, mm, ss);
 			if (G->ManeuverEvaluationTable[i].noon)
 			{
@@ -300,12 +300,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "M-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(24 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable[i].Y);
-			skp->Text(30 * W / 32, (i * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable[i].Ydot);
-			skp->Text(30 * W / 32, (i * 3 + 6) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (i * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
 			SS2HHMMSS(G->ManeuverEvaluationTable[i].TTS, hh, mm, ss);
 			if (G->ManeuverEvaluationTable[i].sunrise)
 			{
@@ -315,7 +315,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "SS-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(30 * W / 32, (i * 3 + 7) * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::LEFT);
 		}
