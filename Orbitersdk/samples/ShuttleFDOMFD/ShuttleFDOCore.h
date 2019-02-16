@@ -43,8 +43,8 @@ class OMPDefs
 {
 public:
 	typedef enum { NOMAN, APSO, CIRC, DVPY, DVYP, EXDV, HA, HASH, LSDV, NOSH, PC, NC, NCC, NH, NHRD, NPC, NS, NSR, SOI, SOM, SOR, TPF, TPI, TPM } MANTYPE;
-	typedef enum { NOTHR, APS, CAN, DLT, DT, DTL, M, REV, T } THRESHOLD;
-	typedef enum { NOSEC, A, ALT, APO, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV} SECONDARIES;
+	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T } THRESHOLD;
+	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV} SECONDARIES;
 	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP} THRUSTERS;
 	typedef enum { NOGUID, M50, P7} GUID;
 };
@@ -219,7 +219,7 @@ public:
 	SV coast_osc(SV sv0, double dt);
 	SV coast_auto(SV sv0, double dt);
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param);
+	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off, double dt, int N, bool prog);
 	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off);
@@ -229,6 +229,7 @@ public:
 	SV timetoapo_auto(SV sv_A, double revs);
 	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
 	SV DeltaOrbitsAuto(SV sv0, double M);
+	SV FindNthApsidalCrossingAuto(SV sv0, double N);
 
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();

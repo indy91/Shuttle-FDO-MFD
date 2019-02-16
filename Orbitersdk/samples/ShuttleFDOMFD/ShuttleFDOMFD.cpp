@@ -109,8 +109,6 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	Title(skp, "Shuttle FDO MFD");
 	// Draws the MFD title
 
-	SV sv = G->StateVectorCalc(G->target);
-
 	skp->SetFont(font);
 	//skp->SetTextAlign (oapi::Sketchpad::CENTER, oapi::Sketchpad::BASELINE);
 	//skp->SetTextColor (0x00FFFF);
@@ -248,6 +246,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(29 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
 
 		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+		if (G->subThreadStatus != 0) return true;
 
 		for (unsigned i = 0;i < G->ManeuverEvaluationTable.size();i++)
 		{
@@ -871,7 +871,7 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * st
 			double ss;
 			if (sscanf_s(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
 			{
-				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::T, DDDHHHMMSS2MET(dd, hh, mm, ss));
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_T, DDDHHHMMSS2MET(dd, hh, mm, ss));
 				return true;
 			}
 		}
@@ -880,7 +880,7 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * st
 			double m;
 			if (sscanf_s(str, "%lf", &m) == 1)
 			{
-				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::M, m);
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_M, m);
 				return true;
 			}
 		}
@@ -890,7 +890,7 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * st
 			double ss;
 			if (sscanf_s(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
 			{
-				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::DT, DDDHHHMMSS2MET(dd, hh, mm, ss));
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_DT, DDDHHHMMSS2MET(dd, hh, mm, ss));
 				return true;
 			}
 		}
@@ -940,15 +940,15 @@ void ShuttleFDOMFD::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 
 void ShuttleFDOMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
 {
-	if (type == OMPDefs::THRESHOLD::T)
+	if (type == OMPDefs::THRESHOLD::THRES_T)
 	{
 		sprintf_s(buf, 100, "T");
 	}
-	else if (type == OMPDefs::THRESHOLD::DT)
+	else if (type == OMPDefs::THRESHOLD::THRES_DT)
 	{
 		sprintf_s(buf, 100, "DT");
 	}
-	else if (type == OMPDefs::THRESHOLD::M)
+	else if (type == OMPDefs::THRESHOLD::THRES_M)
 	{
 		sprintf_s(buf, 100, "M");
 	}
@@ -961,15 +961,15 @@ void ShuttleFDOMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
 
 void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD type, double num)
 {
-	if (type == OMPDefs::THRESHOLD::T)
+	if (type == OMPDefs::THRESHOLD::THRES_T)
 	{
 		MET2String(buf, num);
 	}
-	else if (type == OMPDefs::THRESHOLD::DT)
+	else if (type == OMPDefs::THRESHOLD::THRES_DT)
 	{
 		MET2String(buf, num);
 	}
-	else if (type == OMPDefs::THRESHOLD::M)
+	else if (type == OMPDefs::THRESHOLD::THRES_M)
 	{
 		sprintf_s(buf, 100, "%.1f", num);
 	}

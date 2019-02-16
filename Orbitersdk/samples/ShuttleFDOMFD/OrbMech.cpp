@@ -1813,6 +1813,7 @@ namespace OrbMech
 		double b12 = -((80.0*a17 + 32.0*a16 + 5.0)*(a22*eccdp*sinI*sinI*(35.0 / 576.0)*g5dg2) + (a8*a21*(35.0 / 1152.0)));
 
 		double sma = smadp * (1.0 + gm2 * ((3.0*theta2 - 1.0)*(eccdp2 / (cn2*cn2*cn2))*(cn + (1.0 / (1.0 + cn))) + ((3.0*theta2 - 1.0) / (cn2*cn2*cn2))*(eccdp*costa)*(3.0 + 3.0*eccdp*costa + eccdp2 * costa2) + 3.0*(1.0 - theta2)*adr3*cs2gta));
+		
 		double sn2gta = sin(2.0*aopdp + 2.0*tadp);
 		double snf2gd = sin(2.0*aopdp + tadp);
 		double csf2gd = cos(2.0*aopdp + tadp);
@@ -1823,7 +1824,7 @@ namespace OrbMech
 		double sn3fgd = sin(3.0*tadp + 2.0*aopdp);
 		double cs3fgd = cos(3.0*tadp + 2.0*aopdp);
 		double sinGD = sin(aopdp);
-		double cosGD = cos(aopdp);
+		double cosGD = cos(aopdp);		
 
 		double bisubc = pow((1.0 - 5.0*theta2), -2.0)*((25.0*theta4*theta)*(gmp2*eccdp2));
 		double blghp, eccdpdl, dltI, sinDH, dlt1e;
@@ -1925,6 +1926,52 @@ namespace OrbMech
 		{
 			aop = aop + PI2;
 		}
+
+		/*
+		//Lyddane Cohen Correction
+		double cosI2osc = cos(inc)*cos(inc);
+		double taosc = MeanToTrueAnomaly(ma, ecc);
+		double cs2gtaosc = cos(2.0*aop + 2.0*taosc);
+		double cnosc = sqrt(1.0 - ecc * ecc);
+		double adrosc = (1.0 + ecc * cos(taosc)) / (1.0 - ecc * ecc);
+		double adrosc3 = adrosc*adrosc*adrosc;
+		double Xi = (-1.0 + 3.0*cosI2osc)*(adrosc3 - cnosc*cnosc*cnosc) + 3.0*(1.0 - cosI2osc)*adrosc3*cs2gtaosc;
+
+		double ecc2 = ecc * ecc;
+		double SARG = 1.0 - ecc2;
+		double AFPRIM = MeanToTrueAnomaly(ma, ecc);
+		theta = cos(inc);
+		theta2 = theta * theta;
+		cn = sqrt(SARG);
+		cn2 = cn * cn;
+		double cn3 = cn2 * cn;
+		double SARG3 = 1.0 - 3.0*theta2;
+		double DA1 = 102.0*SARG3;
+
+		double DA2 = cos(aop);
+		double DA3 = sin(aop);
+		double DA4 = cos(AFPRIM);
+		double DA5 = sin(AFPRIM);
+		double ADVERR = (1.0 + ecc * DA4) / SARG;
+		double DA7 = DA3 * DA4 + DA2 * DA5;
+		double DA72 = DA7 * DA7;
+		double PH20 = ADVERR * ADVERR*ADVERR;
+		double Xitest = DA1 + (302.0*(1.0 - theta2)*(1.0 - DA72 * DA72) - DA1)*PH20*cn3;
+
+		double A0 = -5016.0*(cn2*(1.0-theta2*(3.6-theta2))+0.8*cn*(1.0-theta2*(6.0-DA12))-(1.0-theta2*(12.0+D10)));
+		double A1 = 203.0/PGAM52+cn*SARG3;
+		double A6 = 108.0*ecc2*(1.0-theta2*(16.0-15.0*theta2));
+		double A4 = 2.0*ecc*DA8;
+		double CAPC=DA9/cn3*(A0+XI*(A1-cn*XI)+(302.0*DA8+A4*DA4)*(1.0-2.0*DA12)+A4*DA5*DA6*DA7*A6*(1.0-2.0*DA32));
+
+
+		//double Xi = (-1.0 + 3.0*theta2)*(adr3 - cn * cn*cn) + 3.0*(1.0 - cosI2)*adr3*cs2gta;
+		double cn7 = cn2*cn2*cn2*cn;
+		double test = (1.0 / (sma*sma*sma))*(bk2*Xi*(sma*sma - bk2 * Xi + (3.0 / 2.0)*bk2 / (cn*cn*cn)*(1.0 - 3.0*theta2)) - (bk2*bk2 / (16.0*cn7))*(15.0*cn2*(1.0 - (18.0 / 5.0)*theta2 + theta4)
+			+ 12.0*cn*(1.0 - 6.0*theta2 + 9.0*theta4) - 15.0*(1.0 - 2.0*theta2 - 7.0*theta4) + 6.0*eccdp2*(1.0 - 16.0*theta2 + 15.0*theta4)*cs2gd)
+			+ (9.0*bk2*bk2 / (2.0*cn7))*(1.0 - 6.0*theta2 + 5.0*theta4)*(cs2gta + eccdp * csf2gd + (1.0 / 3.0)*eccdp*cs3fgd));
+
+		sma = smadp + test;*/
 
 		out.a = sma * re;
 		out.e = ecc;
