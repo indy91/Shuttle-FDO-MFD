@@ -230,6 +230,7 @@ public:
 	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
 	SV DeltaOrbitsAuto(SV sv0, double M);
 	SV FindNthApsidalCrossingAuto(SV sv0, double N);
+	double CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
 
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();

@@ -508,7 +508,7 @@ SV ShuttleFDOCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param, d
 
 			COUNT--;
 
-		} while (abs(DX_L) > 0.0005 && COUNT > 0);
+		} while (abs(DX_L) > 2e-4 && COUNT > 0);
 
 		return sv1;
 	}
@@ -718,6 +718,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 						found = 1;
 					}
 					if (found) break;
+					if (k == 0) break;
 				}
 
 				if (!found) return 7;	//Error 7: didn't find NC constraint
@@ -739,6 +740,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 						found = 1;
 					}
 					if (found) break;
+					if (k == 0) break;
 				}
 
 				if (!found) return 8;	//Error 8: didn't find NH constraint
@@ -763,6 +765,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 						found = 1;
 					}
 					if (found) break;
+					if (k == 0) break;
 				}
 
 				if (!found) return 8;	//Error 8: didn't find NH constraint
@@ -1111,6 +1114,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 								DV = tmul(OrbMech::LVLH_Matrix(sv_PH.R, sv_PH.V), dv_table[m]);
 								sv_PH.V -= DV;
 							}
+							else break;
 						}
 
 						add_constraint[iterators[l].man] = crossp(sv_PH.R, sv_PH.V);
@@ -1146,7 +1150,6 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
 		{
-
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
@@ -1229,6 +1232,17 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			double yaw = add_constraint[i].z;
 			dv_table[i] = _V(dv*cos(pit)*cos(yaw), dv*sin(yaw), -dv * sin(pit)*cos(yaw));
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+		}
+
+		//Additional secondary maneuver constraints
+		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
+		{
+			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NULL") == 0)
+			{
+				double Y_A_dot = CalculateYDot(sv_bef_table[i].R, sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
+				dv_table[i].y = -Y_A_dot;
+				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+			}
 		}
 
 		//Calculate SV after the maneuver
@@ -2131,4 +2145,12 @@ SV ShuttleFDOCore::FindNthApsidalCrossingAuto(SV sv0, double N)
 		double P = OrbMech::period(sv0.R, sv0.V, mu);
 		return coast_osc(sv0, dt + 0.5*P * (N - 1.0));
 	}
+}
+
+double ShuttleFDOCore::CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P)
+{
+	VECTOR3 u1 = unit(crossp(V_A, R_A));
+	VECTOR3 u2 = unit(crossp(V_P, R_P));
+	double Y_A_dot = dotp(V_A, u2);
+	return Y_A_dot;
 }

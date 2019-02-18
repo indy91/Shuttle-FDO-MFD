@@ -20,6 +20,11 @@
 
 #pragma once
 
+static inline void papiWriteLine_bool(std::ofstream &file, char *item, bool b)
+{
+	file << item << " " << b << std::endl;
+}
+
 static inline void papiWriteLine_int(std::ofstream &file, char *item, int i)
 {
 	file << item << " " << i << std::endl;
@@ -64,7 +69,7 @@ static inline void papiWriteScenario_mx(FILEHANDLE scn, char *item, MATRIX3 m) {
 	oapiWriteLine(scn, buffer);
 }
 
-static inline bool papiReadScenario_bool(char *line, char *item, bool &b) {
+static inline bool papiReadScenario_bool(const char *line, char *item, bool &b) {
 
 	char buffer[256];
 	int i = 0;

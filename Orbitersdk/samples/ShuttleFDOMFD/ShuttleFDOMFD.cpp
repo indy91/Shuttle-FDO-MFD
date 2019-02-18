@@ -103,6 +103,16 @@ bool ShuttleFDOMFD::ConsumeKeyBuffered(DWORD key)
 	return coreButtons.ConsumeKeyBuffered(this, key);
 }
 
+/*void ShuttleFDOMFD::WriteStatus(FILEHANDLE scn) const
+{
+
+}
+
+void ShuttleFDOMFD::ReadStatus(FILEHANDLE scn)
+{
+
+}*/
+
 // Repaint the MFD
 bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 {
@@ -262,7 +272,6 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable[i].DVMag);
 			skp->Text(1 * W / 32, (i * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
-
 
 			GMT2String(Buffer, G->ManeuverEvaluationTable[i].GMTIG);
 			skp->Text(6 * W / 32, (i * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
@@ -588,7 +597,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	}
 	else if (screen == 6)
 	{
-		skp->Text(12 * W / 32, 1 * H / 32, "OMP Executive Menu", 18);
+		skp->Text(14 * W / 32, 1 * H / 32, "OMP Executive Menu", 18);
 
 		skp->Text(1 * W / 8, 2 * H / 14, "Chaser:", 7);
 		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
@@ -670,16 +679,19 @@ void ShuttleFDOMFD::menuSetOMPExeMenu()
 
 void ShuttleFDOMFD::MET2String(char *buf, double MET)
 {
+	MET = round(MET*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
 
 void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
 {
+	MET = round(MET*10.0) / 10.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
 
 void ShuttleFDOMFD::GMT2String(char *buf, double GMT)
 {
+	GMT = round(GMT*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + 1.0, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
@@ -1327,6 +1339,7 @@ bool ShuttleFDOMFD::SaveState(char *filename)
 		papiWriteLine_double(myfile, "LAUNCHDATE4", G->launchdateSec);
 		if (G->target)
 			papiWriteLine_string(myfile, "TARGET", G->target->GetName());
+		papiWriteLine_bool(myfile, "NONSPHERICAL", G->useNonSphericalGravity);
 		myfile << "START_MCT" << std::endl;
 		for (unsigned i = 0;i < G->ManeuverConstraintsTable.size();i++)
 		{
@@ -1372,6 +1385,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", G->launchdate[3]);
 			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", G->launchdateSec);
 			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
+			papiReadScenario_bool(line.c_str(), "NONSPHERICAL", G->useNonSphericalGravity);
 			if (strcmp(line.c_str(), "END_MCT") == 0) isMCT = false;
 			if (isMCT) ReadMCTLine(line.c_str());
 			if (strcmp(line.c_str(), "START_MCT") == 0) isMCT = true;
