@@ -214,7 +214,7 @@ public:
 
 	void SetLaunchMJD(int Y, int D, int H, int M, double S);
 
-	SV StateVectorCalc(VESSEL *vessel, double SVMJD = 0.0);
+	SV StateVectorCalc(VESSEL *v, double SVMJD = 0.0);
 	SV coast(SV sv0, double dt);
 	SV coast_osc(SV sv0, double dt);
 	SV coast_auto(SV sv0, double dt);
@@ -257,6 +257,8 @@ public:
 	VESSEL* vessel;
 	VESSEL* target;
 	int targetnumber;
+	VESSEL* shuttle;
+	int shuttlenumber;
 
 	int launchdate[4];
 	double launchdateSec;

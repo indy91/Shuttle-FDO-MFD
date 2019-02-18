@@ -56,6 +56,7 @@ public:
 	void menuDeleteOMPSecondary();
 	void menuSetLiftoffTime();
 	void set_target();
+	void set_shuttle();
 	void menuCycleGravityOption();
 
 	void menuSetMainMenu();

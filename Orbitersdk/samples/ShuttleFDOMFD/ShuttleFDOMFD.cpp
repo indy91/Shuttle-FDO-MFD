@@ -606,9 +606,9 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 8, 10 * H / 14, "Save to file", 12);
 		skp->Text(1 * W / 8, 12 * H / 14, "Load from file", 14);
 
-		if (G->vessel)
+		if (G->shuttle)
 		{
-			sprintf(Buffer, G->vessel->GetName());
+			sprintf(Buffer, G->shuttle->GetName());
 			skp->Text(4 * W / 8, 2 * H / 14, Buffer, strlen(Buffer));
 		}
 		if (G->target)
@@ -1236,6 +1236,24 @@ void ShuttleFDOMFD::set_target()
 	G->target = oapiGetVesselInterface(oapiGetVesselByIndex(G->targetnumber));
 }
 
+void ShuttleFDOMFD::set_shuttle()
+{
+	int vesselcount;
+
+	vesselcount = oapiGetVesselCount();
+
+	if (G->shuttlenumber < vesselcount - 1)
+	{
+		G->shuttlenumber++;
+	}
+	else
+	{
+		G->shuttlenumber = 0;
+	}
+
+	G->shuttle = oapiGetVesselInterface(oapiGetVesselByIndex(G->shuttlenumber));
+}
+
 void ShuttleFDOMFD::menuCycleGravityOption()
 {
 	G->useNonSphericalGravity = !G->useNonSphericalGravity;
@@ -1337,6 +1355,8 @@ bool ShuttleFDOMFD::SaveState(char *filename)
 		papiWriteLine_int(myfile, "LAUNCHDATE2", G->launchdate[2]);
 		papiWriteLine_int(myfile, "LAUNCHDATE3", G->launchdate[3]);
 		papiWriteLine_double(myfile, "LAUNCHDATE4", G->launchdateSec);
+		if (G->shuttle)
+			papiWriteLine_string(myfile, "SHUTTLE", G->shuttle->GetName());
 		if (G->target)
 			papiWriteLine_string(myfile, "TARGET", G->target->GetName());
 		papiWriteLine_bool(myfile, "NONSPHERICAL", G->useNonSphericalGravity);
@@ -1368,6 +1388,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 {
 	bool isMCT = false;
 	char Buffer[128];
+	char shuttlebuff[100] = "";
 	char targetbuff[100] = "";
 	sprintf_s(Buffer, ".\\Config\\MFD\\ShuttleFDOMFD\\%s.txt", filename);
 	std::ifstream myfile;
@@ -1384,6 +1405,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", G->launchdate[2]);
 			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", G->launchdate[3]);
 			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", G->launchdateSec);
+			papiReadScenario_string(line.c_str(), "SHUTTLE", shuttlebuff);
 			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
 			papiReadScenario_bool(line.c_str(), "NONSPHERICAL", G->useNonSphericalGravity);
 			if (strcmp(line.c_str(), "END_MCT") == 0) isMCT = false;
@@ -1395,6 +1417,20 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 
 		//Processing
 		G->SetLaunchMJD(G->launchdate[0], G->launchdate[1], G->launchdate[2], G->launchdate[3], G->launchdateSec);
+
+		OBJHANDLE hShuttle = oapiGetVesselByName(shuttlebuff);
+		if (hShuttle)
+		{
+			G->shuttle = oapiGetVesselInterface(hShuttle);
+			for (unsigned i = 0;i < oapiGetVesselCount();i++)
+			{
+				if (hShuttle == oapiGetVesselByIndex(i))
+				{
+					G->shuttlenumber = i;
+				}
+			}
+		}
+
 		OBJHANDLE hTarget = oapiGetVesselByName(targetbuff);
 		if (hTarget)
 		{

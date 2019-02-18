@@ -44,7 +44,21 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	launchdateSec = 18.0;
 	SetLaunchMJD(launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
 	
+	shuttlenumber = -1;
+	shuttle = vessel;
+
+	OBJHANDLE hShuttle = vessel->GetHandle();
+	for (unsigned i = 0;i < oapiGetVesselCount();i++)
+	{
+		if (hShuttle == oapiGetVesselByIndex(i))
+		{
+			shuttlenumber = i;
+		}
+	}
+
+	targetnumber = -1;
 	target = NULL;
+
 	OBJHANDLE hTarget = oapiGetVesselByName("ISS");
 	if (hTarget)
 	{
@@ -273,20 +287,20 @@ void ShuttleFDOCore::LoadPlanCNoNPC()
 	AddManeuverSecondary(6, "CXYZ", 0.2962);
 }
 
-SV ShuttleFDOCore::StateVectorCalc(VESSEL *vessel, double SVMJD)
+SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVMJD)
 {
 	VECTOR3 R, V;
 	double dt;
 	SV sv, sv1;
 
-	vessel->GetRelativePos(hEarth, R);
-	vessel->GetRelativeVel(hEarth, V);
+	v->GetRelativePos(hEarth, R);
+	v->GetRelativeVel(hEarth, V);
 	sv.MJD = oapiGetSimMJD();
 
 	sv.R = _V(R.x, R.z, R.y);
 	sv.V = _V(V.x, V.z, V.y);
 
-	sv.mass = vessel->GetMass();
+	sv.mass = v->GetMass();
 
 	if (SVMJD != 0.0)
 	{
@@ -922,7 +936,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	}
 
 	SV sv_A0, sv_P0, sv_cur, sv_P_cur;
-	sv_A0 = StateVectorCalc(vessel);
+	sv_A0 = StateVectorCalc(shuttle);
 	sv_P0 = StateVectorCalc(target);
 
 	//Save for later use
@@ -1490,7 +1504,7 @@ double ShuttleFDOCore::CalculateInPlaneTime()
 	dt = 0.0;
 	dt_bias = -300.0;
 
-	vessel->GetEquPos(lng, lat, rad);
+	shuttle->GetEquPos(lng, lat, rad);
 	sv_P = StateVectorCalc(target);
 	MJD = sv_P.MJD;
 

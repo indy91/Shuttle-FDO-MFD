@@ -230,7 +230,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu6[] =
 	{
-		{ "", 0, ' ' },
+		{ "Set chaser", 0, 'M' },
 		{ "Set target", 0, 'T' },
 		{ "Set liftoff time", 0, 'S' },
 		{ "Gravity option", 0, 'G' },
@@ -247,7 +247,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterPage(mnu6, sizeof(mnu6) / sizeof(MFDBUTTONMENU));
 
-	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("CHA", OAPI_KEY_M, &ShuttleFDOMFD::set_shuttle);
 	RegisterFunction("TGT", OAPI_KEY_T, &ShuttleFDOMFD::set_target);
 	RegisterFunction("TLO", OAPI_KEY_S, &ShuttleFDOMFD::menuSetLiftoffTime);
 	RegisterFunction("GRA", OAPI_KEY_G, &ShuttleFDOMFD::menuCycleGravityOption);
