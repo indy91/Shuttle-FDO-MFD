@@ -1287,11 +1287,11 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	}
 	else if (err == 7)
 	{
-		sprintf_s(buf, 100, "Error: could not find DR constraint for NC maneuver");
+		sprintf_s(buf, 100, "Error: could not find NC maneuver for DR constraint");
 	}
 	else if (err == 8)
 	{
-		sprintf_s(buf, 100, "Error: could not find DH constraint for NH maneuver");
+		sprintf_s(buf, 100, "Error: could not find NH maneuver for DH constraint");
 	}
 	else if (err == 9)
 	{
@@ -1308,6 +1308,10 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	else if (err == 12)
 	{
 		sprintf_s(buf, 100, "Error: wrong maneuver after SOI");
+	}
+	else if (err == 13)
+	{
+		sprintf_s(buf, 100, "Error: could not find NPC maneuver for WEDG constraint");
 	}
 	else if (err == 14)
 	{
@@ -1334,7 +1338,7 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 void ShuttleFDOMFD::menuSaveState()
 {
 	bool SaveStateInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Choose mission name:", SaveStateInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Choose name of file to save:", SaveStateInput, 0, 20, (void*)this);
 }
 
 bool SaveStateInput(void *id, char *str, void *data)
@@ -1376,7 +1380,7 @@ return true;
 void ShuttleFDOMFD::menuLoadState()
 {
 	bool LoadStateInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Choose mission name:", LoadStateInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Choose name of file to load:", LoadStateInput, 0, 20, (void*)this);
 }
 
 bool LoadStateInput(void *id, char *str, void *data)

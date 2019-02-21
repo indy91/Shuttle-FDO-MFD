@@ -1292,6 +1292,76 @@ namespace OrbMech
 		return dt;
 	}
 
+	void poweredflight(VECTOR3 R, VECTOR3 V, double mjd0, double f_T, double v_ex, double m, VECTOR3 V_G, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
+	{
+		double dt, dt_max, a_T, tau, m0, mnow, dV, dVnow, t_remain, t;
+		VECTOR3 U_TD, gp, g, R0, V0, Rnow, Vnow, dvdt;
+
+		dV = length(V_G);
+		U_TD = unit(V_G);
+		R0 = R;
+		V0 = V;
+		m0 = m;
+		t = 0.0;
+		Rnow = R0;
+		Vnow = V0;
+		mnow = m;
+		dVnow = dV;
+
+		dt_max = 0.1;
+		dt = 1.0;
+
+		gp = gravityroutine(R0, mjd0);
+
+		while (dt != 0.0)
+		{
+			a_T = f_T / mnow;
+			tau = v_ex / a_T;
+			t_remain = tau * (1.0 - exp(-dVnow / v_ex));
+			dt = min(dt_max, t_remain);
+			dvdt = U_TD * f_T / mnow * dt;
+
+			Rnow = Rnow + (Vnow + gp * dt*0.5 + dvdt * 0.5)*dt;
+			g = gravityroutine(Rnow, mjd0);
+			Vnow = Vnow + (g + gp)*dt*0.5 + dvdt;
+			gp = g;
+			dVnow -= length(dvdt);
+			mnow -= f_T / v_ex * dt;
+			t += dt;
+		}
+		R_cutoff = Rnow;
+		V_cutoff = Vnow;
+		m_cutoff = mnow;
+		t_go = t;
+	}
+
+	VECTOR3 gravityroutine(VECTOR3 R, double mjd0)
+	{
+		OBJHANDLE hEarth;
+		VECTOR3 U_R, U_Z, g;
+		double rr, mu;
+
+		hEarth = oapiGetObjectByName("Earth");
+		U_R = unit(R);
+		MATRIX3 obli_E = OrbMech::GetObliquityMatrix(hEarth, mjd0);
+		U_Z = mul(obli_E, _V(0, 1, 0));
+		U_Z = _V(U_Z.x, U_Z.z, U_Z.y);
+
+		rr = dotp(R, R);
+		mu = GGRAV * oapiGetMass(hEarth);
+
+		double costheta, R_E, J2E;
+		VECTOR3 g_b;
+
+		costheta = dotp(U_R, U_Z);
+		R_E = oapiGetSize(hEarth);
+		J2E = oapiGetPlanetJCoeff(hEarth, 0);
+		g_b = -(U_R*(1.0 - 5.0*costheta*costheta) + U_Z * 2.0*costheta)*mu / rr * 3.0 / 2.0*J2E*power(R_E, 2.0) / rr;
+		g = -U_R * mu / rr + g_b;
+
+		return g;
+	}
+
 	void REL_COMP(VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 &R_S_INER, VECTOR3 &R_REL)
 	{
 		VECTOR3 V_S_INER, V_REL;

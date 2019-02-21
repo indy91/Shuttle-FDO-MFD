@@ -47,7 +47,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	shuttlenumber = -1;
 	shuttle = vessel;
 
-	OBJHANDLE hShuttle = vessel->GetHandle();
+	OBJHANDLE hShuttle = shuttle->GetHandle();
 	for (unsigned i = 0;i < oapiGetVesselCount();i++)
 	{
 		if (hShuttle == oapiGetVesselByIndex(i))
@@ -782,7 +782,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					if (k == 0) break;
 				}
 
-				if (!found) return 8;	//Error 8: didn't find NH constraint
+				if (!found) return 13;	//Error 13: could not find NPC maneuver for WEDG constraint
 
 				con.man = k;
 				con.type = 3;
@@ -1691,6 +1691,7 @@ void ShuttleFDOCore::CalcDMT()
 	if (DMT_MNVR < 1 || DMT_MNVR > DMTInputTable.size()) return;
 
 	DMTINPUT input = DMTInputTable[DMT_MNVR - 1];
+	SV sv_cut;
 	MATRIX3 Rot;
 	VECTOR3 u_A;
 	double F, isp, P, LY, RY, p_T, y_T;
@@ -1804,9 +1805,10 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(input.DV_iner) / isp));
 	DMT.VGO = u_A*DMT.DVTOT;
 
-	double apo, peri;
-	OrbMech::periapo(input.sv_tig.R, input.sv_tig.V + input.DV_iner, mu, apo, peri);
+	sv_cut = PoweredFlightProcessor(input.sv_tig, input.DV_iner, F, isp);
 
+	double apo, peri;
+	OrbMech::periapo(sv_cut.R, sv_cut.V, mu, apo, peri);
 
 	DMT.TGT_HA = (apo - R_E) / 1852.0;
 	DMT.TGT_HP = (peri - R_E) / 1852.0;
@@ -2167,4 +2169,14 @@ double ShuttleFDOCore::CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECT
 	VECTOR3 u2 = unit(crossp(V_P, R_P));
 	double Y_A_dot = dotp(V_A, u2);
 	return Y_A_dot;
+}
+
+SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex)
+{
+	SV sv_cut;
+	double t_go;
+
+	OrbMech::poweredflight(sv_tig.R, sv_tig.V, sv_tig.MJD, f_T, v_ex, sv_tig.mass, DV_iner, sv_cut.R, sv_cut.V, sv_cut.mass, t_go);
+	sv_cut.MJD = sv_tig.MJD + t_go / 24.0 / 3600.0;
+	return sv_cut;
 }
