@@ -715,82 +715,88 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	//SET UP ITERATORS and CHECK THAT THRESHOLDS EXIST
 	for (i = 0;i < TAB;i++)
 	{
+		found = 0;
+
 		if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::NOTHR) return 5;	//Error 5: Maneuver doesn't have a threshold
 		
-		//Look through all secondary constraints
-		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
+		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC)
 		{
-			found = 0;
-
-			//DR constraint found
-			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DR") == 0)
+			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
 			{
-				for (k = i - 1;k >= 0;k--)
+				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
 				{
-					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NC)
+					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "DR") == 0)
 					{
 						found = 1;
 					}
 					if (found) break;
-					if (k == 0) break;
 				}
-
-				if (!found) return 7;	//Error 7: didn't find NC constraint
-
-				con.man = k;
-				con.type = 1;
-				con.constr = i;
-				con.value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
-
-				iterators.push_back(con);
+				if (found) break;
 			}
-			//DH constraint found
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DH") == 0)
+
+			if (!found) return 7;	//Error 7: didn't find NC constraint
+
+			con.man = i;
+			con.type = 1;
+			con.constr = k;
+			con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
+
+			iterators.push_back(con);
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
+		{
+			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
 			{
-				for (k = i - 1;k >= 0;k--)
+				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
 				{
-					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NH)
+					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "DH") == 0)
 					{
 						found = 1;
 					}
 					if (found) break;
-					if (k == 0) break;
 				}
-
-				if (!found) return 8;	//Error 8: didn't find NH constraint
-
-				con.man = k;
-				con.type = 2;
-				con.constr = i;
-				con.value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
-
-				iterators.push_back(con);
+				if (found) break;
 			}
-			//WEDG constraint found
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "WEDG") == 0)
+
+			if (!found) return 8;	//Error 8: didn't find NH constraint
+
+			con.man = i;
+			con.type = 2;
+			con.constr = k;
+			con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
+
+			iterators.push_back(con);
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
+		{
+			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
 			{
-				for (k = i - 1;k >= 0;k--)
+				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
 				{
-					if (ManeuverConstraintsTable[k].type == OMPDefs::MANTYPE::NPC)
+					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "WEDG") == 0)
 					{
-						//if (npcflag) return 22;	//Error 22: More than one NPC maneuver specified
-						//Allow only one NPC maneuver
-						//npcflag = true;
 						found = 1;
 					}
 					if (found) break;
-					if (k == 0) break;
 				}
-
-				if (!found) return 13;	//Error 13: could not find NPC maneuver for WEDG constraint
-
-				con.man = k;
-				con.type = 3;
-				con.constr = i;
-				con.value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-
-				iterators.push_back(con);
+				if (found) break;
 			}
+
+			con.man = i;
+			con.type = 3;
+
+			if (found)
+			{
+				con.constr = k;
+				con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
+			}
+			else
+			{
+				con.constr = i;
+				con.value = 0.0;
+			}
+
+			iterators.push_back(con);
 		}
 	}
 

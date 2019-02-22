@@ -1140,7 +1140,7 @@ void ShuttleFDOMFD::menuCalcDMT()
 void ShuttleFDOMFD::menuDeleteOMPSecondary()
 {
 	bool DeleteOMPSecondaryInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Choose secondary to delete:", DeleteOMPSecondaryInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Secondary to delete (format: MAN SEC)", DeleteOMPSecondaryInput, 0, 20, (void*)this);
 }
 
 bool DeleteOMPSecondaryInput(void *id, char *str, void *data)
@@ -1287,11 +1287,11 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	}
 	else if (err == 7)
 	{
-		sprintf_s(buf, 100, "Error: could not find NC maneuver for DR constraint");
+		sprintf_s(buf, 100, "Error: NC maneuver has no DR constraint specified");
 	}
 	else if (err == 8)
 	{
-		sprintf_s(buf, 100, "Error: could not find NH maneuver for DH constraint");
+		sprintf_s(buf, 100, "Error: NH maneuver has no DH constraint specified");
 	}
 	else if (err == 9)
 	{
@@ -1308,10 +1308,6 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	else if (err == 12)
 	{
 		sprintf_s(buf, 100, "Error: wrong maneuver after SOI");
-	}
-	else if (err == 13)
-	{
-		sprintf_s(buf, 100, "Error: could not find NPC maneuver for WEDG constraint");
 	}
 	else if (err == 14)
 	{
@@ -1491,7 +1487,7 @@ void ShuttleFDOMFD::ReadMCTLine(const char *line)
 	{
 		i = 0;
 		G->ManeuverConstraintsTable.push_back(temp);
-		while (strcmp(sectype[i], "NSEC"))
+		while (strcmp(sectype[i], "NSEC") && i < MAXSECONDARIES)
 		{
 			sprintf_s(sec.type, sectype[i]);
 			sec.value = secnum[i];
