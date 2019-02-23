@@ -1866,7 +1866,7 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(DV_iner_act) / isp));
 	DMT.VGO = u_A*DMT.DVTOT;
 
-	sv_cut = PoweredFlightProcessor(input.sv_tig, DV_iner_act, F, isp);
+	sv_cut = PoweredFlightProcessor(input.sv_tig, DV_iner_act, F, isp, useNonSphericalGravity);
 
 	double apo, peri;
 	OrbMech::periapo(sv_cut.R, sv_cut.V, mu, apo, peri);
@@ -2213,12 +2213,12 @@ double ShuttleFDOCore::CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECT
 	return Y_A_dot;
 }
 
-SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex)
+SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical)
 {
 	SV sv_cut;
 	double t_go;
 
-	OrbMech::poweredflight(sv_tig.R, sv_tig.V, sv_tig.MJD, f_T, v_ex, sv_tig.mass, DV_iner, sv_cut.R, sv_cut.V, sv_cut.mass, t_go);
+	OrbMech::poweredflight(sv_tig.R, sv_tig.V, sv_tig.MJD, f_T, v_ex, sv_tig.mass, DV_iner, nonspherical, sv_cut.R, sv_cut.V, sv_cut.mass, t_go);
 	sv_cut.MJD = sv_tig.MJD + t_go / 24.0 / 3600.0;
 	return sv_cut;
 }

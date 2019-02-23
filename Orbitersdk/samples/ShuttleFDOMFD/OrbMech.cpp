@@ -1292,7 +1292,7 @@ namespace OrbMech
 		return dt;
 	}
 
-	void poweredflight(VECTOR3 R, VECTOR3 V, double mjd0, double f_T, double v_ex, double m, VECTOR3 V_G, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
+	void poweredflight(VECTOR3 R, VECTOR3 V, double mjd0, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
 	{
 		double dt, dt_max, a_T, tau, m0, mnow, dV, dVnow, t_remain, t;
 		VECTOR3 U_TD, gp, g, R0, V0, Rnow, Vnow, dvdt;
@@ -1311,7 +1311,7 @@ namespace OrbMech
 		dt_max = 0.1;
 		dt = 1.0;
 
-		gp = gravityroutine(R0, mjd0);
+		gp = gravityroutine(R0, mjd0, nonspherical);
 
 		while (dt != 0.0)
 		{
@@ -1322,7 +1322,7 @@ namespace OrbMech
 			dvdt = U_TD * f_T / mnow * dt;
 
 			Rnow = Rnow + (Vnow + gp * dt*0.5 + dvdt * 0.5)*dt;
-			g = gravityroutine(Rnow, mjd0);
+			g = gravityroutine(Rnow, mjd0, nonspherical);
 			Vnow = Vnow + (g + gp)*dt*0.5 + dvdt;
 			gp = g;
 			dVnow -= length(dvdt);
@@ -1335,7 +1335,7 @@ namespace OrbMech
 		t_go = t;
 	}
 
-	VECTOR3 gravityroutine(VECTOR3 R, double mjd0)
+	VECTOR3 gravityroutine(VECTOR3 R, double mjd0, bool nonspherical)
 	{
 		OBJHANDLE hEarth;
 		VECTOR3 U_R, U_Z, g;
@@ -1350,14 +1350,21 @@ namespace OrbMech
 		rr = dotp(R, R);
 		mu = GGRAV * oapiGetMass(hEarth);
 
-		double costheta, R_E, J2E;
-		VECTOR3 g_b;
+		if (nonspherical)
+		{
+			double costheta, R_E, J2E;
+			VECTOR3 g_b;
 
-		costheta = dotp(U_R, U_Z);
-		R_E = oapiGetSize(hEarth);
-		J2E = oapiGetPlanetJCoeff(hEarth, 0);
-		g_b = -(U_R*(1.0 - 5.0*costheta*costheta) + U_Z * 2.0*costheta)*mu / rr * 3.0 / 2.0*J2E*power(R_E, 2.0) / rr;
-		g = -U_R * mu / rr + g_b;
+			costheta = dotp(U_R, U_Z);
+			R_E = oapiGetSize(hEarth);
+			J2E = oapiGetPlanetJCoeff(hEarth, 0);
+			g_b = -(U_R*(1.0 - 5.0*costheta*costheta) + U_Z * 2.0*costheta)*mu / rr * 3.0 / 2.0*J2E*power(R_E, 2.0) / rr;
+			g = -U_R * mu / rr + g_b;
+		}
+		else
+		{
+			g = -U_R * mu / rr;
+		}
 
 		return g;
 	}

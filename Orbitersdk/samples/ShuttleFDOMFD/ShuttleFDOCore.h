@@ -232,7 +232,7 @@ public:
 	SV DeltaOrbitsAuto(SV sv0, double M);
 	SV FindNthApsidalCrossingAuto(SV sv0, double N);
 	double CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
-	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex);
+	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical);
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 
