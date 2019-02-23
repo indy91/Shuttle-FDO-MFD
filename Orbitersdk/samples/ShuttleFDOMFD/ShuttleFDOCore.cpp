@@ -933,10 +933,40 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
 			}
 			//Maneuver at nth upcoming apsis
-			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "APS") == 0)
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "APS") == 0)
 			{
 				tigmodifiers[i].type = OMPDefs::SECONDARIES::SEC_APS;
 				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITI") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITI;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITM") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITM;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITO") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITO;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITI") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITI;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITM") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITM;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITO") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITO;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
 			}
 		}
 	}
@@ -1029,6 +1059,22 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::SEC_APS)
 			{
 				sv_bef_table[i] = FindNthApsidalCrossingAuto(sv_bef_table[i], tigmodifiers[i].value);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITI || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITO)
+			{
+				sv_bef_table[i] = FindOrbitalSunriseRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITM)
+			{
+				sv_bef_table[i] = FindOrbitalMidnightRelativeTime(sv_bef_table[i], false, tigmodifiers[i].value);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITO || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITI)
+			{
+				sv_bef_table[i] = FindOrbitalSunriseRelativeTime(sv_bef_table[i], false, tigmodifiers[i].value);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::NITM)
+			{
+				sv_bef_table[i] = FindOrbitalMidnightRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
 			}
 		}
 
@@ -2043,25 +2089,6 @@ SV ShuttleFDOCore::timetoapo_auto(SV sv_A, double revs)
 		{
 			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs);
 		}
-
-		return sv_out;
-
-		/*SV sv_out2;
-		double dt1 = 0.0;
-		if (revs > 1.0)
-		{
-			double T_P = OrbMech::period(sv_A.R, sv_A.V, mu);
-			dt1 = T_P * (revs - 1.0);
-			sv_out2 = coast_auto(sv_A, dt1);
-		}
-		else
-		{
-			sv_out2 = sv_A;
-		}
-		sv_out = sv_out2;
-		double dt2 = OrbMech::timetoapo_integ(sv_out2.R, sv_out2.V, sv_out2.MJD, sv_out.R, sv_out.V);
-		sv_out.MJD += dt2 / 24.0 / 3600.0;*/
-		
 	}
 	else
 	{
@@ -2185,4 +2212,30 @@ SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T
 	OrbMech::poweredflight(sv_tig.R, sv_tig.V, sv_tig.MJD, f_T, v_ex, sv_tig.mass, DV_iner, sv_cut.R, sv_cut.V, sv_cut.mass, t_go);
 	sv_cut.MJD = sv_tig.MJD + t_go / 24.0 / 3600.0;
 	return sv_cut;
+}
+
+SV ShuttleFDOCore::FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1)
+{
+	SV sv1;
+	OBJHANDLE hSun;
+	double dt2;
+
+	hSun = oapiGetObjectByName("hSun");
+
+	dt2 = OrbMech::sunrise(sv0.R, sv0.V, sv0.MJD, hEarth, hSun, sunrise, false, true);
+	sv1 = coast_auto(sv0, dt1 + dt2);
+	return sv1;
+}
+
+SV ShuttleFDOCore::FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1)
+{
+	SV sv1;
+	OBJHANDLE hSun;
+	double dt2;
+
+	hSun = oapiGetObjectByName("hSun");
+
+	dt2 = OrbMech::sunrise(sv0.R, sv0.V, sv0.MJD, hEarth, hSun, midnight, true, true);
+	sv1 = coast_auto(sv0, dt1 + dt2);
+	return sv1;
 }

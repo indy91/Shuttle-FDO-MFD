@@ -44,7 +44,8 @@ class OMPDefs
 public:
 	typedef enum { NOMAN, APSO, CIRC, DVPY, DVYP, EXDV, HA, HASH, LSDV, NOSH, PC, NC, NCC, NH, NHRD, NPC, NS, NSR, SOI, SOM, SOR, TPF, TPI, TPM } MANTYPE;
 	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T } THRESHOLD;
-	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV} SECONDARIES;
+	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV,
+					LITI, LITM, LITO, NITI, NITM, NITO} SECONDARIES;
 	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP} THRUSTERS;
 	typedef enum { NOGUID, M50, P7} GUID;
 };
@@ -232,6 +233,8 @@ public:
 	SV FindNthApsidalCrossingAuto(SV sv0, double N);
 	double CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
 	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex);
+	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
+	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();
