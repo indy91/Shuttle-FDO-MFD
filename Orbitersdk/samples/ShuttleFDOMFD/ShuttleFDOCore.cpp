@@ -1745,7 +1745,7 @@ void ShuttleFDOCore::CalcDMT()
 	DMTINPUT input = DMTInputTable[DMT_MNVR - 1];
 	SV sv_cut;
 	MATRIX3 Rot;
-	VECTOR3 u_A;
+	VECTOR3 u_A, DV_LVLH, DV_iner_act;
 	double F, isp, P, LY, RY, p_T, y_T;
 	char Buffer[100], Buffer2[100];
 
@@ -1803,7 +1803,16 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.PEG4_THETAT = 0.0;
 
 	Rot = OrbMech::LVLH_Matrix(input.sv_tig.R, input.sv_tig.V);
-	DMT.PEG7_DV = mul(Rot, input.DV_iner)*MPS2FPS;
+	DV_LVLH = mul(Rot, input.DV_iner)*MPS2FPS;
+
+	// Round this, so that it agrees with the input for the Shuttle computer
+	DV_LVLH.x = round(DV_LVLH.x*10.0) / 10.0;
+	DV_LVLH.y = round(DV_LVLH.y*10.0) / 10.0;
+	DV_LVLH.z = round(DV_LVLH.z*10.0) / 10.0;
+	//Actual inertial DV vector
+	DV_iner_act = tmul(Rot, DV_LVLH) / MPS2FPS;
+
+	DMT.PEG7_DV = DV_LVLH;
 
 	u_A = _V(cos(y_T)*cos(p_T), sin(y_T), -cos(y_T)*sin(p_T));
 
@@ -1811,7 +1820,7 @@ void ShuttleFDOCore::CalcDMT()
 	VECTOR3 u_D, VEC_BOD, RR_BOD, VEC_M50, RR_M50, YN, YT, vec_A, vec_B, RORB, VORB, Att;
 	double ROLL;
 
-	u_D = unit(input.DV_iner);
+	u_D = unit(DV_iner_act);
 	VEC_BOD = u_A;
 	if (abs(sin(y_T)) <= 0.999848)
 	{
@@ -1851,13 +1860,13 @@ void ShuttleFDOCore::CalcDMT()
 	}
 
 	DMT.BURN_ATT = Att * DEG;
-	DMT.DVTOT = length(input.DV_iner)*MPS2FPS;
+	DMT.DVTOT = length(DV_iner_act)*MPS2FPS;
 
 	GetThrusterData(input.thrusters, F, isp);
-	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(input.DV_iner) / isp));
+	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(DV_iner_act) / isp));
 	DMT.VGO = u_A*DMT.DVTOT;
 
-	sv_cut = PoweredFlightProcessor(input.sv_tig, input.DV_iner, F, isp);
+	sv_cut = PoweredFlightProcessor(input.sv_tig, DV_iner_act, F, isp);
 
 	double apo, peri;
 	OrbMech::periapo(sv_cut.R, sv_cut.V, mu, apo, peri);
