@@ -85,6 +85,9 @@ namespace OrbMech
 	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double MJD, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &MJD_out);
 	void poweredflight(VECTOR3 R, VECTOR3 V, double mjd0, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go);
 	VECTOR3 gravityroutine(VECTOR3 R, double mjd0, bool nonspherical);
+	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu);
+	double findlatitude(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
+	double findlatitude_integ(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);

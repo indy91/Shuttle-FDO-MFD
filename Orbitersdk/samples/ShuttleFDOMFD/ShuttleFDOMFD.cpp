@@ -777,6 +777,16 @@ bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 		G->AddManeuver(OMPDefs::CIRC, name, ins);
 		return true;
 	}
+	else if (strcmp(type, "NHRD") == 0)
+	{
+		G->AddManeuver(OMPDefs::NHRD, name, ins);
+		return true;
+	}
+	else if (strcmp(type, "NSR") == 0)
+	{
+		G->AddManeuver(OMPDefs::NSR, name, ins);
+		return true;
+	}
 
 	return false;
 }
@@ -851,6 +861,16 @@ bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 		G->ModifyManeuver(num - 1, OMPDefs::CIRC, name);
 		return true;
 	}
+	else if (strcmp(type, "NHRD") == 0)
+	{
+		G->ModifyManeuver(num - 1, OMPDefs::NHRD, name);
+		return true;
+	}
+	else if (strcmp(type, "NSR") == 0)
+	{
+		G->ModifyManeuver(num - 1, OMPDefs::NSR, name);
+		return true;
+	}
 
 	return false;
 }
@@ -903,6 +923,51 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * st
 			if (sscanf_s(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
 			{
 				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_DT, DDDHHHMMSS2MET(dd, hh, mm, ss));
+				return true;
+			}
+		}
+		else if (strcmp(type, "APS") == 0)
+		{
+			double aps;
+			if (sscanf_s(str, "%lf", &aps) == 1)
+			{
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_APS, aps);
+				return true;
+			}
+		}
+		else if (strcmp(type, "CAN") == 0)
+		{
+			double ang;
+			if (sscanf_s(str, "%lf", &ang) == 1)
+			{
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_CAN, ang*RAD);
+				return true;
+			}
+		}
+		else if (strcmp(type, "N") == 0)
+		{
+			double aps;
+			if (sscanf_s(str, "%lf", &aps) == 1)
+			{
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_N, aps);
+				return true;
+			}
+		}
+		else if (strcmp(type, "REV") == 0)
+		{
+			double aps;
+			if (sscanf_s(str, "%lf", &aps) == 1)
+			{
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_REV, aps);
+				return true;
+			}
+		}
+		else if (strcmp(type, "WT") == 0)
+		{
+			double ang;
+			if (sscanf_s(str, "%lf", &ang) == 1)
+			{
+				G->AddManeuverThreshold(num - 1, OMPDefs::THRESHOLD::THRES_WT, ang*RAD);
 				return true;
 			}
 		}
@@ -964,6 +1029,26 @@ void ShuttleFDOMFD::GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type)
 	{
 		sprintf_s(buf, 100, "M");
 	}
+	else if (type == OMPDefs::THRESHOLD::THRES_APS)
+	{
+		sprintf_s(buf, 100, "APS");
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_CAN)
+	{
+		sprintf_s(buf, 100, "CAN");
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_N)
+	{
+		sprintf_s(buf, 100, "N");
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_REV)
+	{
+		sprintf_s(buf, 100, "REV");
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_WT)
+	{
+		sprintf_s(buf, 100, "WT");
+	}
 	else
 	{
 		sprintf_s(buf, 100, "");
@@ -984,6 +1069,26 @@ void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD ty
 	else if (type == OMPDefs::THRESHOLD::THRES_M)
 	{
 		sprintf_s(buf, 100, "%.1f", num);
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_APS)
+	{
+		sprintf_s(buf, 100, "%.1f", num);
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_CAN)
+	{
+		sprintf_s(buf, 100, "%.1f°", num*DEG);
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_N)
+	{
+		sprintf_s(buf, 100, "%.1f", num);
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_REV)
+	{
+		sprintf_s(buf, 100, "%.1f", num);
+	}
+	else if (type == OMPDefs::THRESHOLD::THRES_WT)
+	{
+		sprintf_s(buf, 100, "%.1f°", num*DEG);
 	}
 	else
 	{

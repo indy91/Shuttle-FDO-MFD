@@ -204,89 +204,6 @@ void ShuttleFDOCore::CalcMCT()
 	startSubthread(1);
 }
 
-void ShuttleFDOCore::LoadPlanC()
-{
-	ManeuverConstraintsTable.clear();
-
-	//Example plan
-	AddManeuver(OMPDefs::MANTYPE::HA, "OMS-2");
-	AddManeuverThreshold(0, OMPDefs::THRESHOLD::THRES_T, 30.0*60.0);
-	AddManeuverSecondary(0, "APO", 1.0);
-	AddManeuverSecondary(0, "HD", 85.0);
-
-	AddManeuver(OMPDefs::MANTYPE::NC, "NC-1");
-	AddManeuverThreshold(1, OMPDefs::THRESHOLD::THRES_M, 2.0);
-	AddManeuverSecondary(1, "DV", 100.0);
-
-	AddManeuver(OMPDefs::MANTYPE::EXDV, "NC-2");
-	AddManeuverThreshold(2, OMPDefs::THRESHOLD::THRES_M, 9.0);
-	AddManeuverSecondary(2, "DVLV", 8.0);
-	AddManeuverSecondary(2, "DVLV", 0.0);
-	AddManeuverSecondary(2, "DVLV", 0.0);
-
-	AddManeuver(OMPDefs::MANTYPE::NPC, "NPC");
-	AddManeuverThreshold(3, OMPDefs::THRESHOLD::THRES_DT, 1.0);
-	AddManeuverSecondary(3, "CN", 1.0);
-
-	AddManeuver(OMPDefs::MANTYPE::NH, "NC-3");
-	AddManeuverThreshold(4, OMPDefs::THRESHOLD::THRES_M, 15.5);
-
-	AddManeuver(OMPDefs::MANTYPE::NC, "NC-4");
-	AddManeuverThreshold(5, OMPDefs::THRESHOLD::THRES_M, 0.5);
-	AddManeuverSecondary(5, "DR", -40.0);
-
-	AddManeuver(OMPDefs::MANTYPE::SOI, "TI");
-	AddManeuverThreshold(6, OMPDefs::THRESHOLD::THRES_M, 1.0);
-	AddManeuverSecondary(6, "DR", -8.0);
-	AddManeuverSecondary(6, "DH", 0.2);
-	AddManeuverSecondary(6, "WEDG", 0.0);
-
-	AddManeuver(OMPDefs::MANTYPE::SOR, "MC-4");
-	AddManeuverThreshold(7, OMPDefs::THRESHOLD::THRES_DT, 3600.0 + 16.0*60.0 + 54.0);
-	AddManeuverSecondary(7, "CXYZ", -0.1481);
-	AddManeuverSecondary(7, "CXYZ", 0.0);
-	AddManeuverSecondary(7, "CXYZ", 0.2962);
-}
-
-void ShuttleFDOCore::LoadPlanCNoNPC()
-{
-	ManeuverConstraintsTable.clear();
-
-	//Example plan
-	AddManeuver(OMPDefs::MANTYPE::HA, "OMS-2");
-	AddManeuverThreshold(0, OMPDefs::THRESHOLD::THRES_T, 30.0*60.0);
-	AddManeuverSecondary(0, "APO", 1.0);
-	AddManeuverSecondary(0, "HD", 85.0);
-
-	AddManeuver(OMPDefs::MANTYPE::NC, "NC-1");
-	AddManeuverThreshold(1, OMPDefs::THRESHOLD::THRES_M, 2.0);
-	AddManeuverSecondary(1, "DV", 100.0);
-
-	AddManeuver(OMPDefs::MANTYPE::EXDV, "NC-2");
-	AddManeuverThreshold(2, OMPDefs::THRESHOLD::THRES_M, 9.0);
-	AddManeuverSecondary(2, "DVLV", 8.0);
-	AddManeuverSecondary(2, "DVLV", 0.0);
-	AddManeuverSecondary(2, "DVLV", 0.0);
-
-	AddManeuver(OMPDefs::MANTYPE::NH, "NC-3");
-	AddManeuverThreshold(3, OMPDefs::THRESHOLD::THRES_M, 15.5);
-
-	AddManeuver(OMPDefs::MANTYPE::NC, "NC-4");
-	AddManeuverThreshold(4, OMPDefs::THRESHOLD::THRES_M, 0.5);
-	AddManeuverSecondary(4, "DR", -40.0);
-
-	AddManeuver(OMPDefs::MANTYPE::SOI, "TI");
-	AddManeuverThreshold(5, OMPDefs::THRESHOLD::THRES_M, 1.0);
-	AddManeuverSecondary(5, "DR", -8.0);
-	AddManeuverSecondary(5, "DH", 0.2);
-
-	AddManeuver(OMPDefs::MANTYPE::SOR, "MC-4");
-	AddManeuverThreshold(6, OMPDefs::THRESHOLD::THRES_DT, 3600.0 + 16.0*60.0 + 54.0);
-	AddManeuverSecondary(6, "CXYZ", -0.1481);
-	AddManeuverSecondary(6, "CXYZ", 0.0);
-	AddManeuverSecondary(6, "CXYZ", 0.2962);
-}
-
 SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVMJD)
 {
 	VECTOR3 R, V;
@@ -743,7 +660,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 			iterators.push_back(con);
 		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NHRD)
 		{
 			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
 			{
@@ -782,21 +699,15 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				if (found) break;
 			}
 
-			con.man = i;
-			con.type = 3;
-
+			//Only set up iterator if constraint was found
 			if (found)
 			{
+				con.man = i;
+				con.type = 3;
 				con.constr = k;
 				con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
-			}
-			else
-			{
-				con.constr = i;
-				con.value = 0.0;
-			}
-
-			iterators.push_back(con);
+				iterators.push_back(con);
+			}			
 		}
 	}
 
@@ -1009,13 +920,22 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			dt = ManeuverConstraintsTable[i].thresh_num - OrbMech::GETfromMJD(sv_cur.MJD, LaunchMJD);
 			sv_bef_table[i] = coast_auto(sv_cur, dt);
 		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M)
+		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV)
 		{
 			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, ManeuverConstraintsTable[i].thresh_num);
 		}
 		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_DT)
 		{
 			sv_bef_table[i] = coast_auto(sv_cur, ManeuverConstraintsTable[i].thresh_num);
+		}
+		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_APS || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_N)
+		{
+			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, 0.5*ManeuverConstraintsTable[i].thresh_num);
+		}
+		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_CAN || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_WT)
+		{
+			dt = OrbMech::time_theta(sv_bef_table[i].R, sv_bef_table[i].V, ManeuverConstraintsTable[i].thresh_num, mu, true);
+			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, dt);
 		}
 
 		thresholdtime[i] = sv_bef_table[i].MJD;
@@ -1218,6 +1138,12 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		{
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
 		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NHRD)
+		{
+			double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
+			dv_table[i].z = -r_dot;
+			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
 		{
 			double ddt;
@@ -1299,13 +1225,25 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			dv_table[i] = _V(dv*cos(pit)*cos(yaw), dv*sin(yaw), -dv * sin(pit)*cos(yaw));
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
 		}
+		//Node Shift setting up common node 90° later
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NS)
+		{
+			double Y_A_dot = CalculateYDot(sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
+			dv_table[i] = _V(0, -Y_A_dot, 0);
+			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NSR)
+		{
+			DV = NSRManeuver(sv_bef_table[i], sv_P_table[i]);
+			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
+		}
 
 		//Additional secondary maneuver constraints
 		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
 		{
 			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NULL") == 0)
 			{
-				double Y_A_dot = CalculateYDot(sv_bef_table[i].R, sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
+				double Y_A_dot = CalculateYDot(sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
 				dv_table[i].y = -Y_A_dot;
 				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
 			}
@@ -1464,6 +1402,14 @@ void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 	{
 		sprintf_s(buf, 100, "CIRC");
 	}
+	else if (type == OMPDefs::MANTYPE::NHRD)
+	{
+		sprintf_s(buf, 100, "NHRD");
+	}
+	else if (type == OMPDefs::MANTYPE::NSR)
+	{
+		sprintf_s(buf, 100, "NSR");
+	}
 	else
 	{
 		sprintf_s(buf, 100, "N/A");
@@ -1545,6 +1491,36 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 	} while (abs(ddt) > 0.1);
 
 	return dt_abs;
+}
+
+VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
+{
+	//Assume both SVs are at TIG
+	VECTOR3 R_P2, V_P2, R_A2, V_A2, R_PC, V_PC, u, V_A2_apo, DV2;
+	double DH_CDH, r_PC, r_A2, v_PV, a_A, a_P, v_A2, v_AV, v_AH;
+
+	R_A2 = sv_A.R;
+	r_A2 = length(R_A2);
+	V_A2 = sv_A.V;
+	v_A2 = length(V_A2);
+	R_P2 = sv_P.R;
+	V_P2 = sv_P.V;
+	u = unit(crossp(R_P2, V_P2));
+	R_A2 = unit(R_A2 - u * dotp(R_A2, u))*r_A2;
+	V_A2 = unit(V_A2 - u * dotp(V_A2, u))*v_A2;
+
+	OrbMech::RADUP(R_P2, V_P2, R_A2, mu, R_PC, V_PC);
+	a_P = OrbMech::GetSemiMajorAxis(R_PC, V_PC, mu);
+
+	r_PC = length(R_PC);
+	DH_CDH = r_PC - r_A2;
+	v_PV = dotp(V_PC, R_A2) / r_A2;
+	a_A = a_P - DH_CDH;
+	v_AV = v_PV * pow(a_P / a_A, 1.5);
+	v_AH = sqrt(mu*(2.0 / r_A2 - 1.0 / a_A) - v_AV * v_AV);
+	V_A2_apo = unit(crossp(u, R_A2))*v_AH + unit(R_A2)*v_AV;
+	DV2 = V_A2_apo - V_A2;
+	return DV2;
 }
 
 double ShuttleFDOCore::CalculateInPlaneTime()
@@ -2205,9 +2181,8 @@ SV ShuttleFDOCore::FindNthApsidalCrossingAuto(SV sv0, double N)
 	}
 }
 
-double ShuttleFDOCore::CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P)
+double ShuttleFDOCore::CalculateYDot(VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P)
 {
-	VECTOR3 u1 = unit(crossp(V_A, R_A));
 	VECTOR3 u2 = unit(crossp(V_P, R_P));
 	double Y_A_dot = dotp(V_A, u2);
 	return Y_A_dot;

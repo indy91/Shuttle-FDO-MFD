@@ -1369,6 +1369,12 @@ namespace OrbMech
 		return g;
 	}
 
+	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu)
+	{
+		double eps = length(V)*length(V) / 2.0 - mu / length(R);
+		return -mu / (2.0*eps);
+	}
+
 	void REL_COMP(VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 &R_S_INER, VECTOR3 &R_REL)
 	{
 		VECTOR3 V_S_INER, V_REL;
@@ -2715,6 +2721,171 @@ namespace OrbMech
 		} while (abs(e_H) >= eps2);
 
 		return true;
+	}
+
+	double findlatitude_integ(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat)
+	{
+		OELEMENTS coe;
+		MATRIX3 Rot;
+		VECTOR3 R0, V0, R0_equ, V0_equ, R1, V1, R1_equ, V1_equ, H, u;
+		double dt, ddt, mu, Tguess, mjd0, sgn, sign2, inc, cosI, sinBeta, cosBeta, sinBeta2, cosBeta2, l1, l0, lat_now, dl, lat_des;
+		int i;
+
+		R0 = R;
+		V0 = V;
+		mjd0 = mjd;
+		lat_des = lat;
+
+		i = 0;
+		dt = 0.0;
+		ddt = 1.0;
+		mu = GGRAV * oapiGetMass(gravref);
+		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
+		Rot = GetObliquityMatrix(gravref, mjd);
+		if (up)
+		{
+			sgn = 1.0;
+		}
+		else
+		{
+			sgn = -1.0;
+		}
+		R0_equ = rhtmul(Rot, R0);
+		V0_equ = rhtmul(Rot, V0);
+		H = crossp(R0_equ, V0_equ);
+		inc = acos(H.z / length(H));
+		if (inc < abs(lat_des))
+		{
+			lat_des = inc;
+		}
+
+		while (abs(ddt) > 0.1)
+		{
+			oneclickcoast(R0, V0, mjd0, dt, R1, V1);
+			R1_equ = rhtmul(Rot, R1);
+			V1_equ = rhtmul(Rot, V1);
+			coe = coe_from_sv(R1_equ, V1_equ, mu);
+			Tguess = PI2 * sqrt(pow(coe.RA, 3) / mu);
+
+			H = crossp(R1_equ, V1_equ);
+			cosI = H.z / length(H);
+			if (acos(cosI) < abs(lat_des))
+			{
+				lat_des = inc;
+			}
+			sinBeta = cosI / cos(lat_des);
+			cosBeta = sgn * sqrt(1.0 - sinBeta * sinBeta);
+			l1 = atan2(tan(lat_des), cosBeta);
+
+			u = unit(R1_equ);
+			lat_now = atan(u.z / sqrt(u.x*u.x + u.y*u.y));
+			if (V1_equ.z > 0.0)
+			{
+				sign2 = 1.0;
+			}
+			else
+			{
+				sign2 = -1.0;
+			}
+			sinBeta2 = cosI / cos(lat_now);
+			cosBeta2 = sign2 * sqrt(1.0 - sinBeta2 * sinBeta2);
+			l0 = atan2(tan(lat_now), cosBeta2);
+
+			dl = l1 - l0;
+			ddt = Tguess * dl / PI2;
+			if (ddt > Tguess / 2.0)
+			{
+				ddt -= Tguess;
+			}
+			if (abs(ddt) > 100.0)
+			{
+				ddt = sign(ddt)*100.0;
+			}
+			dt += ddt;
+			i++;
+		}
+		Rlat = R1;
+		Vlat = V1;
+
+		return dt;
+	}
+
+	double findlatitude(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat)
+	{
+		OELEMENTS coe;
+		MATRIX3 Rot;
+		VECTOR3 R0, V0, R0_equ, V0_equ, R1, V1, R1_equ, V1_equ, H, u;
+		double dt, ddt, mu, Tguess, mjd0, sgn, sign2, inc, cosI, sinBeta, cosBeta, sinBeta2, cosBeta2, l1, l0, lat_now, dl, lat_des;
+		int i;
+
+		R0 = R;
+		V0 = V;
+		mjd0 = mjd;
+		lat_des = lat;
+
+		i = 0;
+		dt = 0.0;
+		ddt = 1.0;
+		mu = GGRAV * oapiGetMass(gravref);
+		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
+		Rot = GetObliquityMatrix(gravref, mjd);
+		if (up)
+		{
+			sgn = 1.0;
+		}
+		else
+		{
+			sgn = -1.0;
+		}
+		R0_equ = rhtmul(Rot, R0);
+		V0_equ = rhtmul(Rot, V0);
+		H = crossp(R0_equ, V0_equ);
+		inc = acos(H.z / length(H));
+		if (inc < abs(lat_des))
+		{
+			lat_des = inc;
+		}
+
+		cosI = cos(inc);
+		sinBeta = cosI / cos(lat_des);
+		cosBeta = sgn * sqrt(1.0 - sinBeta * sinBeta);
+		l1 = atan2(tan(lat_des), cosBeta);
+
+		while (abs(ddt) > 0.1)
+		{
+			rv_from_r0v0(R0, V0, dt, R1, V1, mu);
+
+			R1_equ = rhtmul(Rot, R1);
+			V1_equ = rhtmul(Rot, V1);
+			coe = coe_from_sv(R1_equ, V1_equ, mu);
+
+			u = unit(R1_equ);
+			lat_now = atan(u.z / sqrt(u.x*u.x + u.y*u.y));
+			if (V1_equ.z > 0.0)
+			{
+				sign2 = 1.0;
+			}
+			else
+			{
+				sign2 = -1.0;
+			}
+			sinBeta2 = cosI / cos(lat_now);
+			cosBeta2 = sign2 * sqrt(1.0 - sinBeta2 * sinBeta2);
+			l0 = atan2(tan(lat_now), cosBeta2);
+
+			dl = l1 - l0;
+			ddt = Tguess * dl / PI2;
+			if (ddt > Tguess / 2.0)
+			{
+				ddt -= Tguess;
+			}
+			dt += ddt;
+			i++;
+		}
+		Rlat = R1;
+		Vlat = V1;
+
+		return dt;
 	}
 
 	void ITER(double &c, int &s, double e, double &p, double &x, double &eo, double &xo, double dx0)

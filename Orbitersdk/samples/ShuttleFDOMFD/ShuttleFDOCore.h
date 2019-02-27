@@ -43,7 +43,7 @@ class OMPDefs
 {
 public:
 	typedef enum { NOMAN, APSO, CIRC, DVPY, DVYP, EXDV, HA, HASH, LSDV, NOSH, PC, NC, NCC, NH, NHRD, NPC, NS, NSR, SOI, SOM, SOR, TPF, TPI, TPM } MANTYPE;
-	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T } THRESHOLD;
+	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T, THRES_N, THRES_WT} THRESHOLD;
 	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV,
 					LITI, LITM, LITO, NITI, NITM, NITO} SECONDARIES;
 	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP} THRUSTERS;
@@ -191,9 +191,6 @@ public:
 	int subThread();
 	int startSubthread(int fcn);
 
-	void LoadPlanC();
-	void LoadPlanCNoNPC();
-
 	void CalcMCT();
 	void CalculateManeuverEvalTable(SV sv_A0, SV sv_P0);
 	void CalcLaunchTime();
@@ -227,11 +224,12 @@ public:
 	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off);
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
 	VECTOR3 CircManeuver(SV sv_A);
+	VECTOR3 NSRManeuver(SV sv_A, SV sv_P);
 	SV timetoapo_auto(SV sv_A, double revs);
 	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
 	SV DeltaOrbitsAuto(SV sv0, double M);
 	SV FindNthApsidalCrossingAuto(SV sv0, double N);
-	double CalculateYDot(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
+	double CalculateYDot(VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
 	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical);
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
