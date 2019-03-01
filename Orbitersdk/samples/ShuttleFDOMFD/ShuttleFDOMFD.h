@@ -106,4 +106,6 @@ protected:
 	char Buffer[100];
 
 	bool MTTFlag;
+	unsigned MCTScroll;
+	unsigned METScroll;
 };

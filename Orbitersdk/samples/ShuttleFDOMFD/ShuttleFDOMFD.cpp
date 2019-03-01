@@ -50,6 +50,8 @@ ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 	// Add MFD initialisation here
 	screen = 0;
 	MTTFlag = false;
+	MCTScroll = 0;
+	METScroll = 0;
 	bool found = false;
 	for (int i = 0; i < nGutsUsed; i++) {
 		if (i == 32) {

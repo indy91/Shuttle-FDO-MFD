@@ -161,6 +161,9 @@ struct DMTINPUT
 
 struct DetailedManeuverTable
 {
+	double GMTI;
+	double PETI;
+	double DV_M;
 	char CODE[11];
 	double TV_ROLL;
 	double TRIMS_P;

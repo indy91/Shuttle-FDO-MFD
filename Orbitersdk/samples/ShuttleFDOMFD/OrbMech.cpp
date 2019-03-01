@@ -1369,6 +1369,55 @@ namespace OrbMech
 		return g;
 	}
 
+	bool impulsive(VECTOR3 R, VECTOR3 V, double MJD, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &MJD_cutoff, double &m_cutoff)
+	{
+		VECTOR3 R_ig, V_ig, V_go, R_ref, V_ref, dV_go, R_d, V_d, R_p, V_p, i_z, i_y;
+		double t_slip_old, t_go, v_goz, dr_z, dt_go, m_p;
+		int n, nmax;
+
+		nmax = 100;
+		t_slip = 0;
+		t_slip_old = 1;
+		dt_go = 1;
+		V_go = DV;
+		R_ref = R;
+		V_ref = V + DV;
+		i_y = -unit(crossp(R_ref, V_ref));
+
+		while (abs(t_slip - t_slip_old) > 0.01)
+		{
+			n = 0;
+			oneclickcoast(R, V, MJD, t_slip, R_ig, V_ig);
+			while ((length(dV_go) > 0.01 || n < 2) && n <= nmax)
+			{
+				poweredflight(R_ig, V_ig, MJD, f_av, isp, m, V_go, nonspherical, R_p, V_p, m_p, t_go);
+				oneclickcoast(R_ref, V_ref, MJD, t_go + t_slip, R_d, V_d);
+				i_z = unit(crossp(R_d, i_y));
+				dr_z = dotp(i_z, R_d - R_p);
+				v_goz = dotp(i_z, V_go);
+				dt_go = -2.0 * dr_z / v_goz;
+				dV_go = V_d - V_p;
+				V_go = V_go + dV_go;
+				n++;
+			}
+			t_slip_old = t_slip;
+			t_slip += dt_go * 0.1;
+		}
+		if (n >= nmax)
+		{
+			sprintf(oapiDebugString(), "Iteration failed!");
+			return false;
+		}
+
+		Llambda = V_go;
+
+		R_cutoff = R_p;
+		V_cutoff = V_p;
+		m_cutoff = m_p;
+		MJD_cutoff = MJD + (t_go + t_slip) / 24.0 / 3600.0;
+		return true;
+	}
+
 	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu)
 	{
 		double eps = length(V)*length(V) / 2.0 - mu / length(R);

@@ -35,14 +35,6 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	mu = GGRAV * oapiGetMass(hEarth);
 	R_E = oapiGetSize(hEarth);
 	w_E = PI2 / oapiGetPlanetPeriod(hEarth);
-
-	//STS-126
-	launchdate[0] = 2008;
-	launchdate[1] = 320;
-	launchdate[2] = 0;
-	launchdate[3] = 55;
-	launchdateSec = 18.0;
-	SetLaunchMJD(launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
 	
 	shuttlenumber = -1;
 	shuttle = vessel;
@@ -82,11 +74,12 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	subThreadMode = 0;
 	subThreadStatus = 0;
 
-	/*for (int i = 0;i < 4;i++)
+	for (int i = 0;i < 4;i++)
 	{
 		launchdate[i] = 0;
 	}
-	launchdateSec = 0.0;*/
+	launchdateSec = 0.0;
+	LaunchMJD = 0.0;
 
 	MTTSlotData[0].SLOT = 1;
 	MTTSlotData[0].thrusters = OMPDefs::THRUSTERS::OBP;
@@ -187,6 +180,9 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DMT.TV_ROLL = 0.0;
 	DMT.VGO = _V(0, 0, 0);
 	DMT.WEIGHT = 0.0;
+	DMT.GMTI = 0.0;
+	DMT.PETI = 0.0;
+	DMT.DV_M = 0.0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -1486,7 +1482,11 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 		i++;
 
 		//If wedge angle is below 0.01° or 10 iterations have been done, go back
-		if (acos(dotp(u1, u2)) < 0.01*RAD || i >= 10) break;
+		if (acos(dotp(u1, u2)) < 0.01*RAD || i >= 10)
+		{
+			sprintf(oapiDebugString(), "%d %f", i, acos(dotp(u1, u2))*DEG);
+			break;
+		}
 
 	} while (abs(ddt) > 0.1);
 
@@ -1669,7 +1669,7 @@ void ShuttleFDOCore::ExecuteMTT()
 	DMTInputTable.clear();
 
 	DMTINPUT man;
-	SV sv_cur, sv_tig;
+	SV sv_cur, sv_tig, sv_cut;
 	VECTOR3 DV_iner;
 	double MJD, dt, F, isp, dv, dt_burn;
 
@@ -1689,6 +1689,11 @@ void ShuttleFDOCore::ExecuteMTT()
 		DV_iner = tmul(OrbMech::LVLH_Matrix(sv_cur.R, sv_cur.V), ManeuverEvaluationTable[i].DV*0.3048);
 		man.DV_iner = DV_iner;
 
+		sv_cut = sv_cur;
+		sv_cut.mass -= F / isp * dt_burn;
+		//TBD: ITER support
+		sv_cut.V += DV_iner;
+
 		if (ManeuverTransferTable[i].IMP)
 		{
 			sv_tig = coast_auto(sv_cur, -dt_burn / 2.0);
@@ -1699,12 +1704,7 @@ void ShuttleFDOCore::ExecuteMTT()
 		}
 
 		man.sv_tig = sv_tig;
-
-		//TBD: ITER support
-
-		sv_tig.mass -= F / isp * dt_burn;
-		sv_tig.V += DV_iner;
-		sv_cur = sv_tig;
+		sv_cur = sv_cut;
 
 		man.TV_ROLL = ManeuverTransferTable[i].ROLL;
 		man.thrusters = ManeuverTransferTable[i].thrusters;
@@ -1725,6 +1725,11 @@ void ShuttleFDOCore::CalcDMT()
 	double F, isp, P, LY, RY, p_T, y_T;
 	char Buffer[100], Buffer2[100];
 
+	//Column 1
+	DMT.GMTI = OrbMech::MJDToDate(input.sv_tig.MJD);
+	DMT.PETI = OrbMech::GETfromMJD(input.sv_tig.MJD, LaunchMJD);
+
+	//PAD Data
 	GetDMTThrusterType(Buffer, input.thrusters);
 	GetDMTManeuverID(Buffer2, input.comment);
 
@@ -1836,7 +1841,7 @@ void ShuttleFDOCore::CalcDMT()
 	}
 
 	DMT.BURN_ATT = Att * DEG;
-	DMT.DVTOT = length(DV_iner_act)*MPS2FPS;
+	DMT.DVTOT = DMT.DV_M = length(DV_iner_act)*MPS2FPS;
 
 	GetThrusterData(input.thrusters, F, isp);
 	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(DV_iner_act) / isp));
