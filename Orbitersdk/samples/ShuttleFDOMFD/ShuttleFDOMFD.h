@@ -58,6 +58,7 @@ public:
 	void set_target();
 	void set_shuttle();
 	void menuCycleGravityOption();
+	void menuModifySecondary();
 
 	void menuSetMainMenu();
 	void menuSetMCTPage();
@@ -72,6 +73,7 @@ public:
 	bool modify_OMPManeuver(unsigned num, char *type, char *name);
 	bool add_OMPManeuverThreshold(unsigned num, char *type, char * str);
 	bool add_OMPManeuverSecondary(unsigned num, char * str, double val);
+	bool modify_OMPManeuverSecondary(unsigned man, unsigned sec, char * str, double val);
 	bool set_MTTManeuverSlot(unsigned mnvr, int slot);
 	void set_DMTManeuver(unsigned mnvr);
 	bool delete_OMPSecondary(unsigned num, unsigned sec);

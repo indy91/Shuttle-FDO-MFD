@@ -1484,7 +1484,7 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 		//If wedge angle is below 0.01° or 10 iterations have been done, go back
 		if (acos(dotp(u1, u2)) < 0.01*RAD || i >= 10)
 		{
-			sprintf(oapiDebugString(), "%d %f", i, acos(dotp(u1, u2))*DEG);
+			//sprintf(oapiDebugString(), "%d %f", i, acos(dotp(u1, u2))*DEG);
 			break;
 		}
 

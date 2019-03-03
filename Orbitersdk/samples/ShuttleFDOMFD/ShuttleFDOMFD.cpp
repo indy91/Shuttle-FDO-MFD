@@ -793,6 +793,40 @@ bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 	return false;
 }
 
+void ShuttleFDOMFD::menuModifySecondary()
+{
+	bool ModifyOMPSecondaryInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Modify Secondary (format: Man Sec Type Value)", ModifyOMPSecondaryInput, 0, 20, (void*)this);
+}
+
+bool ModifyOMPSecondaryInput(void *id, char *str, void *data)
+{
+	unsigned man, sec;
+	char type[32];
+	double val;
+
+	if (sscanf_s(str, "%d %d %s %lf", &man, &sec, type, 32, &val) == 4)
+	{
+		return ((ShuttleFDOMFD*)data)->modify_OMPManeuverSecondary(man, sec, type, val);
+	}
+	return false;
+}
+
+bool ShuttleFDOMFD::modify_OMPManeuverSecondary(unsigned man, unsigned sec, char * str, double val)
+{
+	if (man <= G->ManeuverConstraintsTable.size() && man >= 1)
+	{
+		if (sec <= G->ManeuverConstraintsTable[man - 1].secondaries.size() && sec >= 1)
+		{
+			sprintf_s(G->ManeuverConstraintsTable[man - 1].secondaries[sec - 1].type, 5, str);
+			G->ManeuverConstraintsTable[man - 1].secondaries[sec - 1].value = val;
+			return true;
+		}
+	}
+	return false;
+}
+
+
 void ShuttleFDOMFD::menuModifyOMPManeuver()
 {
 	bool ModifyOMPManeuverInput(void *id, char *str, void *data);
