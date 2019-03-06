@@ -353,7 +353,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "COMMENT");
 		skp->Text(7 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "SLOT");
-		skp->Text(12 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
+		skp->Text(11 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "THR");
 		skp->Text(14 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "GUID");

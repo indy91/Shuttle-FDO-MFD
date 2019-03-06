@@ -68,7 +68,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 
 	InPlaneGMT = 0.0;
 	DMT_MNVR = 0;
-	useNonSphericalGravity = false;
+	useNonSphericalGravity = vessel->NonsphericalGravityEnabled();
 	OMPErrorCode = 0;
 
 	subThreadMode = 0;
@@ -1273,7 +1273,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 	CalculateManeuverEvalTable(sv_A0, sv_P0);
 
-	delete sv_bef_table; delete sv_aft_table; delete tigmodifiers; delete dv_table;
+	delete[] sv_bef_table; delete[] sv_aft_table; delete[] tigmodifiers; delete[] dv_table; delete[] add_constraint; delete[] thresholdtime; delete[] sv_P_table;
 
 	return 0;
 }
