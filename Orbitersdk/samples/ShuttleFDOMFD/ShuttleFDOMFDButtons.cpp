@@ -70,8 +70,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Calculate plan", 0, 'C' },
 		{ "Insert maneuver", 0, 'I' },
 		{ "Modify secondary", 0, 'F' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "Back to menu", 0, 'B' },
 	};
 
@@ -87,8 +87,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalculateOMPPlan);
 	RegisterFunction("INS", OAPI_KEY_I, &ShuttleFDOMFD::menuInsertOMPManeuver);
 	RegisterFunction("MOS", OAPI_KEY_F, &ShuttleFDOMFD::menuModifySecondary);
-	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMCTUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMCTDown);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 
 
@@ -104,8 +104,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Transfer to MTT", 0, 'T' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "Back to menu", 0, ' ' },
 	};
 
@@ -121,8 +121,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("TRA", OAPI_KEY_T, &ShuttleFDOMFD::menuTransferToMTT);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMETUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMETDown);
 	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetMainMenu);
 
 

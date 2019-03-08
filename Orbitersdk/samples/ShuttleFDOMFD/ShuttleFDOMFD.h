@@ -59,6 +59,10 @@ public:
 	void set_shuttle();
 	void menuCycleGravityOption();
 	void menuModifySecondary();
+	void menuScrollMCTUp();
+	void menuScrollMCTDown();
+	void menuScrollMETUp();
+	void menuScrollMETDown();
 
 	void menuSetMainMenu();
 	void menuSetMCTPage();
