@@ -236,6 +236,7 @@ public:
 	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical);
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
+	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
 
 	double FindCommonNode(SV sv_A, VECTOR3 H_P);
 	double CalculateInPlaneTime();

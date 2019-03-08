@@ -2228,3 +2228,42 @@ SV ShuttleFDOCore::FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double
 	sv1 = coast_auto(sv0, dt1 + dt2);
 	return sv1;
 }
+
+bool ShuttleFDOCore::FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2)
+{
+	SV sv_A1, sv_P1;
+	double c_I, p_H, dt, elev, e_H, e_Ho, eps2, dto;
+	int s_F;
+
+	eps2 = 0.01*RAD;
+	p_H = c_I = 0.0;
+	s_F = 0;
+
+	dt = t_guess - OrbMech::GETfromMJD(sv_A.MJD, LaunchMJD);
+	sv_A1 = coast_auto(sv_A, dt);
+	dt = t_guess - OrbMech::GETfromMJD(sv_P.MJD, LaunchMJD);
+	sv_P1 = coast_auto(sv_P, dt);
+	dt = 0.0;
+	dto = 0.0;
+
+	do
+	{
+		sv_A1 = coast_auto(sv_A1, dt - dto);
+		sv_P1 = coast_auto(sv_P1, dt - dto);
+
+		elev = OrbMech::COMELE(sv_A1.R, sv_A1.V, sv_P1.R);
+		e_H = elev_D - elev;
+
+		if (abs(e_H) >= eps2)
+		{
+			OrbMech::ITER(c_I, s_F, e_H, p_H, dt, e_Ho, dto);
+			if (s_F == 1)
+			{
+				return false;
+			}
+		}
+	} while (abs(e_H) >= eps2);
+
+	sv_A2 = sv_A1;
+	return true;
+}

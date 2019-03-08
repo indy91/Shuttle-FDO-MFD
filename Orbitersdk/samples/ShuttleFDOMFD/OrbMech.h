@@ -89,6 +89,7 @@ namespace OrbMech
 	double findlatitude(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	double findlatitude_integ(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	bool impulsive(VECTOR3 R, VECTOR3 V, double MJD, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &MJD_cutoff, double &m_cutoff);
+	double COMELE(VECTOR3 RS_COM, VECTOR3 VS_COM, VECTOR3 RT_COM);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);

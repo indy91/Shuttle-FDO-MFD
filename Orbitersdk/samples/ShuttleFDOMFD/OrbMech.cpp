@@ -1502,6 +1502,32 @@ namespace OrbMech
 		V_S_INER = V_T_INER + VTS_M50;
 	}
 
+	//Calculate elevation angle
+	double COMELE(VECTOR3 RS_COM, VECTOR3 VS_COM, VECTOR3 RT_COM)
+	{
+		double A, B, C, D, E, EL_ANG_COM;
+
+		//a.
+		A = dotp(RS_COM, RS_COM);
+		B = dotp(RS_COM, RT_COM);
+		C = dotp(RT_COM, RT_COM);
+		D = dotp(RS_COM, VS_COM);
+		E = dotp(RT_COM, VS_COM);
+
+		//b.
+		if (A*C - B * B < 0)
+		{
+			EL_ANG_COM = PI + (sign(A - C))*PI05;
+		}
+		else
+		{
+			EL_ANG_COM = PI + atan2(A - B, (sign(B*D - A * E))*sqrt(A*C - B * B));
+		}
+		if (EL_ANG_COM >= PI2) EL_ANG_COM -= PI2;
+
+		return EL_ANG_COM;
+	}
+
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
 	{
 		if (firstAngle > PI2)
