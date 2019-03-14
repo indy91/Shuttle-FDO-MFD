@@ -1424,6 +1424,11 @@ namespace OrbMech
 		return -mu / (2.0*eps);
 	}
 
+	double GetMeanMotion(VECTOR3 R, VECTOR3 V, double mu)
+	{
+		return sqrt(mu / pow(GetSemiMajorAxis(R, V, mu), 3));
+	}
+
 	void REL_COMP(VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 &R_S_INER, VECTOR3 &R_REL)
 	{
 		VECTOR3 V_S_INER, V_REL;
@@ -2987,7 +2992,7 @@ namespace OrbMech
 			else
 			{
 				p = (e - eo) / (x - xo);
-				if (c > 20)
+				if (c > 30)
 				{
 					s = 1;
 				}

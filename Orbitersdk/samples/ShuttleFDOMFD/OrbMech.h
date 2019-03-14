@@ -86,6 +86,7 @@ namespace OrbMech
 	void poweredflight(VECTOR3 R, VECTOR3 V, double mjd0, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go);
 	VECTOR3 gravityroutine(VECTOR3 R, double mjd0, bool nonspherical);
 	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu);
+	double GetMeanMotion(VECTOR3 R, VECTOR3 V, double mu);
 	double findlatitude(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	double findlatitude_integ(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	bool impulsive(VECTOR3 R, VECTOR3 V, double MJD, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &MJD_cutoff, double &m_cutoff);

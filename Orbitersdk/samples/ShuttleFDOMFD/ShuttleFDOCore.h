@@ -222,6 +222,7 @@ public:
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
 	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
+	SV PositionMatch(SV sv_A, SV sv_P);
 	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off, double dt, int N, bool prog);
 	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off);
 	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off);
@@ -238,7 +239,7 @@ public:
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
 
-	double FindCommonNode(SV sv_A, VECTOR3 H_P);
+	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
 	double CalculateInPlaneTime();
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);

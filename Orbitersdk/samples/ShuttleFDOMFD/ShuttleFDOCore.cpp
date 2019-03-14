@@ -486,6 +486,35 @@ void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x,
 
 }
 
+SV ShuttleFDOCore::PositionMatch(SV sv_A, SV sv_P)
+{
+	SV sv_A1, sv_P1;
+	VECTOR3 u, R_A1, U_L;
+	double phase, n, dt, ddt;
+
+	dt = 0.0;
+
+	u = unit(crossp(sv_P.R, sv_P.V));
+	U_L = unit(crossp(u, sv_P.R));
+	sv_A1 = GeneralTrajectoryPropagation(sv_A, 0, sv_P.MJD);
+
+	do
+	{
+		R_A1 = unit(sv_A1.R - u * dotp(sv_A1.R, u))*length(sv_A1.R);
+		phase = acos(dotp(unit(R_A1), unit(sv_P.R)));
+		if (dotp(U_L, R_A1) > 0)
+		{
+			phase = -phase;
+		}
+		n = OrbMech::GetMeanMotion(sv_A1.R, sv_A1.V, mu);
+		ddt = phase / n;
+		sv_A1 = coast(sv_A1, ddt);
+		dt += ddt;
+	} while (abs(ddt) > 0.01);
+
+	return sv_A1;
+}
+
 VECTOR3 ShuttleFDOCore::SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off)
 {
 	SV sv_A1, sv_P2;
@@ -590,7 +619,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 	ManeuverEvaluationTable.clear();
 
-	SV *sv_bef_table, *sv_aft_table, *sv_P_table;
+	SV *sv_bef_table, *sv_aft_table, *sv_P_table, sv_phantom;
 	VECTOR3 DV;
 	VECTOR3 *dv_table;
 	VECTOR3 *add_constraint;
@@ -695,9 +724,13 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				if (found) break;
 			}
 
+			if (npcflag) return 22;	//More than one NPC maneuver found
+
 			//Only set up iterator if constraint was found
 			if (found)
 			{
+				npcflag = true;
+
 				con.man = i;
 				con.type = 3;
 				con.constr = k;
@@ -958,15 +991,14 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::CN)
 			{
 				//First iteration
-				if (add_constraint[i].x == 0.0)
+				if (sv_phantom.MJD == 0.0)
 				{
 					SV sv_P1 = coast_auto(sv_P_cur, (sv_bef_table[i].MJD - sv_P_cur.MJD)*24.0*3600.0);
-					VECTOR3 H_P = crossp(sv_P1.R, sv_P1.V);
-					dt = FindCommonNode(sv_bef_table[i], H_P);
+					dt = FindCommonNode(sv_bef_table[i], sv_P1, add_constraint[i]);
 				}
 				else
 				{
-					dt = FindCommonNode(sv_bef_table[i], add_constraint[i]);
+					dt = FindCommonNode(sv_bef_table[i], sv_phantom, add_constraint[i]);
 				}
 
 
@@ -1012,7 +1044,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 					iterstate[l].err = iterators[l].value - R_REL.x;
 
-					if (abs(iterstate[l].err) > 5.0)
+					if (abs(iterstate[l].err) > 10.0)
 					{
 						iterstate[l].converged = false;
 						iterstate[l].dv = dv_table[iterators[l].man].x;
@@ -1046,7 +1078,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 					iterstate[l].err = length(Rtemp) - length(SV_ACON.R) - iterators[l].value;
 
-					if (abs(iterstate[l].err) > 5.0)
+					if (abs(iterstate[l].err) > 10.0)
 					{
 						iterstate[l].converged = false;
 						iterstate[l].dv = dv_table[iterators[l].man].x;
@@ -1076,7 +1108,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 					iterstate[l].err = OrbMech::acos2(dotp(H_A, H_P) / length(H_A) / length(H_P)) - iterators[l].value;
 
-					if (abs(iterstate[l].err) > 0.005*RAD)
+					if (abs(iterstate[l].err) > 0.0005*RAD)
 					{
 						SV sv_PH;
 						iterstate[l].converged = false;
@@ -1099,7 +1131,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 							else break;
 						}
 
-						add_constraint[iterators[l].man] = crossp(sv_PH.R, sv_PH.V);
+						sv_phantom = sv_PH;
 
 						iterstate[l].c_I += 1.0;
 						if (iterstate[l].c_I > 15) return 20; //Error 20: Too many iterations
@@ -1444,20 +1476,57 @@ VECTOR3 ShuttleFDOCore::CircManeuver(SV sv_A)
 	return V_apo - sv_A.V;
 }
 
-double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
+double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
 {
 	SV sv_A1;
 	VECTOR3 u1, u2, u_node[2];
-	double theta, dt[2], ddt, dt_abs;
-	int i = 0;
-	dt_abs = 0.0;
+	double theta, dt[2], ddt;
 
 	sv_A1 = sv_A;
 
-	do
+	//Spherical gravity
+	if (useNonSphericalGravity == false)
 	{
 		u1 = unit(crossp(sv_A1.V, sv_A1.R));
-		u2 = -unit(H_P);
+		u2 = unit(crossp(sv_P.V, sv_P.R));
+
+		u_node[0] = unit(crossp(u1, u2));
+		u_node[1] = -u_node[0];
+
+		for (int j = 0;j < 2;j++)
+		{
+			theta = OrbMech::sign(dotp(crossp(sv_A1.R, u_node[j]), crossp(sv_A1.R, sv_A1.V)))*OrbMech::acos2(dotp(sv_A1.R / length(sv_A1.R), u_node[j]));
+			dt[j] = OrbMech::time_theta(sv_A1.R, sv_A1.V, theta, mu, true);
+		}
+
+		if (abs(dt[0]) > abs(dt[1]))
+		{
+			ddt = dt[1];
+		}
+		else
+		{
+			ddt = dt[0];
+		}
+
+		u_d = -u2;
+
+		return ddt;
+	}
+
+	//Nonspherical gravity
+	SV sv_P1;
+	double dt_abs;
+	int i = 0;
+	dt_abs = 0.0;
+
+	sv_P1 = GeneralTrajectoryPropagation(sv_P, 0, sv_A1.MJD);
+
+	do
+	{
+		sv_P1 = PositionMatch(sv_P1, sv_A1);
+
+		u1 = unit(crossp(sv_A1.V, sv_A1.R));
+		u2 = unit(crossp(sv_P1.V, sv_P1.R));
 
 		u_node[0] = unit(crossp(u1, u2));
 		u_node[1] = -u_node[0];
@@ -1490,6 +1559,7 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, VECTOR3 H_P)
 
 	} while (abs(ddt) > 0.1);
 
+	u_d = -u2;
 	return dt_abs;
 }
 
