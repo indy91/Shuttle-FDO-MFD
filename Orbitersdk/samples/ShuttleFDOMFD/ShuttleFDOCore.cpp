@@ -262,6 +262,21 @@ SV ShuttleFDOCore::coast_auto(SV sv0, double dt)
 	}
 }
 
+void ShuttleFDOCore::ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P)
+{
+	OrbMech::OELEMENTS coe;
+	VECTOR3 R_ECI, V_ECI;
+	double r, a, u;
+
+	OrbMech::EclipticToECI(sv0.R, sv0.V, sv0.MJD, R_ECI, V_ECI);
+	coe = OrbMech::coe_from_sv(R_ECI, V_ECI, mu);
+	a = OrbMech::GetSemiMajorAxis(R_ECI, V_ECI, mu);
+	r = length(R_ECI);
+	u = coe.TA + coe.w;
+
+	OrbMech::PIFAAP(a, coe.e, coe.i, coe.TA, u, r, R_E, r_A, r_P);
+}
+
 void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 {
 	OrbMech::OELEMENTS coe;
@@ -1154,7 +1169,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//MANEUVER
 		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
 		{
-			DV = HeightManeuverAuto(sv_bef_table[i], add_constraint[i].x);
+			DV = HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x);
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
@@ -1237,7 +1252,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//Circularization
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::CIRC)
 		{
-			DV = CircManeuver(sv_bef_table[i]);
+			DV = CircManeuverAuto(sv_bef_table[i]);
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
@@ -1336,7 +1351,15 @@ void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 			man.DT = 0.0;
 		}
 		man.DV = ManeuverTable[i].dV_LVLH / 0.3048;
-		OrbMech::periapo(sv_cur.R, sv_cur.V, mu, apo, peri);
+
+		if (useNonSphericalGravity)
+		{
+			ApsidesMagnitudeDetermination(sv_cur, apo, peri);
+		}
+		else
+		{
+			OrbMech::periapo(sv_cur.R, sv_cur.V, mu, apo, peri);
+		}
 		man.HA = (apo - R_E) / 1852.0;
 		man.HP = (peri - R_E) / 1852.0;
 
@@ -1458,17 +1481,23 @@ VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 	return V2 - sv_A.V;
 }
 
-VECTOR3 ShuttleFDOCore::CircManeuver(SV sv_A)
+VECTOR3 ShuttleFDOCore::CircManeuverAuto(SV sv_A)
 {
-	//TBD: nonspherical logic
-	VECTOR3 U_H, U_hor, V_apo;
-	double v_circ;
+	if (useNonSphericalGravity)
+	{
+		return HeightManeuverAuto(sv_A, length(sv_A.R));
+	}
+	else
+	{
+		VECTOR3 U_H, U_hor, V_apo;
+		double v_circ;
 
-	U_H = unit(crossp(sv_A.R, sv_A.V));
-	U_hor = unit(crossp(U_H, unit(sv_A.R)));
-	v_circ = sqrt(mu / length(sv_A.R));
-	V_apo = U_hor * v_circ;
-	return V_apo - sv_A.V;
+		U_H = unit(crossp(sv_A.R, sv_A.V));
+		U_hor = unit(crossp(U_H, unit(sv_A.R)));
+		v_circ = sqrt(mu / length(sv_A.R));
+		V_apo = U_hor * v_circ;
+		return V_apo - sv_A.V;
+	}
 }
 
 double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
@@ -2336,7 +2365,7 @@ bool ShuttleFDOCore::FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double 
 	return true;
 }
 
-VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double H_D)
+VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double r_D)
 {
 	VECTOR3 DV;
 
@@ -2346,14 +2375,13 @@ VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double H_D)
 		SV sv_A_apo, sv_D;
 		MATRIX3 Rot;
 		VECTOR3 R1_equ, V1_equ, am;
-		double u_b, dv_H, u_d, DN, e_H, e_Ho, r_D, p_H, c_I, eps, dv_Ho;
+		double u_b, dv_H, u_d, DN, e_H, e_Ho, p_H, c_I, eps, dv_Ho;
 		int s_F;
 
 		eps = 1.0;
 		dv_H = 0.0;
 		am = unit(crossp(sv_A.R, sv_A.V));
 		sv_A_apo = sv_A;
-		r_D = oapiGetSize(hEarth) + H_D;
 		p_H = c_I = 0.0;
 		s_F = 0;
 
@@ -2396,7 +2424,7 @@ VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double H_D)
 		double dt_temp, dh;
 
 		OrbMech::REVUP(sv_A.R, sv_A.V, 0.5, mu, Rtemp, Vtemp, dt_temp);
-		dh = oapiGetSize(hEarth) + H_D - length(Rtemp);
+		dh = r_D - length(Rtemp);
 		DV = OrbMech::HeightManeuver(sv_A.R, sv_A.V, dh, mu);
 	}
 

@@ -91,6 +91,10 @@ namespace OrbMech
 	double findlatitude_integ(VECTOR3 R, VECTOR3 V, double mjd, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	bool impulsive(VECTOR3 R, VECTOR3 V, double MJD, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &MJD_cutoff, double &m_cutoff);
 	double COMELE(VECTOR3 RS_COM, VECTOR3 VS_COM, VECTOR3 RT_COM);
+	//Apogee and Perigee Radius Magnitude
+	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
+	//Apogee/Perigee Magnitude Determination
+	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);

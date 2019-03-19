@@ -220,6 +220,7 @@ public:
 	SV coast_osc(SV sv0, double dt);
 	SV coast_auto(SV sv0, double dt);
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
+	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
 	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	SV PositionMatch(SV sv_A, SV sv_P);
@@ -227,7 +228,7 @@ public:
 	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off);
 	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off);
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
-	VECTOR3 CircManeuver(SV sv_A);
+	VECTOR3 CircManeuverAuto(SV sv_A);
 	VECTOR3 NSRManeuver(SV sv_A, SV sv_P);
 	SV timetoapo_auto(SV sv_A, double revs);
 	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
@@ -238,7 +239,7 @@ public:
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
-	VECTOR3 HeightManeuverAuto(SV sv_A, double H_D);
+	VECTOR3 HeightManeuverAuto(SV sv_A, double r_D);
 
 	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
 	double CalculateInPlaneTime();

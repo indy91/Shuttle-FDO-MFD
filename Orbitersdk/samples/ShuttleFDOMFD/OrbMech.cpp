@@ -1533,6 +1533,51 @@ namespace OrbMech
 		return EL_ANG_COM;
 	}
 
+	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE)
+	{
+		double alpha, beta, gamma, delta, ARG1, ARG2, U0, XR, R_av;
+		
+		alpha = R1 - R3;
+		delta = R1 - R2;
+		ARG1 = sin(U1) - sin(U2) - delta / alpha * (sin(U1) - sin(U3));
+		ARG2 = delta / alpha * (cos(U3) - cos(U1)) - (cos(U2) - cos(U1));
+		U0 = atan2(ARG1, ARG2);
+		beta = sin(U1 - U0);
+		gamma = sin(U3 - U0);
+		XR = alpha / (beta - gamma);
+		R_av = (R1 + R3 - XR * (beta + gamma)) / 2.0;
+		XR = abs(XR);
+		RAP = R_av + XR;
+		RPE = R_av - XR;
+	}
+
+	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P)
+	{
+		double J, a_ref, e_ref, p_ref, p, K1, K2, df, r_1, r_2;
+
+		J = 1623.45e-6;
+
+		a_ref = r + J * R_E * (1.0 - 3.0 / 2.0*pow(sin(i), 2) + 5.0 / 6.0*pow(sin(i), 2)*cos(2.0*u));
+		e_ref = 1.0 - r / a_ref;
+		p_ref = a_ref * (1.0 - e_ref * e_ref);
+		p = a * (1.0 - e * e);
+		K1 = e / sqrt(p);
+		K2 = e_ref / sqrt(p_ref);
+		df = atan2(K1*sin(f), K2 - K1 * cos(f));
+		r_1 = p / (1.0 + e * cos(f + df)) - p_ref / (1.0 + e_ref * cos(df)) + r;
+		r_2 = p / (1.0 - e * cos(f + df)) - p_ref / (1.0 - e_ref * cos(df)) + r;
+		if (r_1 >= r_2)
+		{
+			r_A = r_1;
+			r_P = r_2;
+		}
+		else
+		{
+			r_A = r_2;
+			r_P = r_1;
+		}
+	}
+
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
 	{
 		if (firstAngle > PI2)
