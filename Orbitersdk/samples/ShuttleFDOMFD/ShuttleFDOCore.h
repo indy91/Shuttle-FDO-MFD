@@ -238,6 +238,7 @@ public:
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
+	VECTOR3 HeightManeuverAuto(SV sv_A, double H_D);
 
 	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
 	double CalculateInPlaneTime();

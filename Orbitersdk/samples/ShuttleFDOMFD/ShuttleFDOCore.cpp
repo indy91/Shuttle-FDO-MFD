@@ -1154,12 +1154,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//MANEUVER
 		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
 		{
-			VECTOR3 Rtemp, Vtemp;
-			double dt_temp, dh;
-
-			OrbMech::REVUP(sv_bef_table[i].R, sv_bef_table[i].V, 0.5, mu, Rtemp, Vtemp, dt_temp);
-			dh = oapiGetSize(hEarth) + add_constraint[i].x - length(Rtemp);
-			DV = OrbMech::HeightManeuver(sv_bef_table[i].R, sv_bef_table[i].V, dh, mu);
+			DV = HeightManeuverAuto(sv_bef_table[i], add_constraint[i].x);
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
@@ -1262,8 +1257,8 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NSR)
 		{
-			DV = NSRManeuver(sv_bef_table[i], sv_P_table[i]);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
+			dv_table[i] = NSRManeuver(sv_bef_table[i], sv_P_table[i]);
+			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
 		}
 
 		//Additional secondary maneuver constraints
@@ -1566,7 +1561,7 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
 VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
 {
 	//Assume both SVs are at TIG
-	VECTOR3 R_P2, V_P2, R_A2, V_A2, R_PC, V_PC, u, V_A2_apo, DV2;
+	VECTOR3 R_P2, V_P2, R_A2, V_A2, R_PC, V_PC, u, V_A2_apo, DV2, X, Y, Z;
 	double DH_CDH, r_PC, r_A2, v_PV, a_A, a_P, v_A2, v_AV, v_AH;
 
 	R_A2 = sv_A.R;
@@ -1590,7 +1585,10 @@ VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
 	v_AH = sqrt(mu*(2.0 / r_A2 - 1.0 / a_A) - v_AV * v_AV);
 	V_A2_apo = unit(crossp(u, R_A2))*v_AH + unit(R_A2)*v_AV;
 	DV2 = V_A2_apo - V_A2;
-	return DV2;
+	Z = unit(-R_A2);
+	Y = -u;
+	X = unit(crossp(Y, Z));
+	return tmul(_M(X.x, Y.x, Z.x, X.y, Y.y, Z.y, X.z, Y.z, Z.z), DV2);
 }
 
 double ShuttleFDOCore::CalculateInPlaneTime()
@@ -2336,4 +2334,71 @@ bool ShuttleFDOCore::FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double 
 
 	sv_A2 = sv_A1;
 	return true;
+}
+
+VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double H_D)
+{
+	VECTOR3 DV;
+
+	if (useNonSphericalGravity)
+	{
+		OrbMech::OELEMENTS coe;
+		SV sv_A_apo, sv_D;
+		MATRIX3 Rot;
+		VECTOR3 R1_equ, V1_equ, am;
+		double u_b, dv_H, u_d, DN, e_H, e_Ho, r_D, p_H, c_I, eps, dv_Ho;
+		int s_F;
+
+		eps = 1.0;
+		dv_H = 0.0;
+		am = unit(crossp(sv_A.R, sv_A.V));
+		sv_A_apo = sv_A;
+		r_D = oapiGetSize(hEarth) + H_D;
+		p_H = c_I = 0.0;
+		s_F = 0;
+
+		Rot = OrbMech::GetObliquityMatrix(hEarth, sv_A.MJD);
+		R1_equ = OrbMech::rhtmul(Rot, sv_A.R);
+		V1_equ = OrbMech::rhtmul(Rot, sv_A.V);
+		coe = OrbMech::coe_from_sv(R1_equ, V1_equ, mu);
+		u_b = fmod(coe.TA + coe.w, PI2);
+		u_d = u_b + PI;
+		if (u_d < PI2)
+		{
+			DN = 0.0;
+		}
+		else
+		{
+			u_d = u_d - PI2;
+			DN = 1.0;
+		}
+
+		do
+		{
+			DV = unit(crossp(am, sv_A.R))*dv_H;
+			sv_A_apo.V = sv_A.V + DV;
+			sv_D = GeneralTrajectoryPropagation(sv_A_apo, 2, u_d, DN);
+
+			e_H = length(sv_D.R) - r_D;
+			if (p_H == 0 || abs(e_H) >= eps)
+			{
+				OrbMech::ITER(c_I, s_F, e_H, p_H, dv_H, e_Ho, dv_Ho);
+				if (s_F == 1)
+				{
+					return _V(0, 0, 0);
+				}
+			}
+		} while (abs(e_H) >= eps);
+	}
+	else
+	{
+		VECTOR3 Rtemp, Vtemp;
+		double dt_temp, dh;
+
+		OrbMech::REVUP(sv_A.R, sv_A.V, 0.5, mu, Rtemp, Vtemp, dt_temp);
+		dh = oapiGetSize(hEarth) + H_D - length(Rtemp);
+		DV = OrbMech::HeightManeuver(sv_A.R, sv_A.V, dh, mu);
+	}
+
+	return DV;
 }
