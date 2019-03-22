@@ -748,6 +748,11 @@ bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 		G->AddManeuver(OMPDefs::HA, name, ins);
 		return true;
 	}
+	else if (strcmp(type, "HASH") == 0)
+	{
+		G->AddManeuver(OMPDefs::HASH, name, ins);
+		return true;
+	}
 	else if (strcmp(type, "NC") == 0)
 	{
 		G->AddManeuver(OMPDefs::NC, name, ins);
@@ -864,6 +869,11 @@ bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 	if (strcmp(type, "HA") == 0)
 	{
 		G->ModifyManeuver(num - 1, OMPDefs::HA, name);
+		return true;
+	}
+	else if (strcmp(type, "HASH") == 0)
+	{
+		G->ModifyManeuver(num - 1, OMPDefs::HASH, name);
 		return true;
 	}
 	else if (strcmp(type, "NC") == 0)

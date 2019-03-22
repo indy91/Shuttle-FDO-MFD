@@ -634,29 +634,27 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 	ManeuverEvaluationTable.clear();
 
-	SV *sv_bef_table, *sv_aft_table, *sv_P_table, sv_phantom;
+	std::vector<SV> sv_bef_table, sv_aft_table, sv_P_table;
+	SV sv_phantom;
 	VECTOR3 DV;
-	VECTOR3 *dv_table;
-	VECTOR3 *add_constraint;
-	TIGSecondaries *tigmodifiers;
-	double *thresholdtime;
+	std::vector<VECTOR3> dv_table;
+	std::vector<VECTOR3> add_constraint;
+	std::vector<TIGSecondaries> tigmodifiers;
+	std::vector<double> thresholdtime;
 	double dt;
 	unsigned i, j, k, l, TAB;
 	std::vector<ITERCONSTR> iterators;
 
-	sv_bef_table = sv_aft_table = sv_P_table = NULL;
-	tigmodifiers = NULL;
-
 	TAB = ManeuverConstraintsTable.size();
 	l = 0;
 
-	sv_bef_table = new SV[TAB];
-	sv_aft_table = new SV[TAB];
-	sv_P_table = new SV[TAB];
-	tigmodifiers = new TIGSecondaries[TAB];
-	dv_table = new VECTOR3[TAB];
-	add_constraint = new VECTOR3[TAB];
-	thresholdtime = new double[TAB];
+	sv_bef_table.resize(TAB);
+	sv_aft_table.resize(TAB);
+	sv_P_table.resize(TAB);
+	tigmodifiers.resize(TAB);
+	dv_table.resize(TAB);
+	add_constraint.resize(TAB);
+	thresholdtime.resize(TAB);
 
 	for (i = 0;i < TAB;i++)
 	{
@@ -762,7 +760,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	for (i = 0;i < TAB;i++)
 	{
 		found = 0;
-		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
+		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
 		{
 			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
 			{
@@ -1023,6 +1021,27 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			{
 				sv_bef_table[i] = FindNthApsidalCrossingAuto(sv_bef_table[i], tigmodifiers[i].value);
 			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ARG)
+			{
+				OrbMech::OELEMENTS coe;
+				VECTOR3 R_ECI, V_ECI;
+				double u_b, DN, u_d;
+
+				OrbMech::EclipticToECI(sv_bef_table[i].R, sv_bef_table[i].V, sv_bef_table[i].MJD, R_ECI, V_ECI);
+				coe = OrbMech::coe_from_sv(R_ECI, V_ECI, mu);
+				u_b = fmod(coe.TA + coe.w, PI2);
+				u_d = tigmodifiers[i].value*RAD;
+				if (u_b > u_d)
+				{
+					DN = 1.0;
+				}
+				else
+				{
+					DN = 0.0;
+				}
+
+				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, u_d, DN);
+			}
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITI || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITO)
 			{
 				sv_bef_table[i] = FindOrbitalSunriseRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
@@ -1172,6 +1191,18 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			DV = HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x);
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
+		{
+			SV sv_temp;
+			VECTOR3 DV1, DV2;
+			double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
+			sv_temp = sv_bef_table[i];
+			DV1 = -unit(sv_temp.R)*r_dot;
+			sv_temp.V += DV1;
+			DV2 = HeightManeuverAuto(sv_temp, R_E + add_constraint[i].x);
+			DV = DV1 + DV2;
+			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
+		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
 		{
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
@@ -1315,8 +1346,6 @@ int ShuttleFDOCore::CalculateOMPPlan()
 
 	CalculateManeuverEvalTable(sv_A0, sv_P0);
 
-	delete[] sv_bef_table; delete[] sv_aft_table; delete[] tigmodifiers; delete[] dv_table; delete[] add_constraint; delete[] thresholdtime; delete[] sv_P_table;
-
 	return 0;
 }
 
@@ -1411,6 +1440,10 @@ void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 	if (type == OMPDefs::MANTYPE::HA)
 	{
 		sprintf_s(buf, 100, "HA");
+	}
+	else if (type == OMPDefs::MANTYPE::HASH)
+	{
+		sprintf_s(buf, 100, "HASH");
 	}
 	else if (type == OMPDefs::MANTYPE::NC)
 	{
