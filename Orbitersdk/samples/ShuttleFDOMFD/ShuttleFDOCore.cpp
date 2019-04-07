@@ -19,7 +19,6 @@
   **************************************************************************/
 
 #include "Orbitersdk.h"
-#include "OrbMech.h"
 #include "ShuttleFDOCore.h"
 
 static DWORD WINAPI OMPMFD_Trampoline(LPVOID ptr) {
@@ -70,6 +69,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DMT_MNVR = 0;
 	useNonSphericalGravity = vessel->NonsphericalGravityEnabled();
 	OMPErrorCode = 0;
+	chaserSVOption = false;
 
 	subThreadMode = 0;
 	subThreadStatus = 0;
@@ -183,6 +183,36 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DMT.GMTI = 0.0;
 	DMT.PETI = 0.0;
 	DMT.DV_M = 0.0;
+
+	LWP.SetGlobalConstants(mu, w_E, R_E);
+
+	LWP_Settings.NS = 0;
+	LWP_Settings.TSTART = -5.0*60.0;
+	LWP_Settings.TEND = 5.0*60.0;
+	LWP_Settings.DTOPT = -(5.0*60.0 + 23.0);//-(5.0*60.0 + 40.0);
+	LWP_Settings.WRAP = 0;
+	LWP_Settings.NEGTIV = 0;
+	LWP_Settings.GAMINS = 0.6*RAD;
+	LWP_Settings.LATLS = 28.6084030*RAD;
+	LWP_Settings.LONGLS = -80.6232502*RAD;
+	LWP_Settings.PFA = 14.4*RAD;
+	LWP_Settings.PFT = 8.0*60.0 + 39.0;
+	LWP_Settings.RINS = 21241700.0*0.3048;
+	LWP_Settings.VINS = 25818.88*0.3048;//25928.0*0.3048;
+	LWP_Settings.YSMAX = 14.0*RAD;
+	LWP_Settings.LW = 2;
+	LWP_Settings.DELNO = 0.0;
+	LWP_Settings.LOT = 6;
+	LWP_Settings.CWHT = 251679.0*LBM2KG;
+
+	LWP_LaunchSite = 1;
+	DTIG_ET_SEP = 12.0;
+	DTIG_MPS = 1.0*60.0 + 54.0;
+	DV_ET_SEP = _V(5.0, 0.0, -5.0)*0.3048;
+	DV_MPS = _V(9.7, 0.2, -1.0)*0.3048;
+
+	LWP_PlanarOpenGMT = 0.0;
+	LWP_PlanarCloseGMT = 0.0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -226,40 +256,6 @@ SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVMJD)
 	}
 
 	return sv1;
-}
-
-SV ShuttleFDOCore::coast(SV sv0, double dt)
-{
-	SV sv1;
-
-	OrbMech::oneclickcoast(sv0.R, sv0.V, sv0.MJD, dt, sv1.R, sv1.V);
-	sv1.mass = sv0.mass;
-	sv1.MJD = sv0.MJD + dt / 24.0 / 3600.0;
-
-	return sv1;
-}
-
-SV ShuttleFDOCore::coast_osc(SV sv0, double dt)
-{
-	SV sv1;
-
-	OrbMech::rv_from_r0v0(sv0.R, sv0.V, dt, sv1.R, sv1.V, mu);
-	sv1.mass = sv0.mass;
-	sv1.MJD = sv0.MJD + dt / 24.0 / 3600.0;
-
-	return sv1;
-}
-
-SV ShuttleFDOCore::coast_auto(SV sv0, double dt)
-{
-	if (useNonSphericalGravity)
-	{
-		return coast(sv0, dt);
-	}
-	else
-	{
-		return coast_osc(sv0, dt);
-	}
 }
 
 void ShuttleFDOCore::ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P)
@@ -472,7 +468,7 @@ void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x,
 
 	for (int i = 0;i < 3;i++)
 	{
-		obl = OrbMech::GetObliquityMatrix(hEarth, sv[i].MJD);
+		obl = OrbMech::GetObliquityMatrix(sv[i].MJD);
 		R1_equ = OrbMech::rhtmul(obl, sv[i].R);
 		V1_equ = OrbMech::rhtmul(obl, sv[i].V);
 		coe = OrbMech::coe_from_sv(R1_equ, V1_equ, mu);
@@ -925,7 +921,14 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	}
 
 	SV sv_A0, sv_P0, sv_cur, sv_P_cur;
-	sv_A0 = StateVectorCalc(shuttle);
+	if (chaserSVOption)
+	{
+		sv_A0 = sv_chaser;
+	}
+	else
+	{
+		sv_A0 = StateVectorCalc(shuttle);
+	}
 	sv_P0 = StateVectorCalc(target);
 
 	//Save for later use
@@ -1653,55 +1656,21 @@ VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
 	return tmul(_M(X.x, Y.x, Z.x, X.y, Y.y, Z.y, X.z, Y.z, Z.z), DV2);
 }
 
-double ShuttleFDOCore::CalculateInPlaneTime()
+SV ShuttleFDOCore::coast_auto(SV sv0, double dt)
 {
-	SV sv_P;
-	VECTOR3 u_A, u_P, R_equ, R_ecl, V_A, n_A, n_P;
-	double lng, lat, rad, dt, MJD, dt_bias, LAN_A, LAN_P, dLAN;
-
-	dt = 0.0;
-	dt_bias = -300.0;
-
-	shuttle->GetEquPos(lng, lat, rad);
-	sv_P = StateVectorCalc(target);
-	MJD = sv_P.MJD;
-
-	R_equ = unit(_V(cos(lng)*cos(lat), sin(lng)*cos(lat), sin(lat)));
-
-	do
+	if (useNonSphericalGravity)
 	{
-		R_ecl = OrbMech::rhmul(OrbMech::GetRotationMatrix(hEarth, MJD), R_equ);
-		u_P = unit(crossp(sv_P.R, sv_P.V));
-		V_A = crossp(u_P, R_ecl);
-		u_A = unit(crossp(R_ecl, V_A));
-
-		n_A = _V(-u_A.y, u_A.x, 0.0);
-		n_P = _V(-u_P.y, u_P.x, 0.0);
-		LAN_A = OrbMech::acos2(n_A.x / length(n_A));
-		if (n_A.y < 0)
-		{
-			LAN_A = PI2 - LAN_A;
-		}
-		LAN_P = OrbMech::acos2(n_P.x / length(n_P));
-		if (n_P.y < 0)
-		{
-			LAN_P = PI2 - LAN_P;
-		}
-		dLAN = LAN_P - LAN_A;
-		dt = dLAN / w_E;
-
-		MJD += dt / 24.0 / 3600.0;
-	} while (abs(dt) > 0.1);
-
-	return MJD + dt_bias / 24.0 / 3600.0;
+		return coast(sv0, dt);
+	}
+	else
+	{
+		return coast_osc(sv0, dt, mu);
+	}
 }
 
 void ShuttleFDOCore::CalcLaunchTime()
 {
-	double intpart;
-	double MJD = CalculateInPlaneTime();
-
-	InPlaneGMT = modf(MJD, &intpart)*24.0*3600.0;
+	startSubthread(2);
 }
 
 int ShuttleFDOCore::subThread()
@@ -1718,6 +1687,62 @@ int ShuttleFDOCore::subThread()
 	{
 		OMPErrorCode = 0;
 		OMPErrorCode = CalculateOMPPlan();
+
+		Result = 0;
+	}
+	break;
+	case 2: //Launch Window/Targeting Processor
+	{
+		SV sv_T;
+
+		sv_T = StateVectorCalc(target);
+
+		if (useNonSphericalGravity)
+		{
+			LWP_Settings.SVPROP = 1;
+		}
+		else
+		{
+			LWP_Settings.SVPROP = 0;
+		}
+		LWP_Settings.MJDPLANE = sv_T.MJD;
+		LWP_Settings.TRGVEC = sv_T;
+		LWP_Settings.lwp_param_table = &LWP_Parameters;
+
+		LWP.Init(LWP_Settings);
+		LWP.LWP();
+		LWP.GetOutput(LPW_Summary);
+
+		if (LWP_Settings.LW == 0)
+		{
+			InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDPLANE);
+			LaunchMJD = LPW_Summary.MJDPLANE;
+		}
+		else
+		{
+			InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDLO);
+			LaunchMJD = LPW_Summary.MJDLO;
+		}
+
+		LWP_PlanarOpenGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[0]);
+		LWP_PlanarCloseGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[1]);
+		
+		OrbMech::mjd2ydoy(LaunchMJD, launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
+
+		//Post insertion state vector processing
+		SV sv_P1, sv_P2;
+
+		sv_P1 = coast_auto(LPW_Summary.sv_P, DTIG_ET_SEP);
+		sv_P1.V += tmul(LVLH_Matrix(sv_P1.R, sv_P1.V), DV_ET_SEP);
+
+		sv_P2 = coast_auto(sv_P1, DTIG_MPS - DTIG_ET_SEP);
+		sv_P2.V += tmul(LVLH_Matrix(sv_P2.R, sv_P2.V), DV_MPS);
+		sv_P2.mass = LWP_Settings.CWHT;
+
+		//Store SV
+		sv_chaser = sv_P2;
+		chaserSVOption = true;
+
 
 		Result = 0;
 	}
@@ -2257,7 +2282,7 @@ SV ShuttleFDOCore::DeltaOrbitsAuto(SV sv0, double M)
 	{
 		double P = OrbMech::period(sv0.R, sv0.V, mu);
 		double dt = P * M;
-		return coast_osc(sv0, dt);
+		return coast_osc(sv0, dt, mu);
 	}
 }
 
@@ -2312,7 +2337,7 @@ SV ShuttleFDOCore::FindNthApsidalCrossingAuto(SV sv0, double N)
 			dt = OrbMech::timetoperi(sv0.R, sv0.V, mu, 1);
 		}
 		double P = OrbMech::period(sv0.R, sv0.V, mu);
-		return coast_osc(sv0, dt + 0.5*P * (N - 1.0));
+		return coast_osc(sv0, dt + 0.5*P * (N - 1.0), mu);
 	}
 }
 
@@ -2418,7 +2443,7 @@ VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double r_D)
 		p_H = c_I = 0.0;
 		s_F = 0;
 
-		Rot = OrbMech::GetObliquityMatrix(hEarth, sv_A.MJD);
+		Rot = OrbMech::GetObliquityMatrix(sv_A.MJD);
 		R1_equ = OrbMech::rhtmul(Rot, sv_A.R);
 		V1_equ = OrbMech::rhtmul(Rot, sv_A.V);
 		coe = OrbMech::coe_from_sv(R1_equ, V1_equ, mu);

@@ -22,6 +22,10 @@
 
 #include "MFDButtonPage.hpp"
 #include "ShuttleFDOMFDButtons.h"
+#include "LWP.h"
+#include "OrbMech.h"
+
+using namespace OrbMech;
 
 const double OMS_THRUST = 26700.0;
 const double OMS_ISP0 = 316 * 9.80665;
@@ -30,14 +34,6 @@ const double RCS_ISP0 = OMS_ISP0;
 const double LBM2KG = 0.45359237;
 const double MPS2FPS = 3.280839895;
 const unsigned MAXSECONDARIES = 4;
-
-struct SV
-{
-	VECTOR3 R = _V(0, 0, 0);
-	VECTOR3 V = _V(0, 0, 0);
-	double MJD = 0.0;
-	double mass = 0.0;
-};
 
 class OMPDefs
 {
@@ -77,18 +73,6 @@ struct ITERCONSTR
 	unsigned man = 0;	//maneuver that is applying the DV
 	unsigned constr = 0;	//maneuver for which the constraint is applied
 	double value = 0.0;		//Value of the constraint
-};
-
-struct ITERSTATE
-{
-	int s_F = 0;
-	double p_H = 0.0;
-	double c_I = 0.0;
-	double dv = 0.0;
-	double dvo = 0.0;
-	double err = 0.0;
-	double erro = 0.0;
-	bool converged = false;
 };
 
 struct MANEUVER
@@ -214,10 +198,9 @@ public:
 	void GetDMTManeuverID(char *buf, char *name);
 
 	void SetLaunchMJD(int Y, int D, int H, int M, double S);
+	double GetLaunchMJD() { return LaunchMJD; }
 
 	SV StateVectorCalc(VESSEL *v, double SVMJD = 0.0);
-	SV coast(SV sv0, double dt);
-	SV coast_osc(SV sv0, double dt);
 	SV coast_auto(SV sv0, double dt);
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
 	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
@@ -242,7 +225,6 @@ public:
 	VECTOR3 HeightManeuverAuto(SV sv_A, double r_D);
 
 	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
-	double CalculateInPlaneTime();
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
 
@@ -274,6 +256,22 @@ public:
 
 	bool useNonSphericalGravity;
 	int OMPErrorCode;
+	//false = vessel, true = LWP
+	bool chaserSVOption;
+	LWPSettings LWP_Settings;
+	LWPSummary LPW_Summary;
+	LWPParameterTable LWP_Parameters;
+	//0 = manual, 1 = LC-39A, 2 = LC-39B
+	int LWP_LaunchSite;
+	//DTIG between MECO and ET SEP
+	double DTIG_ET_SEP;
+	//DTIG between MECO and MPS Dump
+	double DTIG_MPS;
+	//ET SEP DV
+	VECTOR3 DV_ET_SEP;
+	//MPS Dump DV
+	VECTOR3 DV_MPS;
+	double LWP_PlanarOpenGMT, LWP_PlanarCloseGMT;
 
 	OBJHANDLE hEarth;
 	double mu;
@@ -287,4 +285,6 @@ protected:
 	double w_E;
 
 	SV sv_chaser, sv_target;
+
+	LaunchWindowProcessor LWP;
 };

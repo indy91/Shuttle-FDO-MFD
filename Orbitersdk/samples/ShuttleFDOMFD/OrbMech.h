@@ -22,6 +22,17 @@
 
 namespace OrbMech
 {
+	const double LAUNCHSITE_LATITUDE[2] = { 28.60833333, 28.627 };
+	const double LAUNCHSITE_LONGITUDE[2] = { -80.60416667, -80.621 };
+
+	struct SV
+	{
+		VECTOR3 R = _V(0, 0, 0);
+		VECTOR3 V = _V(0, 0, 0);
+		double MJD = 0.0;
+		double mass = 0.0;
+	};
+
 	struct OELEMENTS
 	{
 		double h = 0.0;
@@ -50,6 +61,18 @@ namespace OrbMech
 
 		CELEMENTS operator+(const CELEMENTS&) const;
 		CELEMENTS operator-(const CELEMENTS&) const;
+	};
+
+	struct ITERSTATE
+	{
+		int s_F = 0;
+		double p_H = 0.0;
+		double c_I = 0.0;
+		double dv = 0.0;
+		double dvo = 0.0;
+		double err = 0.0;
+		double erro = 0.0;
+		bool converged = false;
 	};
 
 	//Trajectory computations
@@ -95,14 +118,17 @@ namespace OrbMech
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
 	//Apogee/Perigee Magnitude Determination
 	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P);
+	//Compute insertion vector
+	SV coast(SV sv0, double dt);
+	SV coast_osc(SV sv0, double dt, double mu);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
 	void sv_from_coe(OELEMENTS el, double mu, VECTOR3 &R, VECTOR3 &V);
 	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu);
 	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V);
-	MATRIX3 GetObliquityMatrix(OBJHANDLE plan, double t);
-	MATRIX3 GetRotationMatrix(OBJHANDLE plan, double t);
+	MATRIX3 GetObliquityMatrix(double t, bool earth = true);
+	MATRIX3 GetRotationMatrix(double t, bool earth = true);
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng);
 	VECTOR3 Polar2CartesianVel(double r, double lat, double lng, double r_dot, double lat_dot, double lng_dot);
 	VECTOR3 rhmul(const MATRIX3 &A, const VECTOR3 &b);
@@ -116,9 +142,15 @@ namespace OrbMech
 	double MJDfromGET(double GET, double GETBase);
 	int Date2JD(int Y, int M, int D);
 	double Date2MJD(int Y, int D, int H, int M, double S);
+	void mjd2date(double mjd, int &year, int &month, int &day, int &hour, int &minute, double &second);
+	void mjd2ydoy(double mjd, int &Y, int &D, int &H, int &M, double &S);
 	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl);
-	double JD2MJD(double jd);
-	double MJD2JD(double mjd);
+	double jd2mjd(double jd);
+	double mjd2jd(double mjd);
+	void jd2date(double jd, int &year, int &month, int &day);
+	void days2hms(double days, int &hour, int &minute, double &second);
+	int dayofyear(int year, int month, int day);
+	bool isleapyear(int a);
 	CELEMENTS BrouwerMeanLongToOsculatingElements(CELEMENTS mean);
 	CELEMENTS CartesianToBrouwerMeanLong(VECTOR3 R, VECTOR3 V, double mu);
 	CELEMENTS OsculatingToBrouwerMeanLong(CELEMENTS osc, double mu);
@@ -130,6 +162,11 @@ namespace OrbMech
 	VECTOR3 ECIToEcliptic(VECTOR3 v, double MJD);
 	void ECIToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl);
 
+	VECTOR3 EclipticToECEF(VECTOR3 v, double MJD);
+	void EclipticToECEF(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ECEF, VECTOR3 &V_ECEF);
+	VECTOR3 ECEFToEcliptic(VECTOR3 v, double MJD);
+	void ECEFToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl);
+
 	//Math
 	double stumpS(double z);
 	double stumpC(double z);
@@ -138,6 +175,7 @@ namespace OrbMech
 	double cot(double a);
 	double sec(double a);
 	double acos2(double _X);
+	double asin2(double _X);
 	double fraction_an(int n);
 	double fraction_ad(int n);
 	double fraction_a(int n, double x);

@@ -52,6 +52,11 @@ namespace OrbMech
 		return acos(min(1.0, max(-1.0, _X)));
 	}
 
+	double asin2(double _X)
+	{
+		return asin(min(1.0, max(-1.0, _X)));
+	}
+
 	double stumpS(double z)
 	{
 		double s;
@@ -175,13 +180,13 @@ namespace OrbMech
 		return xi_x;
 	}
 
-	MATRIX3 GetObliquityMatrix(OBJHANDLE plan, double t)
+	MATRIX3 GetObliquityMatrix(double t, bool earth)
 	{
 		double t0, T_p, L_0, e_rel, phi_0, T_s, e_ref, L_ref, L_rel, phi, e_ecl, L_ecl;
 		MATRIX3 Rot1, Rot2, Rot3, Rot4, Rot5, Rot6, R_ref, R_rel, R_rot, Rot;
 		VECTOR3 s;
 
-		if (plan == oapiGetObjectByName("Earth"))
+		if (earth)
 		{
 			t0 = 51544.5;								//LAN_MJD, MJD of the LAN in the "beginning"
 			T_p = -9413040.4;							//Precession Period
@@ -192,7 +197,7 @@ namespace OrbMech
 			e_ref = 0;									//Precession Obliquity
 			L_ref = 0;									//Precession LAN
 		}
-		else if (plan == oapiGetObjectByName("Moon"))
+		else
 		{
 			t0 = 51544.5;							//LAN_MJD, MJD of the LAN in the "beginning"
 			T_p = -6793.219721;						//Precession Period
@@ -222,12 +227,12 @@ namespace OrbMech
 		return mul(Rot5, Rot6);
 	}
 
-	MATRIX3 GetRotationMatrix(OBJHANDLE plan, double t)
+	MATRIX3 GetRotationMatrix(double t, bool earth)
 	{
 		double t0, T_p, L_0, e_rel, phi_0, T_s, e_ref, L_ref, L_rel, phi;
 		MATRIX3 Rot1, Rot2, R_ref, Rot3, Rot4, R_rel, R_rot, R, Rot;
 
-		if (plan == oapiGetObjectByName("Earth"))
+		if (earth)
 		{
 			t0 = 51544.5;								//LAN_MJD, MJD of the LAN in the "beginning"
 			T_p = -9413040.4;							//Precession Period
@@ -238,7 +243,7 @@ namespace OrbMech
 			e_ref = 0;									//Precession Obliquity
 			L_ref = 0;									//Precession LAN
 		}
-		else if (plan == oapiGetObjectByName("Moon"))
+		else
 		{
 			t0 = 51544.5;							//LAN_MJD, MJD of the LAN in the "beginning"
 			T_p = -6793.219721;						//Precession Period
@@ -353,7 +358,7 @@ namespace OrbMech
 			JCoeff = oapiGetPlanetJCoeff(gravref, 0);
 		}
 
-		Rot = GetObliquityMatrix(gravref, MJD);
+		Rot = GetObliquityMatrix(MJD);
 
 		R1_equ = rhtmul(Rot, R1);
 		V1_equ = rhtmul(Rot, V1);
@@ -509,30 +514,52 @@ namespace OrbMech
 
 	VECTOR3 EclipticToECI(VECTOR3 v, double MJD)
 	{
-		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
-		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		MATRIX3 Rot = GetObliquityMatrix(MJD);
 		return rhtmul(Rot, v);
 	}
 
 	void EclipticToECI(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ECI, VECTOR3 &V_ECI)
 	{
-		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
-		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		MATRIX3 Rot = GetObliquityMatrix(MJD);
 		R_ECI = rhtmul(Rot, R);
 		V_ECI = rhtmul(Rot, V);
 	}
 
 	VECTOR3 ECIToEcliptic(VECTOR3 v, double MJD)
 	{
-		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
-		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		MATRIX3 Rot = GetObliquityMatrix(MJD);
 		return rhmul(Rot, v);
 	}
 
 	void ECIToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl)
 	{
-		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
-		MATRIX3 Rot = GetObliquityMatrix(hEarth, MJD);
+		MATRIX3 Rot = GetObliquityMatrix(MJD);
+		R_ecl = rhmul(Rot, R);
+		V_ecl = rhmul(Rot, V);
+	}
+
+	VECTOR3 EclipticToECEF(VECTOR3 v, double MJD)
+	{
+		MATRIX3 Rot = GetRotationMatrix(MJD);
+		return rhtmul(Rot, v);
+	}
+
+	void EclipticToECEF(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ECEF, VECTOR3 &V_ECEF)
+	{
+		MATRIX3 Rot = GetRotationMatrix(MJD);
+		R_ECEF = rhtmul(Rot, R);
+		V_ECEF = rhtmul(Rot, V);
+	}
+
+	VECTOR3 ECEFToEcliptic(VECTOR3 v, double MJD)
+	{
+		MATRIX3 Rot = GetRotationMatrix(MJD);
+		return rhmul(Rot, v);
+	}
+
+	void ECEFToEcliptic(VECTOR3 R, VECTOR3 V, double MJD, VECTOR3 &R_ecl, VECTOR3 &V_ecl)
+	{
+		MATRIX3 Rot = GetRotationMatrix(MJD);
 		R_ecl = rhmul(Rot, R);
 		V_ecl = rhmul(Rot, V);
 	}
@@ -1343,7 +1370,7 @@ namespace OrbMech
 
 		hEarth = oapiGetObjectByName("Earth");
 		U_R = unit(R);
-		MATRIX3 obli_E = OrbMech::GetObliquityMatrix(hEarth, mjd0);
+		MATRIX3 obli_E = OrbMech::GetObliquityMatrix(mjd0);
 		U_Z = mul(obli_E, _V(0, 1, 0));
 		U_Z = _V(U_Z.x, U_Z.z, U_Z.y);
 
@@ -1578,6 +1605,28 @@ namespace OrbMech
 		}
 	}
 
+	SV coast(SV sv0, double dt)
+	{
+		SV sv1;
+
+		OrbMech::oneclickcoast(sv0.R, sv0.V, sv0.MJD, dt, sv1.R, sv1.V);
+		sv1.mass = sv0.mass;
+		sv1.MJD = sv0.MJD + dt / 24.0 / 3600.0;
+
+		return sv1;
+	}
+
+	SV coast_osc(SV sv0, double dt, double mu)
+	{
+		SV sv1;
+
+		OrbMech::rv_from_r0v0(sv0.R, sv0.V, dt, sv1.R, sv1.V, mu);
+		sv1.mass = sv0.mass;
+		sv1.MJD = sv0.MJD + dt / 24.0 / 3600.0;
+
+		return sv1;
+	}
+
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
 	{
 		if (firstAngle > PI2)
@@ -1630,7 +1679,7 @@ namespace OrbMech
 	{
 		double JD, temp, JDint, JDfrac, tu, year, leapyrs, days;
 
-		JD = MJD2JD(MJD);
+		JD = mjd2jd(MJD);
 		JDfrac = modf(JD, &JDint);
 		temp = JDint - 2415019.5;
 		tu = temp / 365.25;
@@ -1679,12 +1728,69 @@ namespace OrbMech
 		return MJD;
 	}
 
-	double JD2MJD(double jd)
+	void mjd2date(double mjd, int &year, int &month, int &day, int &hour, int &minute, double &second)
+	{
+		double jd, fmjd;
+
+		jd = mjd2jd(mjd);
+		jd2date(jd, year, month, day);
+
+		fmjd = mjd - floor(mjd);
+		days2hms(fmjd, hour, minute, second);
+	}
+
+	void jd2date(double jd, int &year, int &month, int &day)
+	{
+		double ijd, a, b, c, d, e, m;
+
+		ijd = floor(jd + 0.5);
+		a = ijd + 32044.0;
+		b = floor((4.0*a + 3.0) / 146097.0);
+		c = a - floor((b*146097.0) / 4.0);
+
+		d = floor((4.0*c + 3.0) / 1461);
+		e = c - floor((1461.0*d) / 4.0);
+		m = floor((5.0*e + 2.0) / 153.0);
+		day = (int)(e - floor((153.0*m + 2.0) / 5.0) + 1.0);
+		month = (int)(m + 3.0 - 12.0*floor(m / 10.0));
+		year = (int)(b * 100.0 + d - 4800.0 + floor(m / 10.0));
+	}
+
+	void days2hms(double days, int &hour, int &minute, double &second)
+	{
+		second = 86400.0*days;
+		hour = (int)(floor(second / 3600.0));
+		second = second - 3600.0*(double)hour;
+		minute = (int)(floor(second / 60.0));
+		second = second - 60.0*minute;
+	}
+
+	void mjd2ydoy(double mjd, int &Y, int &D, int &H, int &M, double &S)
+	{
+		int MO, DA;
+
+		mjd2date(mjd, Y, MO, DA, H, M, S);
+		D = dayofyear(Y, MO, DA);
+	}
+
+	int dayofyear(int year, int month, int day)
+	{
+		static const int days_in_prev_months[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+
+		return days_in_prev_months[month - 1] + (isleapyear(year) && (month > 2)) + day;
+	}
+
+	bool isleapyear(int a)
+	{
+		return ((a % 4 == 0 && a % 100 != 0) || a % 400 == 0);
+	}
+
+	double jd2mjd(double jd)
 	{
 		return jd - 2400000.5;
 	}
 
-	double MJD2JD(double mjd)
+	double mjd2jd(double mjd)
 	{
 		return mjd + 2400000.5;
 	}	
@@ -2718,7 +2824,7 @@ namespace OrbMech
 			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, 15.0*60.0, Rt[1], Vt[1]);
 			oneclickcoast(R1, V1, MJD + dt_total / 24.0 / 3600.0, 30.0*60.0, Rt[2], Vt[2]);
 
-			Rot = GetObliquityMatrix(hEarth, MJD + dt_total / 24.0 / 3600.0);
+			Rot = GetObliquityMatrix(MJD + dt_total / 24.0 / 3600.0);
 
 			for (int i = 0;i < 3;i++)
 			{
@@ -2866,7 +2972,7 @@ namespace OrbMech
 		ddt = 1.0;
 		mu = GGRAV * oapiGetMass(gravref);
 		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
-		Rot = GetObliquityMatrix(gravref, mjd);
+		Rot = GetObliquityMatrix(mjd);
 		if (up)
 		{
 			sgn = 1.0;
@@ -2953,7 +3059,7 @@ namespace OrbMech
 		ddt = 1.0;
 		mu = GGRAV * oapiGetMass(gravref);
 		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
-		Rot = GetObliquityMatrix(gravref, mjd);
+		Rot = GetObliquityMatrix(mjd);
 		if (up)
 		{
 			sgn = 1.0;
@@ -3110,7 +3216,7 @@ namespace OrbMech
 		rect1 = 0.75*OrbMech::power(2.0, 22.0);
 		rect2 = 0.75*OrbMech::power(2.0, 3.0);
 
-		MATRIX3 obli_E = OrbMech::GetObliquityMatrix(hEarth, mjd0);
+		MATRIX3 obli_E = OrbMech::GetObliquityMatrix(mjd0);
 		U_Z = mul(obli_E, _V(0, 1, 0));
 		U_Z = _V(U_Z.x, U_Z.z, U_Z.y);
 	}

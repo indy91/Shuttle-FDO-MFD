@@ -108,6 +108,7 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LWP.cpp" />
     <ClCompile Include="ShuttleFDOoapiModule.cpp" />
     <ClCompile Include="ShuttleFDOCore.cpp" />
     <ClCompile Include="ShuttleFDOMFD.cpp" />
@@ -115,6 +116,7 @@
     <ClCompile Include="OrbMech.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LWP.h" />
     <ClInclude Include="ShuttleFDOoapiModule.h" />
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="ShuttleFDOCore.h" />

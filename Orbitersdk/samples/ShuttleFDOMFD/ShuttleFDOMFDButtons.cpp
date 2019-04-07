@@ -27,11 +27,11 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	static const MFDBUTTONMENU mnu0[] =
 	{
 		{ "Executive Menu", 0, 'S' },
+		{ "Launch Window Processor", 0, 'L' },
 		{ "Constraints Page", 0, 'C' },
 		{ "Evaluation Page", 0, 'E' },
 		{ "Transfer Page", 0, 'M' },
 		{ "Detailed Maneuver Table" , 0, 'D' },
-		{ "", 0, ' ' },
 
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -44,11 +44,11 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterPage(mnu0, sizeof(mnu0) / sizeof(MFDBUTTONMENU));
 
 	RegisterFunction("EXE", OAPI_KEY_S, &ShuttleFDOMFD::menuSetOMPExeMenu);
+	RegisterFunction("LWP", OAPI_KEY_A, &ShuttleFDOMFD::menuSetLWPPage);
 	RegisterFunction("MCT", OAPI_KEY_C, &ShuttleFDOMFD::menuSetMCTPage);
 	RegisterFunction("MET", OAPI_KEY_E, &ShuttleFDOMFD::menuSetMETPage);
 	RegisterFunction("MTT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetMTTPage);
 	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 
 	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
@@ -128,36 +128,36 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu3[] =
 	{
-		{ "Calculate Launch Time", 0, 'C' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Set target", 0, 'T' },
+		{ "Set launch site", 0, 'L' },
+		{ "Set LS latitude", 0, 'A' },
+		{ "Set LS longitude", 0, 'G' },
+		{ "Max yaw steering", 0, 'Y' },
+		{ "Back to menu", 0, 'B' },
 
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
-		{ "Back to menu", 0, ' ' },
+		{ "Set powered arc", 0, 'P' },
+		{ "Set powered time", 0, 'F' },
+		{ "Set insertion rad", 0, 'R' },
+		{ "Set insertion vel", 0, 'V' },
+		{ "Set insertion FPA", 0, 'H' },
+		{ "Next page", 0, 'N' },
 	};
 
 	RegisterPage(mnu3, sizeof(mnu3) / sizeof(MFDBUTTONMENU));
 
-	RegisterFunction("LAU", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcLaunchTime);
-	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("TGT", OAPI_KEY_T, &ShuttleFDOMFD::set_target);
+	RegisterFunction("LS", OAPI_KEY_L, &ShuttleFDOMFD::menuLWPSetLS);
+	RegisterFunction("LAT", OAPI_KEY_A, &ShuttleFDOMFD::menuLWPSetLSLat);
+	RegisterFunction("LNG", OAPI_KEY_G, &ShuttleFDOMFD::menuLWPSetLSLng);
+	RegisterFunction("YS", OAPI_KEY_Y, &ShuttleFDOMFD::menuLWPSetYS);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 
-	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetMainMenu);
+	RegisterFunction("PFA", OAPI_KEY_P, &ShuttleFDOMFD::menuLWPSetPFA);
+	RegisterFunction("PFT", OAPI_KEY_F, &ShuttleFDOMFD::menuLWPSetPFT);
+	RegisterFunction("RAD", OAPI_KEY_R, &ShuttleFDOMFD::menuLWPSetRAD);
+	RegisterFunction("VEL", OAPI_KEY_V, &ShuttleFDOMFD::menuLWPSetVEL);
+	RegisterFunction("FPA", OAPI_KEY_H, &ShuttleFDOMFD::menuLWPSetFPA);
+	RegisterFunction("NXT", OAPI_KEY_N, &ShuttleFDOMFD::menuSetLWPPage2);
 
 
 	static const MFDBUTTONMENU mnu4[] =
@@ -258,6 +258,74 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu7[] =
+	{
+		{ "DT ET SEP", 0, 'D' },
+		{ "DV ET SEP", 0, 'V' },
+		{ "DT MPS Dump", 0, 'T' },
+		{ "DV MPS Dump", 0, 'M' },
+		{ "Nodal bias", 0, 'L' },
+		{ "Pre OMS-2 weight", 0, 'W' },
+
+		{ "Set DTOPT", 0, 'O' },
+		{ "Set window opening", 0, 'U' },
+		{ "Set window closing", 0, 'C' },
+		{ "Set phase flag", 0, 'P' },
+		{ "Set wrap counter", 0, 'R' },
+		{ "Next page", 0, 'N' },
+	};
+
+	RegisterPage(mnu7, sizeof(mnu7) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("DTE", OAPI_KEY_D, &ShuttleFDOMFD::menuLWPSetDTETSEP);
+	RegisterFunction("DVE", OAPI_KEY_V, &ShuttleFDOMFD::menuLWPSetDVETSEP);
+	RegisterFunction("DTM", OAPI_KEY_T, &ShuttleFDOMFD::menuLWPSetDTMPS);
+	RegisterFunction("DVM", OAPI_KEY_M, &ShuttleFDOMFD::menuLWPSetDVMPS);
+	RegisterFunction("DEL", OAPI_KEY_L, &ShuttleFDOMFD::menuLWPSetDELNO);
+	RegisterFunction("WT", OAPI_KEY_W, &ShuttleFDOMFD::menuLWPSetWT);
+
+	RegisterFunction("OPT", OAPI_KEY_O, &ShuttleFDOMFD::menuLWPSetDTOPT);
+	RegisterFunction("DTO", OAPI_KEY_U, &ShuttleFDOMFD::menuLWPSetDTO);
+	RegisterFunction("DTC", OAPI_KEY_C, &ShuttleFDOMFD::menuLWPSetDTC);
+	RegisterFunction("PHA", OAPI_KEY_P, &ShuttleFDOMFD::menuLWPSetPHASEFLAG);
+	RegisterFunction("WRA", OAPI_KEY_R, &ShuttleFDOMFD::menuLWPSetWRAPFLAG);
+	RegisterFunction("NXT", OAPI_KEY_N, &ShuttleFDOMFD::menuSetLWPPage3);
+
+
+	static const MFDBUTTONMENU mnu8[] =
+	{
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu8, sizeof(mnu8) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcLaunchTime);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 }
