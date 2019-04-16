@@ -1713,35 +1713,39 @@ int ShuttleFDOCore::subThread()
 		LWP.LWP();
 		LWP.GetOutput(LPW_Summary);
 
-		if (LWP_Settings.LW == 0)
+		//No error
+		if (LPW_Summary.LWPERROR == 0)
 		{
-			InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDPLANE);
-			LaunchMJD = LPW_Summary.MJDPLANE;
+			if (LWP_Settings.LW == 0)
+			{
+				InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDPLANE);
+				LaunchMJD = LPW_Summary.MJDPLANE;
+			}
+			else
+			{
+				InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDLO);
+				LaunchMJD = LPW_Summary.MJDLO;
+			}
+
+			LWP_PlanarOpenGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[0]);
+			LWP_PlanarCloseGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[1]);
+
+			OrbMech::mjd2ydoy(LaunchMJD, launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
+
+			//Post insertion state vector processing
+			SV sv_P1, sv_P2;
+
+			sv_P1 = coast_auto(LPW_Summary.sv_P, DTIG_ET_SEP);
+			sv_P1.V += tmul(LVLH_Matrix(sv_P1.R, sv_P1.V), DV_ET_SEP);
+
+			sv_P2 = coast_auto(sv_P1, DTIG_MPS - DTIG_ET_SEP);
+			sv_P2.V += tmul(LVLH_Matrix(sv_P2.R, sv_P2.V), DV_MPS);
+			sv_P2.mass = LWP_Settings.CWHT;
+
+			//Store SV
+			sv_chaser = sv_P2;
+			chaserSVOption = true;
 		}
-		else
-		{
-			InPlaneGMT = OrbMech::MJDToDate(LPW_Summary.MJDLO);
-			LaunchMJD = LPW_Summary.MJDLO;
-		}
-
-		LWP_PlanarOpenGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[0]);
-		LWP_PlanarCloseGMT = OrbMech::MJDToDate(LWP_Parameters.MJDLO[1]);
-		
-		OrbMech::mjd2ydoy(LaunchMJD, launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
-
-		//Post insertion state vector processing
-		SV sv_P1, sv_P2;
-
-		sv_P1 = coast_auto(LPW_Summary.sv_P, DTIG_ET_SEP);
-		sv_P1.V += tmul(LVLH_Matrix(sv_P1.R, sv_P1.V), DV_ET_SEP);
-
-		sv_P2 = coast_auto(sv_P1, DTIG_MPS - DTIG_ET_SEP);
-		sv_P2.V += tmul(LVLH_Matrix(sv_P2.R, sv_P2.V), DV_MPS);
-		sv_P2.mass = LWP_Settings.CWHT;
-
-		//Store SV
-		sv_chaser = sv_P2;
-		chaserSVOption = true;
 
 
 		Result = 0;

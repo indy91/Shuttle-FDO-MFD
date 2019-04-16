@@ -588,7 +588,7 @@ void LaunchWindowProcessor::LWPOT()
 
 void LaunchWindowProcessor::GetOutput(LWPSummary &out)
 {
-	out.LWPERROR = 0;
+	out.LWPERROR = error;
 	out.MJDLO = MJDLO;
 	out.MJDINS = MJDINS;
 	out.AZL = AZL;

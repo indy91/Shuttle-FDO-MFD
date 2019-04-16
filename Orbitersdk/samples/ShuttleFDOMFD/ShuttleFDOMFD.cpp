@@ -752,7 +752,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		LWPGMT2String(Buffer, G->LWP_PlanarOpenGMT);
 		skp->Text(3 * W / 16, 6 * H / 14, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.1f°", G->LWP_Parameters.PHASE[0]*DEG);
-		skp->Text(3 * W / 8, 7 * H / 14, Buffer, strlen(Buffer));
+		skp->Text(5 * W / 16, 7 * H / 14, Buffer, strlen(Buffer));
 
 		skp->Text(4 * W / 8, 5 * H / 14, "PLANAR CLOSE", 12);
 		skp->Text(4 * W / 8, 6 * H / 14, "L/O", 3);
@@ -760,7 +760,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		LWPGMT2String(Buffer, G->LWP_PlanarCloseGMT);
 		skp->Text(5 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.1f°", G->LWP_Parameters.PHASE[1] * DEG);
-		skp->Text(6 * W / 8, 7 * H / 14, Buffer, strlen(Buffer));
+		skp->Text(11 * W / 16, 7 * H / 14, Buffer, strlen(Buffer));
 
 		sprintf_s(Buffer, "IMECO:");
 		skp->Text(1 * W / 16, 9 * H / 14, Buffer, strlen(Buffer));
