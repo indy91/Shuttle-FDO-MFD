@@ -78,7 +78,7 @@ struct ITERCONSTR
 struct MANEUVER
 {
 	char name[64];
-	double TIG_MJD;
+	double TIG_GMT;
 	VECTOR3 dV_LVLH;
 	OMPDefs::MANTYPE type;
 };
@@ -198,18 +198,19 @@ public:
 	void GetDMTManeuverID(char *buf, char *name);
 
 	void SetLaunchMJD(int Y, int D, int H, int M, double S);
-	double GetLaunchMJD() { return LaunchMJD; }
+	double GETfromGMT(double GMT) { return GMT - LaunchGMT; }
+	double GMTfromGET(double GET) { return GET + LaunchGMT; }
 
-	SV StateVectorCalc(VESSEL *v, double SVMJD = 0.0);
+	SV StateVectorCalc(VESSEL *v, double SVGMT = 0.0);
 	SV coast_auto(SV sv0, double dt);
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
 	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
 	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	SV PositionMatch(SV sv_A, SV sv_P);
-	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double MJD0, VECTOR3 RP_off, double dt, int N, bool prog);
-	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double MJD1, double dt, VECTOR3 off);
-	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double MJD1, VECTOR3 off);
+	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double GMT0, VECTOR3 RP_off, double dt, int N, bool prog);
+	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double GMT1, double dt, VECTOR3 off);
+	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double GMT1, VECTOR3 off);
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
 	VECTOR3 CircManeuverAuto(SV sv_A);
 	VECTOR3 NSRManeuver(SV sv_A, SV sv_P);
@@ -251,7 +252,10 @@ public:
 	VESSEL* shuttle;
 	int shuttlenumber;
 
+	//Displayed launch time
+	//Year, Day, Hour, Minutes of launch
 	int launchdate[4];
+	//Seconds of launch
 	double launchdateSec;
 
 	bool useNonSphericalGravity;
@@ -280,7 +284,12 @@ protected:
 	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
 
-	double LaunchMJD;
+	//MJD at midnight before launch
+	double BaseMJD;
+	//GMT of launch
+	double LaunchGMT;
+	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to Ecliptic, left handed
+	MATRIX3 M_EFTOECL_AT_EPOCH;
 	double R_E;
 	double w_E;
 

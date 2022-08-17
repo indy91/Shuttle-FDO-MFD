@@ -27,8 +27,8 @@ using namespace OrbMech;
 struct LWPSummary
 {
 	int LWPERROR = 0;
-	double MJDLO = 0.0;
-	double MJDINS = 0.0;
+	double GMTLO = 0.0;
+	double GMTINS = 0.0;
 	double AZL = 0.0;
 	double VIGM = 0.0;
 	double RIGM = 0.0;
@@ -39,7 +39,7 @@ struct LWPSummary
 	double DN = 0.0;
 	double DELNO = 0.0;
 	double PA = 0.0;
-	double MJDPLANE = 0.0;
+	double GMTPLANE = 0.0;
 	double LATLS = 0.0;
 	double LONGLS = 0.0;
 	SV sv_P;
@@ -47,7 +47,7 @@ struct LWPSummary
 
 struct LWPParameterTable
 {
-	double MJDLO[2] = { 0.0, 0.0 };
+	double GMTLO[2] = { 0.0, 0.0 };
 	double GPAZ[2] = { 0.0, 0.0 };
 	double AZL[2] = { 0.0, 0.0 };
 	double YP[2] = { 0.0, 0.0 };
@@ -87,8 +87,8 @@ struct LWPSettings
 	double VINS;
 	//Yaw steering limit
 	double YSMAX;
-	//MJD of inplane lift-off time (normally computed internally)
-	double MJDPLANE;
+	//GMT of inplane lift-off time (normally computed internally)
+	double GMTPLANE;
 	//Launch window/launch targeting options
 	//0 = LW, 1 = LT, 2 = LW and LT
 	int LW;
@@ -119,14 +119,14 @@ public:
 protected:
 	void LWT();
 	SV UPDATE(SV sv0, double dt);
-	void NPLAN(double &MJDIP);
-	void LENSR(double mjdlo, double ysmax, SV &sv_P, double &delta);
+	void NPLAN(double &GMTIP);
+	void LENSR(double GMTLO, double ysmax, SV &sv_P, double &delta);
 	double PHANG(SV sv_P, int phcont, int wrp);
-	double GMTLS(double MJDI);
+	double GMTLS(double GMTI);
 	void RLOT();
 	void TARGT(SV &sv_P);
 	SV PositionMatch(SV sv_A, SV sv_P);
-	void NSERT(double MJDLO, double &UINS, SV &sv_P, double &DH);
+	void NSERT(double GMTLO, double &UINS, SV &sv_P, double &DH);
 	void LWPT();
 	void LWDSP();
 	void RLOTD();
@@ -176,10 +176,10 @@ protected:
 	int LOT;
 	//Delta time added to inplane time to obtain lift-off time
 	double TRANS;
-	//MJD of inplane lift-off time (normally computed internally)
-	double MJDPLANE;
-	//Recommended or threshold lift-off MJD
-	double MJDLOR;
+	//GMT of inplane lift-off time (normally computed internally)
+	double GMTPLANE;
+	//Recommended or threshold lift-off GMT
+	double GMTLOR;
 	//Time iteration tolerance
 	double DET;
 	//Radius iteration tolerance
@@ -191,7 +191,7 @@ protected:
 	double DELNO;
 	//DT from lift-off, which defines the time of guidance reference release
 	double DTGRR;
-	//Bias that is added to MJDLOSTAR to produce lift-off time
+	//Bias that is added to GMTLOSTAR to produce lift-off time
 	double BIAS;
 	//Differential nodal precession
 	double DELNOD;
@@ -214,12 +214,12 @@ protected:
 	double PAC;
 	//Phase angle at window opening (ascending node)
 	double PAO;
-	//MJD of lift-off for launch window opening (ascending node)
-	double MJDOPEN;
-	//MJD of lift-off for launch window closing (descending node)
-	double MJDCLOSE;
-	//MJD of insertion
-	double MJDINS;
+	//GMT of lift-off for launch window opening (ascending node)
+	double GMTOPEN;
+	//GMT of lift-off for launch window closing (descending node)
+	double GMTCLOSE;
+	//GMT of insertion
+	double GMTINS;
 	//Wedge angle between planes
 	double WEDGE;
 	//Launch window parameter table options
@@ -231,8 +231,8 @@ protected:
 	double OFFSET;
 	//Launch azimuth coefficients
 	double LAZCOE[4];
-	//MJD of lift-off
-	double MJDLO;
+	//GMT of lift-off
+	double GMTLO;
 	//Inclination of chaser at insertion
 	double IIGM;
 	//Angle measured from launch site meridian to chaser descending node

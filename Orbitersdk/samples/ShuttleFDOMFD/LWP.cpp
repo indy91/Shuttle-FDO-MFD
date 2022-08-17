@@ -43,9 +43,9 @@ LaunchWindowProcessor::LaunchWindowProcessor()
 	ANOM = 0.0;
 	LOT = 0;
 	TRANS = 0.0;
-	MJDPLANE = 0.0;
-	MJDLO = 0.0;
-	MJDLOR = 0.0;
+	GMTPLANE = 0.0;
+	GMTLO = 0.0;
+	GMTLOR = 0.0;
 	DET = 1.0;
 	DELH = 250.0*0.3048;
 	DELNOF = true;
@@ -61,9 +61,9 @@ LaunchWindowProcessor::LaunchWindowProcessor()
 	DVTOL = 0.1*0.3048;
 	PAO = 0.0;
 	PAC = 0.0;
-	MJDOPEN = 0.0;
-	MJDCLOSE = 0.0;
-	MJDINS = 0.0;
+	GMTOPEN = 0.0;
+	GMTCLOSE = 0.0;
+	GMTINS = 0.0;
 	WEDGE = 0.0;
 	LPT = 1;
 	OFFSET = 0.0;
@@ -102,7 +102,7 @@ void LaunchWindowProcessor::Init(LWPSettings &set)
 	RINS = set.RINS;
 	VINS = set.VINS;
 	YSMAX = set.YSMAX;
-	MJDPLANE = set.MJDPLANE;
+	GMTPLANE = set.GMTPLANE;
 	LW = set.LW;
 	TSTART = set.TSTART;
 	TEND = set.TEND;
@@ -149,20 +149,20 @@ SV LaunchWindowProcessor::UPDATE(SV sv0, double dt)
 	}
 }
 
-void LaunchWindowProcessor::LENSR(double mjdlo, double ysmax, SV &sv_P, double &delta)
+void LaunchWindowProcessor::LENSR(double GMTLO, double ysmax, SV &sv_P, double &delta)
 {
 	SV sv_T1;
 	OELEMENTS coe;
 	MATRIX3 MATR1, MATR2, MATR3;
 	VECTOR3 URLS, H, K, J;
-	double psi, Gamma, DYAW, MJDINS;
+	double psi, Gamma, DYAW, LONG;
 
-	MJDINS = mjdlo + PFT / 24.0 / 3600.0;
-	sv_T = UPDATE(sv_T, (MJDINS - sv_T.MJD)*24.0*3600.0);
+	GMTINS = GMTLO + PFT;
+	sv_T = UPDATE(sv_T, GMTINS - sv_T.GMT);
 	sv_T1 = sv_T;
 
-	URLS = _V(cos(LATLS)*cos(LONGLS), cos(LATLS)*sin(LONGLS), sin(LATLS));
-	URLS = OrbMech::ECEFToEcliptic(URLS, mjdlo);
+	LONG = LONGLS + w_E * GMTLO;
+	URLS = _V(cos(LATLS)*cos(LONG), cos(LATLS)*sin(LONG), sin(LATLS));
 	H = unit(crossp(sv_T1.R, sv_T1.V));
 	K = unit(crossp(H, URLS));
 	J = crossp(K, H);
@@ -201,18 +201,17 @@ void LaunchWindowProcessor::LENSR(double mjdlo, double ysmax, SV &sv_P, double &
 	MATR3 = mul(_M(cos(GAMINS), -sin(GAMINS), 0., sin(GAMINS), cos(GAMINS), 0., 0., 0., 1.), MATR2);
 	sv_P.R = _V(MATR2.m11, MATR2.m12, MATR2.m13)*RINS;
 	sv_P.V = _V(MATR3.m21, MATR3.m22, MATR3.m23)*VINS;
-	sv_P.MJD = MJDINS;
+	sv_P.GMT = GMTINS;
 
 	//Test
 	OELEMENTS coetest = coe_from_sv(sv_P.R, sv_P.V, mu);
 	double atest2 = 1;
 }
 
-void LaunchWindowProcessor::NPLAN(double &MJDIP)
+void LaunchWindowProcessor::NPLAN(double &GMTIP)
 {
 	OrbMech::OELEMENTS coe;
-	VECTOR3 R_ECEF, V_ECEF;
-	double I_m, U_T, eta, lambda_N, lambda, DLON, DOS, dt;
+	double I_m, U_T, eta, lambda_N, LAMBDA, LONG, DLON, DOS, dt;
 	int ITER;
 
 	ITER = 1;
@@ -220,23 +219,23 @@ void LaunchWindowProcessor::NPLAN(double &MJDIP)
 
 	do
 	{
-		sv_T = UPDATE(sv_T, (MJDIP - sv_T.MJD)*24.0*3600.0);
-		OrbMech::EclipticToECEF(sv_T.R, sv_T.V, sv_T.MJD, R_ECEF, V_ECEF);
-		coe = OrbMech::coe_from_sv(R_ECEF, V_ECEF, mu);
+		sv_T = UPDATE(sv_T, GMTIP - sv_T.GMT);
+		coe = OrbMech::coe_from_sv(sv_T.R, sv_T.V, mu);
 		I_m = coe.i;
 		lambda_N = coe.RA;
 		U_T = OrbMech::asin2(sin(LATLS) / sin(I_m));
 		if (NS == 1) U_T = PI - U_T;
 		eta = acos(cos(U_T) / cos(LATLS));
 		if (I_m > PI05) eta = -eta;
-		lambda = lambda_N + eta;
-		if (lambda < 0) lambda += PI2;
-		DLON = lambda - LONGLS;
+		LAMBDA = lambda_N - w_E * GMTIP;
+		LONG = LAMBDA + eta;
+		if (LONG < 0) LONG += PI2;
+		DLON = LONG - LONGLS;
 		while (DLON > PI) DLON -= PI2;
 		while (DLON <= -PI) DLON += PI2;
 		if (DLON < 0 && ITER == 1) DLON += PI2;
 		dt = DLON / w_E;
-		MJDIP += dt / 24.0 / 3600.0;
+		GMTIP += dt;
 		ITER++;
 	} while (abs(DLON) >= DOS && ITER <= CMAX);
 }
@@ -244,20 +243,20 @@ void LaunchWindowProcessor::NPLAN(double &MJDIP)
 void LaunchWindowProcessor::LWT()
 {
 	SV sv_P;
-	double MJDIP, V, delta, DV, MJDIP0;
+	double GMTIP, V, delta, DV, GMTIP0;
 	ITERSTATE iter;
 
-	MJDIP = sv_T.MJD;
+	GMTIP = sv_T.GMT;
 	
 LWT1:
 
 	iter.dv = 0.0;
-	NPLAN(MJDIP);
-	MJDIP0 = MJDIP;
+	NPLAN(GMTIP);
+	GMTIP0 = GMTIP;
 	do
 	{
-		MJDIP = MJDIP0 + iter.dv / 24.0 / 3600.0;
-		LENSR(MJDIP, -1, sv_P, delta);
+		GMTIP = GMTIP0 + iter.dv;
+		LENSR(GMTIP, -1, sv_P, delta);
 		V = length(sv_P.V);
 		DV = 2.0*V*sin(delta / 2.0);
 
@@ -276,9 +275,9 @@ LWT1:
 
 	if (NS != 1)
 	{
-		MJDOPEN = MJDIP + DTOPT / 24.0 / 3600.0;
-		MJDPLANE = MJDOPEN;
-		LENSR(MJDPLANE, YSMAX, sv_P, delta);
+		GMTOPEN = GMTIP + DTOPT;
+		GMTPLANE = GMTOPEN;
+		LENSR(GMTPLANE, YSMAX, sv_P, delta);
 		PAO = PHANG(sv_P, NEGTIV, WRAP);
 	}
 	if (NS == 2)
@@ -288,10 +287,10 @@ LWT1:
 	}
 	if (NS != 0)
 	{
-		MJDCLOSE = MJDIP + DTOPT / 24.0 / 3600.0;
-		MJDINS = MJDCLOSE + PFT / 24.0 / 3600.0;
-		MJDPLANE = MJDCLOSE;
-		LENSR(MJDPLANE, YSMAX, sv_P, delta);
+		GMTCLOSE = GMTIP + DTOPT;
+		GMTINS = GMTCLOSE + PFT;
+		GMTPLANE = GMTCLOSE;
+		LENSR(GMTPLANE, YSMAX, sv_P, delta);
 		PAC = PHANG(sv_P, NEGTIV, WRAP);
 	}
 
@@ -331,13 +330,13 @@ double LaunchWindowProcessor::PHANG(SV sv_P, int phcont, int wrp)
 	return phase;
 }
 
-double LaunchWindowProcessor::GMTLS(double MJDI)
+double LaunchWindowProcessor::GMTLS(double GMTI)
 {
 	SV sv_P;
 	double DT, STAR, phase, n, delta;
 
 	DT = 1000.0;
-	STAR = MJDI;
+	STAR = GMTI;
 	n = OrbMech::GetMeanMotion(sv_T.R, sv_T.V, mu);
 
 	do
@@ -353,7 +352,7 @@ double LaunchWindowProcessor::GMTLS(double MJDI)
 void LaunchWindowProcessor::RLOT()
 {
 	SV sv_P;
-	double DALT, DTYAW, GSTAR, UINS, DH, MJDYAW;
+	double DALT, DTYAW, GSTAR, UINS, DH, GMTYAW;
 	int ITER, ITINS, LAST;
 
 	ITER = 0;
@@ -376,18 +375,18 @@ void LaunchWindowProcessor::RLOT()
 	case 1:
 	case 2:
 	case 3:
-		MJDLO = MJDLOR;
+		GMTLO = GMTLOR;
 		break;
 	case 4:
 	case 6:
-		MJDLO = MJDPLANE;
+		GMTLO = GMTPLANE;
 		break;
 	case 5:
-		MJDLO = MJDPLANE + TRANS;
+		GMTLO = GMTPLANE + TRANS;
 		break;
 	}
 
-	GSTAR = GMTLS(MJDLO);
+	GSTAR = GMTLS(GMTLO);
 
 	do
 	{
@@ -400,7 +399,7 @@ void LaunchWindowProcessor::RLOT()
 				case 1:
 				case 5:
 				case 6:
-					NSERT(MJDLO, UINS, sv_P, DH);
+					NSERT(GMTLO, UINS, sv_P, DH);
 					break;
 				case 2:
 					break;
@@ -421,11 +420,11 @@ void LaunchWindowProcessor::RLOT()
 				}
 			} while (abs(DALT) >= DELH);
 
-			BIAS = (MJDLO - GSTAR)*24.0*3600.0;
+			BIAS = GMTLO - GSTAR;
 			TARGT(sv_P);
 			if (LAST == 1)
 			{
-				MJDYAW = MJDPLANE + (DELNO / w_E) / 24.0 / 3600.0;
+				GMTYAW = GMTPLANE + DELNO / w_E;
 			}
 			else
 			{
@@ -433,8 +432,8 @@ void LaunchWindowProcessor::RLOT()
 			}
 			if (LOT == 6)
 			{
-				DTYAW = (MJDYAW - MJDLO)*24.0*3600.0;
-				MJDLO = MJDYAW;
+				DTYAW = GMTYAW - GMTLO;
+				GMTLO = GMTYAW;
 			}
 
 			ITER++;
@@ -446,7 +445,7 @@ void LaunchWindowProcessor::RLOT()
 		{
 			LAST = 0;
 			LOT = 1;
-			MJDLO = MJDYAW + TRANS / 24.0 / 3600.0;
+			GMTLO = GMTYAW + TRANS;
 		}
 
 	} while (LAST != 1);
@@ -456,7 +455,6 @@ void LaunchWindowProcessor::TARGT(SV &sv_P)
 {
 	//Position matched target state vector
 	SV sv_T1;
-	VECTOR3 R_TINS, V_TINS;
 	OELEMENTS coe;
 	//nodal precession rate of target
 	double HDOTT;
@@ -487,8 +485,7 @@ void LaunchWindowProcessor::TARGT(SV &sv_P)
 
 	//Calculate IIGM
 	sv_T1 = PositionMatch(sv_T, sv_P);
-	EclipticToECI(sv_T1.R, sv_T1.V, sv_T1.MJD, R_TINS, V_TINS);
-	coe = coe_from_sv(R_TINS, V_TINS, mu);
+	coe = coe_from_sv(sv_T1.R, sv_T1.V, mu);
 	IIGM = coe.i;
 
 	TIGM = DN - LONGLS + DELNO + w_E * (PFT + DTGRR);
@@ -501,12 +498,11 @@ void LaunchWindowProcessor::TARGT(SV &sv_P)
 
 	if (DELNO != 0.0)
 	{
-		EclipticToECI(sv_P.R, sv_P.V, sv_P.MJD, sv_P1.R, sv_P1.V);
+		sv_P1 = sv_P;
 		coe = coe_from_sv(sv_P1.R, sv_P1.V, mu);
 		coe.i = IIGM;
 		coe.RA = coe.RA + DELNO;
 		sv_from_coe(coe, mu, sv_P1.R, sv_P1.V);
-		ECIToEcliptic(sv_P1.R, sv_P1.V, sv_P1.MJD, sv_P1.R, sv_P1.V);
 	}
 	else
 	{
@@ -524,7 +520,7 @@ SV LaunchWindowProcessor::PositionMatch(SV sv_A, SV sv_P)
 
 	u = unit(crossp(sv_P.R, sv_P.V));
 	U_L = unit(crossp(u, sv_P.R));
-	sv_A1 = UPDATE(sv_A, (sv_P.MJD - sv_A.MJD)*24.0*3600.0);
+	sv_A1 = UPDATE(sv_A, sv_P.GMT - sv_A.GMT);
 
 	do
 	{
@@ -543,11 +539,11 @@ SV LaunchWindowProcessor::PositionMatch(SV sv_A, SV sv_P)
 	return sv_A1;
 }
 
-void LaunchWindowProcessor::NSERT(double MJDLO, double &UINS, SV &sv_P, double &DH)
+void LaunchWindowProcessor::NSERT(double GMTLO, double &UINS, SV &sv_P, double &DH)
 {
 	double delta;
 
-	LENSR(MJDLO, YSMAX, sv_P, delta);
+	LENSR(GMTLO, YSMAX, sv_P, delta);
 
 	DH = length(sv_T.R) - length(sv_P.R);
 	PA = PHANG(sv_P, NEGTIV, WRAP);
@@ -577,20 +573,20 @@ void LaunchWindowProcessor::LWPOT()
 	double delta;
 	bool last = false;
 
-	lwp_param_table->MJDLO[0] = MJDLO + TSTART / 24.0 / 3600.0;
-	LENSR(lwp_param_table->MJDLO[0], YSMAX, sv_P, delta);
+	lwp_param_table->GMTLO[0] = GMTLO + TSTART;
+	LENSR(lwp_param_table->GMTLO[0], YSMAX, sv_P, delta);
 	lwp_param_table->PHASE[0] = PHANG(sv_P, NEGTIV, WRAP);
 
-	lwp_param_table->MJDLO[1] = MJDLO + TEND / 24.0 / 3600.0;
-	LENSR(lwp_param_table->MJDLO[1], YSMAX, sv_P, delta);
+	lwp_param_table->GMTLO[1] = GMTLO + TEND;
+	LENSR(lwp_param_table->GMTLO[1], YSMAX, sv_P, delta);
 	lwp_param_table->PHASE[1] = PHANG(sv_P, NEGTIV, WRAP);
 }
 
 void LaunchWindowProcessor::GetOutput(LWPSummary &out)
 {
 	out.LWPERROR = error;
-	out.MJDLO = MJDLO;
-	out.MJDINS = MJDINS;
+	out.GMTLO = GMTLO;
+	out.GMTINS = GMTINS;
 	out.AZL = AZL;
 	out.VIGM = VINS;
 	out.RIGM = RINS;
@@ -600,7 +596,7 @@ void LaunchWindowProcessor::GetOutput(LWPSummary &out)
 	out.DN = DN;
 	out.DELNO = DELNO;
 	out.PA = PA;
-	out.MJDPLANE = MJDPLANE;
+	out.GMTPLANE = GMTPLANE;
 	out.LATLS = LATLS;
 	out.LONGLS = LONGLS;
 	out.sv_P = sv_P1;

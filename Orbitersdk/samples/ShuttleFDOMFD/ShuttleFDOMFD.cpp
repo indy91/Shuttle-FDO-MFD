@@ -842,13 +842,13 @@ void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
 void ShuttleFDOMFD::GMT2String(char *buf, double GMT)
 {
 	GMT = round(GMT*1000.0) / 1000.0;
-	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + 1.0, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + (double)G->launchdate[1], floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
 void ShuttleFDOMFD::LWPGMT2String(char *buf, double GMT)
 {
 	GMT = round(GMT*1000.0) / 1000.0;
-	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(GMT / 86400.0) + 1.0, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(GMT / 86400.0), floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
 double ShuttleFDOMFD::DDDHHHMMSS2MET(int dd, int hh, int mm, double ss)
@@ -1639,6 +1639,10 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	else if (err == 23)
 	{
 		sprintf_s(buf, 100, "Error: No valid threshold for SOI/NCC");
+	}
+	else if (err == 100)
+	{
+		sprintf_s(buf, 100, "Error: No target vessel.");
 	}
 	else
 	{
