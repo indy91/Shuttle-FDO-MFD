@@ -1212,6 +1212,28 @@ namespace OrbMech
 		return dt;
 	}
 
+	//Analytical sun ephemeris
+	VECTOR3 SUN(double MJD, const MATRIX3 &RM)
+	{
+		//Calculate solar direction vector in ecliptic coordinates, then rotate to desired coordinate system with RM
+		VECTOR3 R_Sun;
+		double T_UT, lng_mean, T_TDB, M, lng_ecl, obl, r;
+		
+		T_UT = (MJD - 51544.5) / 36525.0;
+		lng_mean = 280.460 + 36000.77*T_UT;
+		lng_mean = normalize_angle(lng_mean);
+		T_TDB = T_UT;
+		M = 357.5277233 + 35999.05034 *T_TDB;
+		M = normalize_angle(M)*RAD;
+		lng_ecl = lng_mean + 1.914666471 *sin(M) + 0.019994643 *sin(2.0*M);
+		lng_ecl = lng_ecl - T_UT * 360.0 / 257.715; //Precession term
+		lng_ecl = normalize_angle(lng_ecl)*RAD;
+		obl = 0.0;
+		r = 1.000140612 - 0.016708617 *cos(M) - 0.000139589 *cos(2.0*M);
+		R_Sun = _V(cos(lng_ecl), cos(obl)*sin(lng_ecl), sin(obl)*sin(lng_ecl))*r*AU;
+		return rhtmul(RM, R_Sun);
+	}
+
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
 	{
 		double dt, dt_max, a_T, tau, m0, mnow, dV, dVnow, t_remain, t;
@@ -1542,6 +1564,11 @@ namespace OrbMech
 		while (difference < -PI) difference += PI2;
 		while (difference > PI) difference -= PI2;
 		return difference;
+	}
+
+	double normalize_angle(double value)
+	{
+		return (value - (floor(value / 360.0) * 360.0));
 	}
 
 	MATRIX3 inverse(MATRIX3 a)

@@ -103,6 +103,8 @@ namespace OrbMech
 	void umbra(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool rise, double &v1);
 	double sunrise(VECTOR3 R, VECTOR3 V, double GMT, double BaseMJD, MATRIX3 Rot, OBJHANDLE planet, OBJHANDLE planet2, bool rise, bool midnight, bool future = false);
 	void orbitmidnight(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool night, double &v1);
+	//Analytical sun ephemeris
+	VECTOR3 SUN(double MJD, const MATRIX3 &RM);
 	void BrouwerSecularRates(CELEMENTS mean, double mu, double &l_dot, double &g_dot, double &h_dot, double &n0);
 	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime);
 	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double GMT, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &GMT_out);
@@ -174,6 +176,7 @@ namespace OrbMech
 	double fraction_pq(double x);
 	double fraction_xi(double x);
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle);
+	double normalize_angle(double value);
 	MATRIX3 inverse(MATRIX3 a);
 	double determinant(MATRIX3 a);
 	MATRIX3 tmat(MATRIX3 a);

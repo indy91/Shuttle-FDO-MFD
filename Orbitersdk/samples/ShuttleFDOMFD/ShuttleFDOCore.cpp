@@ -1831,7 +1831,7 @@ void ShuttleFDOCore::ExecuteMTT()
 	DMTINPUT man;
 	SV sv_cur, sv_tig, sv_cut;
 	VECTOR3 DV_iner;
-	double dt, F, isp, dv, dt_burn;
+	double dt, F, isp, dv, dt_burn, W_dot;
 
 	sv_cur = sv_chaser;
 
@@ -1841,25 +1841,46 @@ void ShuttleFDOCore::ExecuteMTT()
 		sv_cur = coast_auto(sv_cur, dt);
 
 		GetThrusterData(ManeuverTransferTable[i].thrusters, F, isp);
+		W_dot = F / isp;
 
 		dv = ManeuverEvaluationTable[i].DVMag*0.3048;
-		dt_burn = isp / F * sv_cur.mass*(1.0 - exp(-dv / isp));
+		dt_burn = sv_cur.mass / W_dot * (1.0 - exp(-dv * W_dot / F));
 
 		DV_iner = tmul(OrbMech::LVLH_Matrix(sv_cur.R, sv_cur.V), ManeuverEvaluationTable[i].DV*0.3048);
 		man.DV_iner = DV_iner;
 
 		sv_cut = sv_cur;
-		sv_cut.mass -= F / isp * dt_burn;
+		sv_cut.mass -= W_dot * dt_burn;
 		//TBD: ITER support
 		sv_cut.V += DV_iner;
 
-		if (ManeuverTransferTable[i].IMP)
+		//Very small burn, bypass logic
+		if (ManeuverEvaluationTable[i].DVMag < 0.1)
 		{
-			sv_tig = coast_auto(sv_cur, -dt_burn / 2.0);
+			sv_tig = sv_cur;
 		}
 		else
 		{
-			sv_tig = sv_cur;
+			if (ManeuverTransferTable[i].IMP)
+			{
+				//Balance DV before and after impulsive TIG
+				double S, A, B, dt_tig;
+				S = F / W_dot;
+				A = S * log(sv_cur.mass / sv_cut.mass);
+				B = (sv_cur.mass / W_dot)*A - S * dt_burn;
+				dt_tig = -B / A;
+
+				if (i == 0)
+				{
+					sprintf(oapiDebugString(), "%lf %lf", dt_tig, -dt_burn / 2.0);
+				}
+
+				sv_tig = coast_auto(sv_cur, dt_tig);
+			}
+			else
+			{
+				sv_tig = sv_cur;
+			}
 		}
 
 		man.sv_tig = sv_tig;
@@ -2203,7 +2224,7 @@ void ShuttleFDOCore::SetLaunchMJD(int Y, int D, int H, int M, double S)
 	//Calculate GMT of launch
 	LaunchGMT = H * 3600.0 + M * 60.0 + S;
 
-	sprintf(oapiDebugString(), "%f %f", BaseMJD, LaunchGMT);
+	//sprintf(oapiDebugString(), "%f %f", BaseMJD, LaunchGMT);
 }
 
 void ShuttleFDOCore::OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY)
