@@ -23,6 +23,7 @@
 #include "MFDButtonPage.hpp"
 #include "ShuttleFDOMFDButtons.h"
 #include "LWP.h"
+#include "DeorbitOpportunities.h"
 #include "OrbMech.h"
 
 using namespace OrbMech;
@@ -181,10 +182,11 @@ public:
 	void CalcMCT();
 	void CalculateManeuverEvalTable(SV sv_A0, SV sv_P0);
 	void CalcLaunchTime();
-	void MET2MTT();
+	bool MET2MTT();
 	void LoadMTTSlotData(MANTRANSDATA &man, int slot);
 	void ExecuteMTT();
 	void CalcDMT();
+	void CalcDeorbitOpportunities();
 
 	void AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins = 0);
 	void AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time);
@@ -205,7 +207,6 @@ public:
 	SV coast_auto(SV sv0, double dt);
 	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
 	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	SV PositionMatch(SV sv_A, SV sv_P);
 	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double GMT0, VECTOR3 RP_off, double dt, int N, bool prog);
@@ -228,6 +229,8 @@ public:
 	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
+
+	double GetLaunchGMT() { return LaunchGMT; }
 
 	std::vector<MANEUVER> ManeuverTable;
 	std::vector<ManeuverConstraints> ManeuverConstraintsTable;
@@ -276,6 +279,13 @@ public:
 	//MPS Dump DV
 	VECTOR3 DV_MPS;
 	double LWP_PlanarOpenGMT, LWP_PlanarCloseGMT;
+
+	//Deorbit Opportunities
+	LOPTOutput DODS_Output;
+	double DOPS_GETS;
+	double DOPS_GETF;
+	int DOPS_InitialRev;
+	double DOPS_MaxXRNG;
 
 	OBJHANDLE hEarth;
 	double mu;

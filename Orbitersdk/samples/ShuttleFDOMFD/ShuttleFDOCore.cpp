@@ -215,6 +215,10 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 
 	LWP_PlanarOpenGMT = 0.0;
 	LWP_PlanarCloseGMT = 0.0;
+
+	DOPS_GETS = DOPS_GETF = 0.0;
+	DOPS_InitialRev = 1;
+	DOPS_MaxXRNG = 800.0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -320,139 +324,6 @@ void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 			sv_a = sv2;
 		}
 	}
-}
-
-SV ShuttleFDOCore::GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN)
-{
-	//Update to the given time
-	if (opt == 0)
-	{
-		double GMT1, dt;
-
-		GMT1 = param;
-		dt = GMT1 - sv0.GMT;
-		return coast(sv0, dt);
-	}
-	//Update to the given mean anomaly
-	else
-	{
-		SV sv1;
-		OrbMech::CELEMENTS osc0, osc1;
-		double DX_L, X_L, X_L_dot, dt, ddt, L_D, ll_dot, n0, g_dot, J20;
-		int LINE, COUNT;
-		bool DH;
-
-		J20 = 1082.6269e-6;
-
-		sv1 = sv0;
-		osc0 = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu);
-
-		n0 = sqrt(mu / (osc0.a*osc0.a*osc0.a));
-		ll_dot = n0;
-		g_dot = n0 * ((3.0 / 4.0)*(J20*R_E*R_E*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
-
-		osc1 = osc0;
-		if (opt != 3)
-		{
-			L_D = param;
-		}
-		else
-		{
-			double u = OrbMech::MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-			u = fmod(u, PI2);
-			if (u < 0)
-				u += PI2;
-			L_D = u;
-		}
-		DX_L = 1.0;
-		DH = DN > 0.0;
-		dt = 0.0;
-		LINE = 0;
-		COUNT = 24;
-
-		do
-		{
-			//Mean anomaly
-			if (opt == 1)
-			{
-				X_L = osc1.l;
-				X_L_dot = ll_dot;
-			}
-			//Argument of latitude
-			else if (opt == 2)
-			{
-				double u = OrbMech::MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-				u = fmod(u, PI2);
-				if (u < 0)
-					u += PI2;
-
-				X_L = u;
-				X_L_dot = ll_dot + g_dot;
-			}
-			//Maneuver line
-			else
-			{
-				double u = OrbMech::MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-				u = fmod(u, PI2);
-				if (u < 0)
-					u += PI2;
-
-				X_L = u;
-				X_L_dot = ll_dot + g_dot;
-				LINE = 2;
-			}
-
-			if (DH)
-			{
-				double DN_apo = DN * PI2;
-				ddt = DN_apo / ll_dot;
-				DH = false;
-
-				if (LINE != 0)
-				{
-					L_D = L_D + g_dot * ddt + DN_apo;
-					while (L_D < 0) L_D += PI2;
-					while (L_D >= PI2) L_D -= PI2;
-				}
-				else
-				{
-					ddt += (L_D - X_L) / X_L_dot;
-				}
-			}
-			else
-			{
-				DX_L = L_D - X_L;
-				if (abs(DX_L) - PI >= 0)
-				{
-					if (DX_L > 0)
-					{
-						DX_L -= PI2;
-					}
-					else
-					{
-						DX_L += PI2;
-					}
-				}
-				ddt = DX_L / X_L_dot;
-				if (LINE != 0)
-				{
-					L_D = L_D + ddt * g_dot;
-				}
-			}
-
-
-			dt += ddt;
-			sv1 = coast(sv1, ddt);
-			osc1 = OrbMech::CartesianToKeplerian(sv1.R, sv1.V, mu);
-
-			COUNT--;
-
-		} while (abs(DX_L) > 2e-4 && COUNT > 0);
-
-		return sv1;
-	}
-
-	return sv0;
 }
 
 void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
@@ -1668,6 +1539,11 @@ void ShuttleFDOCore::CalcLaunchTime()
 	startSubthread(2);
 }
 
+void ShuttleFDOCore::CalcDeorbitOpportunities()
+{
+	startSubthread(3);
+}
+
 int ShuttleFDOCore::subThread()
 {
 	//Do nothing if mission not initialized
@@ -1752,6 +1628,48 @@ int ShuttleFDOCore::subThread()
 		Result = 0;
 	}
 	break;
+	case 3: //Deorbit Opportunities
+	{
+		LandingOpportunitiesProcessor lop;
+		LOPTInput opt;
+
+		std::ifstream myfile;
+		myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\LandingSites.txt");
+		if (myfile.is_open())
+		{
+			char Buffer[128];
+			LOPTSite temp;
+			opt.sites.clear();
+
+			std::string line;
+			while (std::getline(myfile, line))
+			{
+				if (sscanf(line.c_str(), "%s %lf %lf %lf %d", Buffer, &temp.lat, &temp.lng, &temp.rad, &temp.timezone) == 5)
+				{
+					temp.name.assign(Buffer);
+					temp.lat *= RAD;
+					temp.lng *= RAD;
+					opt.sites.push_back(temp);
+				}
+			}
+
+			if (opt.sites.size() > 0)
+			{
+				opt.sv_in = StateVectorCalc(vessel);
+				opt.GETS = DOPS_GETS;
+				opt.GETF = DOPS_GETF;
+				opt.INORB = DOPS_InitialRev;
+				opt.SVPROP = useNonSphericalGravity;
+				opt.GMTR = LaunchGMT;
+				opt.XRNG = DOPS_MaxXRNG;
+				opt.BaseMJD = BaseMJD;
+				opt.RM = M_EFTOECL_AT_EPOCH;
+
+				lop.LOPT(opt, DODS_Output);
+			}
+		}
+	}
+	break;
 	}
 
 	subThreadStatus = Result;
@@ -1781,9 +1699,9 @@ int ShuttleFDOCore::startSubthread(int fcn) {
 	return(0);
 }
 
-void ShuttleFDOCore::MET2MTT()
+bool ShuttleFDOCore::MET2MTT()
 {
-	if (ManeuverEvaluationTable.size() < 1) return;
+	if (ManeuverEvaluationTable.size() < 1) return false;
 
 	ManeuverTransferTable.clear();
 
@@ -1798,6 +1716,7 @@ void ShuttleFDOCore::MET2MTT()
 
 		ManeuverTransferTable.push_back(man);
 	}
+	return true;
 }
 
 void ShuttleFDOCore::LoadMTTSlotData(MANTRANSDATA &man, int slot)
@@ -1869,11 +1788,6 @@ void ShuttleFDOCore::ExecuteMTT()
 				A = S * log(sv_cur.mass / sv_cut.mass);
 				B = (sv_cur.mass / W_dot)*A - S * dt_burn;
 				dt_tig = -B / A;
-
-				if (i == 0)
-				{
-					sprintf(oapiDebugString(), "%lf %lf", dt_tig, -dt_burn / 2.0);
-				}
 
 				sv_tig = coast_auto(sv_cur, dt_tig);
 			}

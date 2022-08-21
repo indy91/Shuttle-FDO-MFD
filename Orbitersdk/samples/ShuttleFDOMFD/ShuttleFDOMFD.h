@@ -22,6 +22,14 @@
 
 #include "ShuttleFDOCore.h"
 
+struct ShuttleFDOMFDInputBoxData
+{
+	double *dVal;
+	int *iVal;
+	VECTOR3 *vVal;
+	double factor;
+};
+
 class ShuttleFDOMFD : public MFD2 {
 public:
 	ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im);
@@ -84,6 +92,12 @@ public:
 	void menuLWPSetPHASEFLAG();
 	void menuLWPSetWRAPFLAG();
 
+	void menuCalcDeorbitOpportunities();
+	void menuDOPSSetGETS();
+	void menuDOPSSetGETF();
+	void menuDOPSSetRev();
+	void menuDOPSSetMaxXRNG();
+
 	void menuSetMainMenu();
 	void menuSetMCTPage();
 	void menuSetMETPage();
@@ -93,6 +107,8 @@ public:
 	void menuSetOMPExeMenu();
 	void menuSetLWPPage2();
 	void menuSetLWPPage3();
+	void menuSetDOPSPage();
+	void SetScreen(int s);
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
 	bool delete_OMPManeuver(unsigned num);
@@ -129,8 +145,10 @@ public:
 	void set_LWP_WRAPFLAG(int flag);
 
 	void MET2String(char *buf, double MET);
+	void MET2String2(char *buf, double MET);
 	void DMTMET2String(char *buf, double MET);
 	void GMT2String(char *buf, double GMT);
+	void GMT2String2(char *buf, double GMT);
 	void LWPGMT2String(char *buf, double GMT);
 	double DDDHHHMMSS2MET(int dd, int hh, int mm, double ss);
 	void SS2HHMMSS(double val, double &hh, double &mm, double &ss);
@@ -145,6 +163,11 @@ public:
 	void GetOMPError(char *buf, int err);
 
 protected:
+
+	void GenericIntInput(int *val, char* message);
+	void GenericMETInput(double *get, char *message);
+	void GenericDoubleInput(double *val, char* message, double factor = 1.0);
+
 	oapi::Font *font;
 	oapi::Font *font2;
 
@@ -152,6 +175,7 @@ protected:
 
 	ShuttleFDOMFDButtons coreButtons;
 	ShuttleFDOCore* G;
+	ShuttleFDOMFDInputBoxData tempData;
 
 	char Buffer[100];
 

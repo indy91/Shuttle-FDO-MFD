@@ -20,10 +20,17 @@
 
 #pragma once
 
+#include "Orbitersdk.h"
+
 namespace OrbMech
 {
 	const double LAUNCHSITE_LATITUDE[2] = { 28.60833333, 28.627 };
 	const double LAUNCHSITE_LONGITUDE[2] = { -80.60416667, -80.621 };
+
+	const double R_Earth = 6.37101e6;
+	const double mu_Earth = 398600439968871.2;
+	const double J2_Earth = 1082.6269e-6;
+	const double w_Earth = PI2 / 86164.10132;
 
 	struct SV
 	{
@@ -31,6 +38,24 @@ namespace OrbMech
 		VECTOR3 V = _V(0, 0, 0);
 		double GMT = 0.0;
 		double mass = 0.0;
+	};
+
+	struct InvariantElements
+	{
+		double TIMV = 0.0;
+		double a = 0.0;
+		double e = 0.0;
+		double i = 0.0;
+		double g = 0.0;
+		double h = 0.0;
+		double l = 0.0;
+		double l_dot = 0.0;
+		double g_dot = 0.0;
+		double h_dot = 0.0;
+		double CD = 0.0;
+		double Area = 0.0;
+		double Mass = 0.0;
+		std::string VectorName;
 	};
 
 	struct OELEMENTS
@@ -123,6 +148,8 @@ namespace OrbMech
 	//Compute insertion vector
 	SV coast(SV sv0, double dt);
 	SV coast_osc(SV sv0, double dt, double mu);
+	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
+	InvariantElements CalculateInvariantElementsBlock(SV sv, double mu, double Area, bool precision);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
@@ -157,6 +184,7 @@ namespace OrbMech
 	double MeanToTrueAnomaly(double meanAnom, double eccdp, double error2 = 1e-12);
 	double TrueToMeanAnomaly(double ta, double eccdp);
 	double TrueToEccentricAnomaly(double ta, double ecc);
+	void latlong_from_r(VECTOR3 R, double &lat, double &lng);
 
 	//Math
 	double stumpS(double z);
@@ -176,7 +204,7 @@ namespace OrbMech
 	double fraction_pq(double x);
 	double fraction_xi(double x);
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle);
-	double normalize_angle(double value);
+	double normalize_angle(const double value, const double start, const double end);
 	MATRIX3 inverse(MATRIX3 a);
 	double determinant(MATRIX3 a);
 	MATRIX3 tmat(MATRIX3 a);

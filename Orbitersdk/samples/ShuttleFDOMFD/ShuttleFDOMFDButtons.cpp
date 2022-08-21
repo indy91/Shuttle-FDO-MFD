@@ -50,7 +50,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("MTT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetMTTPage);
 	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
 
-	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("DOP", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDOPSPage);
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
@@ -319,10 +319,44 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 
 	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcLaunchTime);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu9[] =
+	{
+		{ "Initial rev counter", 0, 'I' },
+		{ "MET for start of search", 0, 'S' },
+		{ "MET for end of search", 0, 'E' },
+		{ "Maximum crossrange", 0, 'X' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu9, sizeof(mnu9) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("REV", OAPI_KEY_I, &ShuttleFDOMFD::menuDOPSSetRev);
+	RegisterFunction("STA", OAPI_KEY_S, &ShuttleFDOMFD::menuDOPSSetGETS);
+	RegisterFunction("END", OAPI_KEY_E, &ShuttleFDOMFD::menuDOPSSetGETF);
+	RegisterFunction("XR", OAPI_KEY_X, &ShuttleFDOMFD::menuDOPSSetMaxXRNG);
+	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcDeorbitOpportunities);
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);

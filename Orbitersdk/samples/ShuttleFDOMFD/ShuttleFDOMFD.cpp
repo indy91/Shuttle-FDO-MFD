@@ -130,12 +130,16 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 
 	if (screen == 0)
 	{
-		skp->Text(1 * W / 8, 2 * H / 14, "Executive Menu", 14);
-		skp->Text(1 * W / 8, 4 * H / 14, "Launch Window Processor", 23);
-		skp->Text(1 * W / 8, 6 * H / 14, "Maneuver Constraints Table", 27);
-		skp->Text(1 * W / 8, 8 * H / 14, "Maneuver Evaluation Table", 25);
-		skp->Text(1 * W / 8, 10 * H / 14, "Maneuver Transfer Table", 23);
-		skp->Text(1 * W / 8, 12 * H / 14, "Detailed Maneuver Table", 23);
+		skp->Text(1 * W / 16, 2 * H / 14, "Executive Menu", 14);
+		skp->Text(1 * W / 16, 4 * H / 14, "Launch Window Processor", 23);
+		skp->Text(1 * W / 16, 6 * H / 14, "Maneuver Constraints Table", 27);
+		skp->Text(1 * W / 16, 8 * H / 14, "Maneuver Evaluation Table", 25);
+		skp->Text(1 * W / 16, 10 * H / 14, "Maneuver Transfer Table", 23);
+		skp->Text(1 * W / 16, 12 * H / 14, "Detailed Maneuver Table", 23);
+
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+
+		skp->Text(15 * W / 16, 2 * H / 14, "Deorbit Opportunities", 21);
 	}
 	else if (screen == 1)
 	{
@@ -405,7 +409,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "MNVR");
 		skp->Text(1 * W / 64, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "NAME");
-		skp->Text(5 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
+		skp->Text(7 * W / 64, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "COMMENT");
 		skp->Text(6 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "SLOT");
@@ -655,7 +659,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	}
 	else if (screen == 6)
 	{
-		skp->Text(14 * W / 32, 1 * H / 32, "OMP Executive Menu", 18);
+		skp->Text(14 * W / 32, 1 * H / 32, "Executive Menu", 14);
 
 		skp->Text(1 * W / 8, 2 * H / 14, "Chaser:", 7);
 		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
@@ -767,63 +771,128 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "%.3f°", G->LPW_Summary.IIGM*DEG);
 		skp->Text(1 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
 	}
+	else if (screen == 9)
+	{
+		skp->SetFont(font2);
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
+		skp->Text(1 * W / 2, 2 * H / 36, "DEORBIT OPPORTUNITIES TABLE (DOT)", 33);
+
+		skp->Text(1 * W / 16, 4 * H / 36, "REV", 3);
+		sprintf(Buffer, "%d", G->DOPS_InitialRev);
+		skp->Text(2 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
+
+		skp->Text(7 * W / 32, 4 * H / 36, "GETS", 4);
+		DMTMET2String(Buffer, G->DOPS_GETS);
+		skp->Text(6 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
+
+		skp->Text(17 * W / 32, 4 * H / 36, "GETF", 4);
+		DMTMET2String(Buffer, G->DOPS_GETF);
+		skp->Text(22 * W / 32, 4 * H / 36, Buffer, strlen(Buffer));
+
+		skp->Text(27 * W / 32, 4 * H / 36, "XRNG", 4);
+		sprintf_s(Buffer, "%.0f", G->DOPS_MaxXRNG);
+		skp->Text(15 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
+
+		skp->Text(1 * W / 16, 6 * H / 36, "TIG", 3);
+		skp->Text(1 * W / 16, 7 * H / 36, "ORB", 3);
+
+		skp->Text(3 * W / 16, 6 * H / 36, "SITE", 4);
+
+		skp->Text(5 * W / 16, 6 * H / 36, "TIG", 3);
+		skp->Text(5 * W / 16, 7 * H / 36, "MET", 3);
+
+		skp->Text(17 * W / 32, 6 * H / 36, "LANDING", 7);
+		skp->Text(15 * W / 32, 7 * H / 36, "MET", 3);
+		skp->Text(19 * W / 32, 7 * H / 36, "GMT", 3);
+		skp->Text(23 * W / 32, 7 * H / 36, "LIGHT", 5);
+
+		skp->Text(14 * W / 16, 6 * H / 36, "XRNG", 4);
+
+		for (unsigned i = 0; i < G->DODS_Output.data.size();i++)
+		{
+			sprintf(Buffer, "%d", G->DODS_Output.data[i].Rev);
+			skp->Text(1 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[i].Site.c_str());
+			skp->Text(3 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			MET2String2(Buffer, G->DODS_Output.data[i].TIG_MET);
+			skp->Text(5 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			MET2String2(Buffer, G->DODS_Output.data[i].Landing_MET);
+			skp->Text(15 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			GMT2String2(Buffer, G->DODS_Output.data[i].Landing_GMT);
+			skp->Text(19 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[i].T_Light.c_str());
+			skp->Text(23 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[i].XRNG.c_str());
+			skp->Text(14 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+
+			if (i == 26) break;
+		}
+	}
 	return true;
 }
 
 void ShuttleFDOMFD::menuSetMainMenu()
 {
-	screen = 0;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(0);
 }
 
 void ShuttleFDOMFD::menuSetMCTPage()
 {
-	screen = 1;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(1);
 }
 
 void ShuttleFDOMFD::menuSetMETPage()
 {
 	METScroll = 0;
-	screen = 2;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(2);
 }
 
 void ShuttleFDOMFD::menuSetLWPPage()
 {
-	screen = 3;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(3);
 }
 
 void ShuttleFDOMFD::menuSetMTTPage()
 {
-	screen = 4;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(4);
 
 	MTTFlag = false;
 }
 
 void ShuttleFDOMFD::menuSetDMTPage()
 {
-	screen = 5;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(5);
 }
 
 void ShuttleFDOMFD::menuSetOMPExeMenu()
 {
-	screen = 6;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(6);
 }
 
 void ShuttleFDOMFD::menuSetLWPPage2()
 {
-	screen = 7;
-	coreButtons.SelectPage(this, screen);
+	SetScreen(7);
 }
 
 void ShuttleFDOMFD::menuSetLWPPage3()
 {
-	screen = 8;
+	SetScreen(8);
+}
+
+void ShuttleFDOMFD::menuSetDOPSPage()
+{
+	SetScreen(9);
+}
+
+void ShuttleFDOMFD::SetScreen(int s)
+{
+	screen = s;
 	coreButtons.SelectPage(this, screen);
 }
 
@@ -831,6 +900,13 @@ void ShuttleFDOMFD::MET2String(char *buf, double MET)
 {
 	MET = round(MET*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
+}
+
+void ShuttleFDOMFD::MET2String2(char *buf, double MET)
+{
+	//Format: DD/HH:MM
+	MET = round(MET*1000.0) / 1000.0;
+	sprintf_s(buf, 100, "%02.0f/%02.0f:%02.0f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0));
 }
 
 void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
@@ -843,6 +919,13 @@ void ShuttleFDOMFD::GMT2String(char *buf, double GMT)
 {
 	GMT = round(GMT*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + (double)G->launchdate[1], floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+}
+
+void ShuttleFDOMFD::GMT2String2(char *buf, double GMT)
+{
+	//Format:DDD/HH:MM
+	GMT = round(GMT*1000.0) / 1000.0;
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f", floor(GMT / 86400.0) + (double)G->launchdate[1], floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0));
 }
 
 void ShuttleFDOMFD::LWPGMT2String(char *buf, double GMT)
@@ -1362,9 +1445,17 @@ void ShuttleFDOMFD::menuCalcLaunchTime()
 	G->CalcLaunchTime();
 }
 
+void ShuttleFDOMFD::menuCalcDeorbitOpportunities()
+{
+	G->CalcDeorbitOpportunities();
+}
+
 void ShuttleFDOMFD::menuTransferToMTT()
 {
-	G->MET2MTT();
+	if (G->MET2MTT())
+	{
+		menuSetMTTPage();
+	}
 }
 
 void ShuttleFDOMFD::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
@@ -2309,4 +2400,97 @@ bool LWPWRAPFLAGInput(void *id, char *str, void *data)
 void ShuttleFDOMFD::set_LWP_WRAPFLAG(int flag)
 {
 	G->LWP_Settings.WRAP = flag;
+}
+
+void ShuttleFDOMFD::menuDOPSSetGETS()
+{
+	GenericMETInput(&G->DOPS_GETS, "MET for start of search in DD:HH:MM:SS");
+}
+
+void ShuttleFDOMFD::menuDOPSSetGETF()
+{
+	GenericMETInput(&G->DOPS_GETF, "MET for end of search in DD:HH:MM:SS");
+}
+
+void ShuttleFDOMFD::menuDOPSSetRev()
+{
+	GenericIntInput(&G->DOPS_InitialRev, "Set initial rev counter:");
+}
+
+void ShuttleFDOMFD::menuDOPSSetMaxXRNG()
+{
+	GenericDoubleInput(&G->DOPS_MaxXRNG, "Maximum crossrange in nautical miles:");
+}
+
+void ShuttleFDOMFD::GenericMETInput(double *get, char *message)
+{
+	bool GenericMETInputBox(void *id, char *str, void *data);
+	oapiOpenInputBox(message, GenericMETInputBox, 0, 25, (void*)(get));
+}
+
+bool GenericMETInputBox(void *id, char *str, void *data)
+{
+	double *get2 = static_cast<double*>(data);
+
+	int dd, hh, mm;
+	double ss, get;
+
+	if (sscanf(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
+	{
+		get = ss + 60 * (mm + 60 * (hh + 24 * dd));
+		*get2 = get;
+
+		return true;
+
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::GenericIntInput(int *val, char *message)
+{
+	void *data2;
+
+	tempData.iVal = val;
+	data2 = &tempData;
+
+	bool GenericIntInputBox(void *id, char *str, void *data);
+	oapiOpenInputBox(message, GenericIntInputBox, 0, 25, data2);
+}
+
+bool GenericIntInputBox(void *id, char *str, void *data)
+{
+	ShuttleFDOMFDInputBoxData *arr = static_cast<ShuttleFDOMFDInputBoxData*>(data);
+	int val;
+
+	if (sscanf(str, "%d", &val) == 1)
+	{
+		*arr->iVal = val;
+		return true;
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::GenericDoubleInput(double *val, char *message, double factor)
+{
+	void *data2;
+
+	tempData.dVal = val;
+	tempData.factor = factor;
+	data2 = &tempData;
+
+	bool GenericDoubleInputBox(void *id, char *str, void *data);
+	oapiOpenInputBox(message, GenericDoubleInputBox, 0, 25, data2);
+}
+
+bool GenericDoubleInputBox(void *id, char *str, void *data)
+{
+	ShuttleFDOMFDInputBoxData *arr = static_cast<ShuttleFDOMFDInputBoxData*>(data);
+	double val;
+
+	if (sscanf(str, "%lf", &val) == 1)
+	{
+		*arr->dVal = val * arr->factor;
+		return true;
+	}
+	return false;
 }
