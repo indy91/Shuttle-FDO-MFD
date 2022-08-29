@@ -62,7 +62,8 @@ public:
 	void menuDMTChooseManeuver();
 	void menuCalcDMT();
 	void menuDeleteOMPSecondary();
-	void menuSetLiftoffTime();
+	void menuSetLaunchDay();
+	void menuSetLaunchTime();
 	void set_target();
 	void set_shuttle();
 	void menuCycleGravityOption();
@@ -104,7 +105,7 @@ public:
 	void menuSetMTTPage();
 	void menuSetLWPPage();
 	void menuSetDMTPage();
-	void menuSetOMPExeMenu();
+	void menuSetConfigurationMenu();
 	void menuSetLWPPage2();
 	void menuSetLWPPage3();
 	void menuSetDOPSPage();
@@ -120,7 +121,9 @@ public:
 	void set_DMTManeuver(unsigned mnvr);
 	bool delete_OMPSecondary(unsigned num, unsigned sec);
 	bool insert_OMPManeuver(unsigned ins, char *type, char *name);
-	void set_LiftoffTime(int YY, int DD, int HH, int MM, double SS);
+	void set_LaunchDay();
+	void set_LaunchDay(int YY, int DD);
+	void set_LiftoffTime(int HH, int MM, double SS);
 	void WriteMCTLine(std::ofstream &file, ManeuverConstraints &constr);
 	void ReadMCTLine(const char *line);
 	void set_LWP_DELNO(double delno);

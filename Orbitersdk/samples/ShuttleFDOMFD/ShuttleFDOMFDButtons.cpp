@@ -26,7 +26,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 {
 	static const MFDBUTTONMENU mnu0[] =
 	{
-		{ "Executive Menu", 0, 'S' },
+		{ "Config Menu", 0, 'S' },
 		{ "Launch Window Processor", 0, 'L' },
 		{ "Constraints Page", 0, 'C' },
 		{ "Evaluation Page", 0, 'E' },
@@ -43,7 +43,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterPage(mnu0, sizeof(mnu0) / sizeof(MFDBUTTONMENU));
 
-	RegisterFunction("EXE", OAPI_KEY_S, &ShuttleFDOMFD::menuSetOMPExeMenu);
+	RegisterFunction("CFG", OAPI_KEY_S, &ShuttleFDOMFD::menuSetConfigurationMenu);
 	RegisterFunction("LWP", OAPI_KEY_A, &ShuttleFDOMFD::menuSetLWPPage);
 	RegisterFunction("MCT", OAPI_KEY_C, &ShuttleFDOMFD::menuSetMCTPage);
 	RegisterFunction("MET", OAPI_KEY_E, &ShuttleFDOMFD::menuSetMETPage);
@@ -232,14 +232,14 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	{
 		{ "Set chaser", 0, 'M' },
 		{ "Set target", 0, 'T' },
-		{ "Set liftoff time", 0, 'S' },
+		{ "Set liftoff day", 0, 'S' },
 		{ "Gravity option", 0, 'G' },
 		{ "Save to file", 0, 'A' },
 		{ "Load from file", 0, 'L' },
 
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Set launch time", 0, 'F' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "Back to menu", 0, 'B' },
@@ -249,14 +249,14 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("CHA", OAPI_KEY_M, &ShuttleFDOMFD::set_shuttle);
 	RegisterFunction("TGT", OAPI_KEY_T, &ShuttleFDOMFD::set_target);
-	RegisterFunction("TLO", OAPI_KEY_S, &ShuttleFDOMFD::menuSetLiftoffTime);
+	RegisterFunction("DLO", OAPI_KEY_S, &ShuttleFDOMFD::menuSetLaunchDay);
 	RegisterFunction("GRA", OAPI_KEY_G, &ShuttleFDOMFD::menuCycleGravityOption);
 	RegisterFunction("SAV", OAPI_KEY_A, &ShuttleFDOMFD::menuSaveState);
 	RegisterFunction("LOA", OAPI_KEY_L, &ShuttleFDOMFD::menuLoadState);
 
 	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("TLO", OAPI_KEY_F, &ShuttleFDOMFD::menuSetLaunchTime);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);

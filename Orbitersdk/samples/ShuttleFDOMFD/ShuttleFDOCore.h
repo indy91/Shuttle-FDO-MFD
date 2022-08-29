@@ -199,7 +199,9 @@ public:
 	void GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type);
 	void GetDMTManeuverID(char *buf, char *name);
 
-	void SetLaunchMJD(int Y, int D, int H, int M, double S);
+	void SetLaunchDay();
+	void SetLaunchDay(int Y, int D);
+	void SetLaunchTime(int H, int M, double S);
 	double GETfromGMT(double GMT) { return GMT - LaunchGMT; }
 	double GMTfromGET(double GET) { return GET + LaunchGMT; }
 

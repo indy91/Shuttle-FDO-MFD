@@ -130,7 +130,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 
 	if (screen == 0)
 	{
-		skp->Text(1 * W / 16, 2 * H / 14, "Executive Menu", 14);
+		skp->Text(1 * W / 16, 2 * H / 14, "Config", 6);
 		skp->Text(1 * W / 16, 4 * H / 14, "Launch Window Processor", 23);
 		skp->Text(1 * W / 16, 6 * H / 14, "Maneuver Constraints Table", 27);
 		skp->Text(1 * W / 16, 8 * H / 14, "Maneuver Evaluation Table", 25);
@@ -659,7 +659,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	}
 	else if (screen == 6)
 	{
-		skp->Text(14 * W / 32, 1 * H / 32, "Executive Menu", 14);
+		skp->Text(14 * W / 32, 1 * H / 32, "Config", 6);
 
 		skp->Text(1 * W / 8, 2 * H / 14, "Chaser:", 7);
 		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
@@ -870,7 +870,7 @@ void ShuttleFDOMFD::menuSetDMTPage()
 	SetScreen(5);
 }
 
-void ShuttleFDOMFD::menuSetOMPExeMenu()
+void ShuttleFDOMFD::menuSetConfigurationMenu()
 {
 	SetScreen(6);
 }
@@ -1599,28 +1599,61 @@ bool ShuttleFDOMFD::insert_OMPManeuver(unsigned ins, char *type, char *name)
 	return false;
 }
 
-void ShuttleFDOMFD::menuSetLiftoffTime()
+void ShuttleFDOMFD::menuSetLaunchDay()
 {
-	bool LiftoffTimeInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Set liftoff time (YYYY:DD:HH:MM:SS)", LiftoffTimeInput, 0, 20, (void*)this);
+	bool LaunchDayInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Set launch day (YYYY:DD) or leave blank for current day", LaunchDayInput, 0, 20, (void*)this);
 }
 
-bool LiftoffTimeInput(void *id, char *str, void *data)
+bool LaunchDayInput(void *id, char *str, void *data)
 {
-	int yy, dd, hh, mm;
-	double ss;
+	int yy, dd;
 
-	if (sscanf_s(str, "%d:%d:%d:%d:%lf", &yy, &dd, &hh, &mm, &ss) == 5)
+	if (sscanf_s(str, "%d:%d", &yy, &dd) == 2)
 	{
-		((ShuttleFDOMFD*)data)->set_LiftoffTime(yy, dd, hh, mm, ss);
+		((ShuttleFDOMFD*)data)->set_LaunchDay(yy, dd);
+		return true;
+	}
+	else if (sscanf_s(str, "") == 0)
+	{
+		((ShuttleFDOMFD*)data)->set_LaunchDay();
 		return true;
 	}
 	return false;
 }
 
-void ShuttleFDOMFD::set_LiftoffTime(int YY, int DD, int HH, int MM, double SS)
+void ShuttleFDOMFD::set_LaunchDay()
 {
-	G->SetLaunchMJD(YY, DD, HH, MM, SS);
+	G->SetLaunchDay();
+}
+
+void ShuttleFDOMFD::set_LaunchDay(int YY, int DD)
+{
+	G->SetLaunchDay(YY, DD);
+}
+
+void ShuttleFDOMFD::menuSetLaunchTime()
+{
+	bool LaunchTimeInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Set time of liftoff HH:MM:SS.SSS:", LaunchTimeInput, 0, 20, (void*)this);
+}
+
+bool LaunchTimeInput(void *id, char *str, void *data)
+{
+	int hh, mm;
+	double ss;
+
+	if (sscanf_s(str, "%d:%d:%lf", &hh, &mm, &ss) == 3)
+	{
+		((ShuttleFDOMFD*)data)->set_LiftoffTime(hh, mm, ss);
+		return true;
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::set_LiftoffTime(int HH, int MM, double SS)
+{
+	G->SetLaunchTime(HH, MM, SS);
 }
 
 void ShuttleFDOMFD::set_target()
@@ -1808,14 +1841,17 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 		G->ManeuverConstraintsTable.clear();
 		G->chaserSVOption = false;
 
+		int Year, Day, Hour, Minute;
+		double launchdateSec;
+
 		std::string line;
 		while (std::getline(myfile, line))
 		{
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE0", G->launchdate[0]);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE1", G->launchdate[1]);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", G->launchdate[2]);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", G->launchdate[3]);
-			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", G->launchdateSec);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE0", Year);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE1", Day);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", Hour);
+			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", Minute);
+			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", launchdateSec);
 			papiReadScenario_string(line.c_str(), "SHUTTLE", shuttlebuff);
 			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
 			papiReadScenario_bool(line.c_str(), "NONSPHERICAL", G->useNonSphericalGravity);
@@ -1827,7 +1863,8 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 		myfile.close();
 
 		//Processing
-		G->SetLaunchMJD(G->launchdate[0], G->launchdate[1], G->launchdate[2], G->launchdate[3], G->launchdateSec);
+		G->SetLaunchDay(Year, Day);
+		G->SetLaunchTime(Hour, Minute, launchdateSec);
 
 		OBJHANDLE hShuttle = oapiGetVesselByName(shuttlebuff);
 		if (hShuttle)

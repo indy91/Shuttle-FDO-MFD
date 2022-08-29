@@ -1597,17 +1597,15 @@ int ShuttleFDOCore::subThread()
 		{
 			if (LWP_Settings.LW == 0)
 			{
-				InPlaneGMT = LaunchGMT = LPW_Summary.GMTPLANE;
+				InPlaneGMT = LPW_Summary.GMTPLANE;
 			}
 			else
 			{
-				InPlaneGMT = LaunchGMT = LPW_Summary.GMTLO;
+				InPlaneGMT = LPW_Summary.GMTLO;
 			}
 
 			LWP_PlanarOpenGMT = LWP_Parameters.GMTLO[0];
 			LWP_PlanarCloseGMT = LWP_Parameters.GMTLO[1];
-
-			OrbMech::mjd2ydoy(BaseMJD + LaunchGMT / 24.0 / 3600.0, launchdate[0], launchdate[1], launchdate[2], launchdate[3], launchdateSec);
 
 			//Post insertion state vector processing
 			SV sv_P1, sv_P2;
@@ -1622,6 +1620,13 @@ int ShuttleFDOCore::subThread()
 			//Store SV
 			sv_chaser = sv_P2;
 			chaserSVOption = true;
+
+			//Save launch time
+			int hh, mm;
+			double ss;
+
+			OrbMech::days2hms(InPlaneGMT / 24.0 / 3600.0, hh, mm, ss);
+			SetLaunchTime(hh, mm, ss);
 		}
 
 
@@ -2123,22 +2128,38 @@ void ShuttleFDOCore::GetDMTManeuverID(char *buf, char *name)
 	}
 }
 
-void ShuttleFDOCore::SetLaunchMJD(int Y, int D, int H, int M, double S)
+void ShuttleFDOCore::SetLaunchDay()
+{
+	int Y, D, H, M;
+	double MJD, S;
+
+	MJD = oapiGetSimMJD();
+
+	OrbMech::mjd2ydoy(MJD, Y, D, H, M, S);
+
+	SetLaunchDay(Y, D);
+}
+
+void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 {
 	launchdate[0] = Y;
 	launchdate[1] = D;
-	launchdate[2] = H;
-	launchdate[3] = M;
-	launchdateSec = S;
 
 	//Calculate base MJD
 	BaseMJD = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
 	//Calculate rotation matrix
 	M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(BaseMJD);
-	//Calculate GMT of launch
-	LaunchGMT = H * 3600.0 + M * 60.0 + S;
 
-	//sprintf(oapiDebugString(), "%f %f", BaseMJD, LaunchGMT);
+	//sprintf(oapiDebugString(), "%f", BaseMJD);
+}
+
+void ShuttleFDOCore::SetLaunchTime(int H, int M, double S)
+{
+	launchdate[2] = H;
+	launchdate[3] = M;
+	launchdateSec = S;
+
+	LaunchGMT = 3600.0*(double)H + 60.0*(double)M + S;
 }
 
 void ShuttleFDOCore::OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY)

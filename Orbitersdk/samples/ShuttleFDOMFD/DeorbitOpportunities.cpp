@@ -151,90 +151,94 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 						T_TIG = CalculateTIG(T_CA, elem_cur.a);
 						T_LAND = CalculateLandingTime(T_CA, elem_cur.a);
 
-						//Begin storing data
-						temp.Site = opt.sites[i].name;
-						temp.Rev = opt.INORB + j;
-						temp.TIG_MET = T_TIG - opt.GMTR;
-						temp.Landing_MET = T_LAND - opt.GMTR;
-						temp.Landing_GMT = T_LAND;
-
-						char Buffer[16];
-						char Ascending;
-						char Left;
-
-						if (UCPA > PI05 && UCPA < PI05*3.0)
+						//Require that predicted time of ignition is after the input time to start the search
+						if (T_TIG >= GMTS)
 						{
-							Ascending = 'D';
-						}
-						else
-						{
-							Ascending = 'A';
-						}
-						if (XRNG > 0)
-						{
-							Left = 'L';
-						}
-						else
-						{
-							Left = 'R';
-						}
+							//Begin storing data
+							temp.Site = opt.sites[i].name;
+							temp.Rev = opt.INORB + j;
+							temp.TIG_MET = T_TIG - opt.GMTR;
+							temp.Landing_MET = T_LAND - opt.GMTR;
+							temp.Landing_GMT = T_LAND;
 
-						sprintf(Buffer, "%.0f%c%c", abs(XRNG)*OrbMech::R_Earth / 1852.0, Ascending, Left);
-						temp.XRNG.assign(Buffer);
+							char Buffer[16];
+							char Ascending;
+							char Left;
 
-						//Calculate local sun angle
-						R_SUN = OrbMech::SUN(opt.BaseMJD + T_LAND / 24.0 / 3600.0, opt.RM);
-						OrbMech::latlong_from_r(R_SUN, SLAT, SLON);
-						SLON -= T_LAND * OrbMech::w_Earth;
-						SLON = OrbMech::normalize_angle(SLON, 0.0, PI2);
-
-						//Calculate local sunrise/sunset times
-						DELR = acos((cos(opt.ANGZ) - sin(lat_S)*sin(SLAT)) / cos(lat_S) / cos(SLAT));
-						DELC = SLON - lng_S;
-						DANG = DELR - DELC;
-						DANG = OrbMech::normalize_angle(DANG, -PI, PI);
-						DTSR = DANG / OrbMech::w_Earth;
-						DANG = DELR + DELC;
-						DANG = OrbMech::normalize_angle(DANG, -PI, PI);
-						DTSS = DANG / OrbMech::w_Earth;
-
-						double dTemp, ss;
-						int hh, mm;
-						char AfterSun, Rise;
-
-						//Show closest sunrise or sunset
-						if (abs(DTSR) > abs(DTSS))
-						{
-							dTemp = DTSS;
-							Rise = 'S';
-							if (dTemp < 0.0)
+							if (UCPA > PI05 && UCPA < PI05*3.0)
 							{
-								AfterSun = 'A';
+								Ascending = 'D';
 							}
 							else
 							{
-								AfterSun = 'B';
+								Ascending = 'A';
 							}
-						}
-						else
-						{
-							dTemp = DTSR;
-							Rise = 'R';
-							if (dTemp > 0.0)
+							if (XRNG > 0)
 							{
-								AfterSun = 'A';
+								Left = 'L';
 							}
 							else
 							{
-								AfterSun = 'B';
+								Left = 'R';
 							}
+
+							sprintf(Buffer, "%.0f%c%c", abs(XRNG)*OrbMech::R_Earth / 1852.0, Ascending, Left);
+							temp.XRNG.assign(Buffer);
+
+							//Calculate local sun angle
+							R_SUN = OrbMech::SUN(opt.BaseMJD + T_LAND / 24.0 / 3600.0, opt.RM);
+							OrbMech::latlong_from_r(R_SUN, SLAT, SLON);
+							SLON -= T_LAND * OrbMech::w_Earth;
+							SLON = OrbMech::normalize_angle(SLON, 0.0, PI2);
+
+							//Calculate local sunrise/sunset times
+							DELR = acos((cos(opt.ANGZ) - sin(lat_S)*sin(SLAT)) / cos(lat_S) / cos(SLAT));
+							DELC = SLON - lng_S;
+							DANG = DELR - DELC;
+							DANG = OrbMech::normalize_angle(DANG, -PI, PI);
+							DTSR = DANG / OrbMech::w_Earth;
+							DANG = DELR + DELC;
+							DANG = OrbMech::normalize_angle(DANG, -PI, PI);
+							DTSS = DANG / OrbMech::w_Earth;
+
+							double dTemp, ss;
+							int hh, mm;
+							char AfterSun, Rise;
+
+							//Show closest sunrise or sunset
+							if (abs(DTSR) > abs(DTSS))
+							{
+								dTemp = DTSS;
+								Rise = 'S';
+								if (dTemp < 0.0)
+								{
+									AfterSun = 'A';
+								}
+								else
+								{
+									AfterSun = 'B';
+								}
+							}
+							else
+							{
+								dTemp = DTSR;
+								Rise = 'R';
+								if (dTemp > 0.0)
+								{
+									AfterSun = 'A';
+								}
+								else
+								{
+									AfterSun = 'B';
+								}
+							}
+
+							OrbMech::days2hms(abs(dTemp) / 24.0 / 3600.0, hh, mm, ss);
+							sprintf(Buffer, "%d:%02d%c%c", hh, mm, AfterSun, Rise);
+							temp.T_Light.assign(Buffer);
+
+							out.data.push_back(temp);
 						}
-
-						OrbMech::days2hms(abs(dTemp) / 24.0 / 3600.0, hh, mm, ss);
-						sprintf(Buffer, "%d:%02d%c%c", hh, mm, AfterSun, Rise);
-						temp.T_Light.assign(Buffer);
-
-						out.data.push_back(temp);
 					}
 				}
 			}
