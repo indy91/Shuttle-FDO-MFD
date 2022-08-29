@@ -504,7 +504,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	std::vector<VECTOR3> dv_table;
 	std::vector<VECTOR3> add_constraint;
 	std::vector<TIGSecondaries> tigmodifiers;
-	std::vector<double> thresholdtime;
+	std::vector<SV> sv_thres;
 	double dt;
 	unsigned i, j, k, l, TAB;
 	std::vector<ITERCONSTR> iterators;
@@ -518,7 +518,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 	tigmodifiers.resize(TAB);
 	dv_table.resize(TAB);
 	add_constraint.resize(TAB);
-	thresholdtime.resize(TAB);
+	sv_thres.resize(TAB);
 
 	for (i = 0;i < TAB;i++)
 	{
@@ -833,17 +833,44 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			dt = GMTfromGET(ManeuverConstraintsTable[i].thresh_num) - sv_cur.GMT;
 			sv_bef_table[i] = coast_auto(sv_cur, dt);
 		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV)
+		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV ||
+			ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_APS || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_N)
 		{
-			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, ManeuverConstraintsTable[i].thresh_num);
+			double mult;
+
+			if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV)
+			{
+				mult = 1.0;
+			}
+			else
+			{
+				mult = 0.5;
+			}
+
+			if (i > 0 && ManeuverConstraintsTable[i - 1].type == OMPDefs::MANTYPE::NPC)
+			{
+				//Special NPC logic. Propagate threshold state vector for desired orbits, then propagate current state vector to same time. Assumes plane change doesn't affect orbital period
+				sv_bef_table[i] = DeltaOrbitsAuto(sv_thres[i - 1], mult*ManeuverConstraintsTable[i].thresh_num);
+				sv_bef_table[i] = coast_auto(sv_cur, sv_bef_table[i].GMT - sv_cur.GMT);
+			}
+			else
+			{
+				sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, mult*ManeuverConstraintsTable[i].thresh_num);
+			}
 		}
 		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_DT)
 		{
-			sv_bef_table[i] = coast_auto(sv_cur, ManeuverConstraintsTable[i].thresh_num);
-		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_APS || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_N)
-		{
-			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, 0.5*ManeuverConstraintsTable[i].thresh_num);
+			//Special NPC logic. DT from threshold time, not current time
+			double ddt;
+			if (i > 0 && ManeuverConstraintsTable[i - 1].type == OMPDefs::MANTYPE::NPC)
+			{
+				ddt = ManeuverConstraintsTable[i].thresh_num - (sv_cur.GMT - sv_thres[i - 1].GMT);
+			}
+			else
+			{
+				ddt = ManeuverConstraintsTable[i].thresh_num;
+			}
+			sv_bef_table[i] = coast_auto(sv_cur, ddt);
 		}
 		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_CAN || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_WT)
 		{
@@ -851,7 +878,8 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, dt);
 		}
 
-		thresholdtime[i] = sv_bef_table[i].GMT;
+		//Save state vector at threshold
+		sv_thres[i] = sv_bef_table[i];
 
 		//TIG MODIFICATION
 		if (tigmodifiers[i].type != OMPDefs::SECONDARIES::NOSEC)
