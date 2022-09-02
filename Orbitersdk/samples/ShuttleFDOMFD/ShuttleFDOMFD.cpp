@@ -973,73 +973,14 @@ bool AddOMPManeuverInput(void *id, char *str, void *data)
 
 bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 {
-	if (strcmp(type, "HA") == 0)
+	OMPDefs::MANTYPE man = G->GetOPMManeuverType(type);
+	if (man == OMPDefs::MANTYPE::NOMAN)
 	{
-		G->AddManeuver(OMPDefs::HA, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "HASH") == 0)
-	{
-		G->AddManeuver(OMPDefs::HASH, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NC") == 0)
-	{
-		G->AddManeuver(OMPDefs::NC, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "EXDV") == 0)
-	{
-		G->AddManeuver(OMPDefs::EXDV, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NH") == 0)
-	{
-		G->AddManeuver(OMPDefs::NH, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "SOI") == 0)
-	{
-		G->AddManeuver(OMPDefs::SOI, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "SOR") == 0)
-	{
-		G->AddManeuver(OMPDefs::SOR, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NPC") == 0)
-	{
-		G->AddManeuver(OMPDefs::NPC, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NCC") == 0)
-	{
-		G->AddManeuver(OMPDefs::NCC, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "APSO") == 0)
-	{
-		G->AddManeuver(OMPDefs::APSO, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "CIRC") == 0)
-	{
-		G->AddManeuver(OMPDefs::CIRC, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NHRD") == 0)
-	{
-		G->AddManeuver(OMPDefs::NHRD, name, ins);
-		return true;
-	}
-	else if (strcmp(type, "NSR") == 0)
-	{
-		G->AddManeuver(OMPDefs::NSR, name, ins);
-		return true;
+		return false;
 	}
 
-	return false;
+	G->AddManeuver(man, name, ins);
+	return true;
 }
 
 void ShuttleFDOMFD::menuModifySecondary()
@@ -1096,73 +1037,14 @@ bool ModifyOMPManeuverInput(void *id, char *str, void *data)
 
 bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 {
-	if (strcmp(type, "HA") == 0)
+	OMPDefs::MANTYPE man = G->GetOPMManeuverType(type);
+	if (man == OMPDefs::MANTYPE::NOMAN)
 	{
-		G->ModifyManeuver(num - 1, OMPDefs::HA, name);
-		return true;
-	}
-	else if (strcmp(type, "HASH") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::HASH, name);
-		return true;
-	}
-	else if (strcmp(type, "NC") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NC, name);
-		return true;
-	}
-	else if (strcmp(type, "EXDV") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::EXDV, name);
-		return true;
-	}
-	else if (strcmp(type, "NH") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NH, name);
-		return true;
-	}
-	else if (strcmp(type, "SOI") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::SOI, name);
-		return true;
-	}
-	else if (strcmp(type, "SOR") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::SOR, name);
-		return true;
-	}
-	else if (strcmp(type, "NPC") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NPC, name);
-		return true;
-	}
-	else if (strcmp(type, "NCC") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NCC, name);
-		return true;
-	}
-	else if (strcmp(type, "APSO") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::APSO, name);
-		return true;
-	}
-	else if (strcmp(type, "CIRC") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::CIRC, name);
-		return true;
-	}
-	else if (strcmp(type, "NHRD") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NHRD, name);
-		return true;
-	}
-	else if (strcmp(type, "NSR") == 0)
-	{
-		G->ModifyManeuver(num - 1, OMPDefs::NSR, name);
-		return true;
+		return false;
 	}
 
-	return false;
+	G->ModifyManeuver(num - 1, man, name);
+	return true;
 }
 
 void ShuttleFDOMFD::menuAddOMPThreshold()
@@ -1722,7 +1604,7 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	}
 	else if (err == 6)
 	{
-		sprintf_s(buf, 100, "Error: could not find HD constraints for HA maneuver");
+		sprintf_s(buf, 100, "Error: could not find HD constraint for HA maneuver");
 	}
 	else if (err == 7)
 	{
@@ -1763,6 +1645,34 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	else if (err == 23)
 	{
 		sprintf_s(buf, 100, "Error: No valid threshold for SOI/NCC");
+	}
+	else if (err == 24)
+	{
+		sprintf_s(buf, 100, "Error: could not find DNOD constraint for NOSH maneuver");
+	}
+	else if (err == 25)
+	{
+		sprintf_s(buf, 100, "Error: OPT secondary only applies to NOSH");
+	}
+	else if (err == 26)
+	{
+		sprintf_s(buf, 100, "Error: Routine SEARMT could not find maneuver point");
+	}
+	else if (err == 27)
+	{
+		sprintf_s(buf, 100, "Error: could not find DPC constraint for PC maneuver");
+	}
+	else if (err == 28)
+	{
+		sprintf_s(buf, 100, "Error: HA maneuver failed to converge");
+	}
+	else if (err == 29)
+	{
+		sprintf_s(buf, 100, "Error: HASH maneuver failed to converge");
+	}
+	else if (err == 30)
+	{
+		sprintf_s(buf, 100, "Error: CIRC maneuver failed to converge");
 	}
 	else if (err == 100)
 	{

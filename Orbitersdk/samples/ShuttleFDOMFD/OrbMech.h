@@ -121,7 +121,6 @@ namespace OrbMech
 	void RADUP(VECTOR3 R_W, VECTOR3 V_W, VECTOR3 R_C, double mu, VECTOR3 &R_W1, VECTOR3 &V_W1);
 	bool CSIToDH(VECTOR3 R_A1, VECTOR3 V_A1, VECTOR3 R_P2, VECTOR3 V_P2, double DH, double mu, double &dv);
 	void ITER(double &c, int &s, double e, double &p, double &x, double &eo, double &xo, double dx0 = 1.0);
-	VECTOR3 HeightManeuver(VECTOR3 R, VECTOR3 V, double dh, double mu);
 	VECTOR3 elegant_lambert(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double dt, int N, bool prog, double mu);
 	VECTOR3 Vinti(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double gmt0, double dt, int N, bool prog, VECTOR3 V_guess, double tol = 0.1);
 	void periapo(VECTOR3 R, VECTOR3 V, double mu, double &apo, double &peri);
@@ -145,11 +144,13 @@ namespace OrbMech
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
 	//Apogee/Perigee Magnitude Determination
 	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P);
-	//Compute insertion vector
+	SV coast_auto(SV sv0, double dt, bool precision);
 	SV coast(SV sv0, double dt);
 	SV coast_osc(SV sv0, double dt, double mu);
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN = 0.0);
+	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision);
 	InvariantElements CalculateInvariantElementsBlock(SV sv, double mu, double Area, bool precision);
+	VECTOR3 PROJCT(VECTOR3 U1, VECTOR3 U2, VECTOR3 X);
+	double PHSANG(VECTOR3 R, VECTOR3 V, VECTOR3 RD);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);

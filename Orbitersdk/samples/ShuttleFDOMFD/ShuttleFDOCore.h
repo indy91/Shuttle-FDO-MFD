@@ -41,7 +41,7 @@ class OMPDefs
 public:
 	typedef enum { NOMAN, APSO, CIRC, DVPY, DVYP, EXDV, HA, HASH, LSDV, NOSH, PC, NC, NCC, NH, NHRD, NPC, NS, NSR, SOI, SOM, SOR, TPF, TPI, TPM } MANTYPE;
 	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T, THRES_N, THRES_WT} THRESHOLD;
-	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LONG, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV,
+	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LON, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV,
 					LITI, LITM, LITO, NITI, NITM, NITO} SECONDARIES;
 	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP} THRUSTERS;
 	typedef enum { NOGUID, M50, P7} GUID;
@@ -195,6 +195,7 @@ public:
 	void ChangeMTTManeuverSlot(unsigned mnvr, int slot);
 
 	void GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type);
+	OMPDefs::MANTYPE GetOPMManeuverType(char *buf);
 	void GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type);
 	void GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type);
 	void GetDMTManeuverID(char *buf, char *name);
@@ -215,7 +216,6 @@ public:
 	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double GMT1, double dt, VECTOR3 off);
 	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double GMT1, VECTOR3 off);
 	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
-	VECTOR3 CircManeuverAuto(SV sv_A);
 	VECTOR3 NSRManeuver(SV sv_A, SV sv_P);
 	SV timetoapo_auto(SV sv_A, double revs);
 	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
@@ -226,7 +226,12 @@ public:
 	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
 	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
 	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
-	VECTOR3 HeightManeuverAuto(SV sv_A, double r_D);
+	bool HeightManeuverAuto(SV sv_A, double r_D, bool horizontal, VECTOR3 &DV);
+	SV FindOptimumNodeShiftPoint(SV sv0, double dh);
+	VECTOR3 NodeShiftManeuver(SV sv0, double dh_D);
+	VECTOR3 PlaneChangeManeuver(SV sv0, double dw_D);
+	//Search for maneuver time routine
+	bool SEARMT(SV sv0, int opt, double val, SV &sv1);
 
 	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG

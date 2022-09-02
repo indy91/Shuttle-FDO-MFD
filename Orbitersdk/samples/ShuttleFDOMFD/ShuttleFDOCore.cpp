@@ -299,8 +299,8 @@ void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 
 	if (lowecclogic == false)
 	{
-		sv_p = GeneralTrajectoryPropagation(sv0, 1, 0.0);
-		sv_a = GeneralTrajectoryPropagation(sv0, 1, PI);
+		sv_p = GeneralTrajectoryPropagation(sv0, 1, 0.0, 0.0, useNonSphericalGravity);
+		sv_a = GeneralTrajectoryPropagation(sv0, 1, PI, 0.0, useNonSphericalGravity);
 	}
 	else
 	{
@@ -310,8 +310,8 @@ void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
 		//First guess
 		ApsidesArgumentofLatitudeDetermination(sv0, u_x, u_y);
 
-		sv1 = GeneralTrajectoryPropagation(sv0, 2, u_x);
-		sv2 = GeneralTrajectoryPropagation(sv0, 2, u_y);
+		sv1 = GeneralTrajectoryPropagation(sv0, 2, u_x, 0.0, useNonSphericalGravity);
+		sv2 = GeneralTrajectoryPropagation(sv0, 2, u_y, 0.0, useNonSphericalGravity);
 
 		if (length(sv1.R) > length(sv2.R))
 		{
@@ -374,7 +374,7 @@ SV ShuttleFDOCore::PositionMatch(SV sv_A, SV sv_P)
 
 	u = unit(crossp(sv_P.R, sv_P.V));
 	U_L = unit(crossp(u, sv_P.R));
-	sv_A1 = GeneralTrajectoryPropagation(sv_A, 0, sv_P.GMT);
+	sv_A1 = GeneralTrajectoryPropagation(sv_A, 0, sv_P.GMT, 0.0, useNonSphericalGravity);
 
 	do
 	{
@@ -718,6 +718,30 @@ int ShuttleFDOCore::CalculateOMPPlan()
 				}
 			}
 		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NOSH)
+		{
+			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
+			{
+				if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DNOD") == 0)
+				{
+					add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					found++;
+				}
+			}
+			if (found != 1) return 24;	//Didn't find DNOD constraint for NOSH maneuver
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::PC)
+		{
+		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
+		{
+			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DPC") == 0)
+			{
+				add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+				found++;
+			}
+		}
+		if (found != 1) return 27;	//Didn't find DPC constraint for PC maneuver
+		}
 	}
 
 	//CHECK AND LOAD TIG MODIFIERS
@@ -784,6 +808,66 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			{
 				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITO;
 				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
+			}
+			//Optimum node shift
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "OPT") == 0)
+			{
+				if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NOSH) return 25;	//Error 25: OPT secondary only applies to NOSH
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::OPT;
+			}
+			//Angle from apogee
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "A") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::A;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Angle from perigee
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "P") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::P;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Argument of latitude
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "U") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::U;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Ascending Node
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "ASC") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::ASC;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
+			}
+			//Descending Node
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DSC") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::DSC;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
+			}
+			//Latitude
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LAT") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::LAT;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Longitude
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LON") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::LON;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Declination
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DEC") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::DEC;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
+			}
+			//Latitude
+			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "ALT") == 0)
+			{
+				tigmodifiers[i].type = OMPDefs::SECONDARIES::ALT;
+				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
 			}
 		}
 	}
@@ -937,7 +1021,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					DN = 0.0;
 				}
 
-				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, u_d, DN);
+				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, u_d, DN, useNonSphericalGravity);
 			}
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITI || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITO)
 			{
@@ -954,6 +1038,56 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::NITM)
 			{
 				sv_bef_table[i] = FindOrbitalMidnightRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::OPT)
+			{
+				sv_bef_table[i] = FindOptimumNodeShiftPoint(sv_bef_table[i], add_constraint[i].x);
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LAT || tigmodifiers[i].type == OMPDefs::SECONDARIES::LON || tigmodifiers[i].type == OMPDefs::SECONDARIES::DEC || tigmodifiers[i].type == OMPDefs::SECONDARIES::ALT)
+			{
+				SV sv_temp;
+				bool err;
+
+				err = SEARMT(sv_bef_table[i], tigmodifiers[i].type, tigmodifiers[i].value, sv_temp);
+				if (err) return 26; //Failure to find maneuver time
+				sv_bef_table[i] = sv_temp;
+			}
+			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ASC || tigmodifiers[i].type == OMPDefs::SECONDARIES::DSC || tigmodifiers[i].type == OMPDefs::SECONDARIES::U)
+			{
+				VECTOR3 N, H;
+				double U, crossings, U_D;
+
+				//Calculate current argument of latitude
+				H = unit(crossp(sv_bef_table[i].R, sv_bef_table[i].V));
+				N = unit(crossp(_V(0, 0, 1), H));
+				U = PHSANG(sv_bef_table[i].R, sv_bef_table[i].V, N);
+				if (U < 0)
+				{
+					U += PI2;
+				}
+
+				if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ASC)
+				{
+					U_D = 0.0;
+					crossings = round(tigmodifiers[i].value) - 1.0;
+				}
+				else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::DSC)
+				{
+					U_D = PI;
+					crossings = round(tigmodifiers[i].value) - 1.0;
+				}
+				else
+				{
+					U_D = tigmodifiers[i].value;
+					crossings = 0.0;
+				}
+
+				if (U > U_D)
+				{
+					crossings = crossings + 1.0;
+				}
+
+				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, U_D, crossings, useNonSphericalGravity);
 			}
 		}
 
@@ -1085,19 +1219,18 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//MANEUVER
 		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
 		{
-			DV = HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x);
+			if (HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x, true, DV))
+			{
+				return 28;	//HA maneuver failed to converge
+			}
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
 		{
-			SV sv_temp;
-			VECTOR3 DV1, DV2;
-			double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
-			sv_temp = sv_bef_table[i];
-			DV1 = -unit(sv_temp.R)*r_dot;
-			sv_temp.V += DV1;
-			DV2 = HeightManeuverAuto(sv_temp, R_E + add_constraint[i].x);
-			DV = DV1 + DV2;
+			if (HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x, false, DV))
+			{
+				return 29;	//HASH maneuver failed to converge
+			}
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
@@ -1180,7 +1313,10 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//Circularization
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::CIRC)
 		{
-			DV = CircManeuverAuto(sv_bef_table[i]);
+			if (HeightManeuverAuto(sv_bef_table[i], length(sv_bef_table[i].R), false, DV))
+			{
+				return 30;	//CIRC maneuver failed to converge
+			}
 			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
@@ -1202,6 +1338,16 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		{
 			dv_table[i] = NSRManeuver(sv_bef_table[i], sv_P_table[i]);
 			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NOSH)
+		{
+			DV = NodeShiftManeuver(sv_bef_table[i], add_constraint[i].x);
+			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
+		}
+		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::PC)
+		{
+			DV = PlaneChangeManeuver(sv_bef_table[i], add_constraint[i].x);
+			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
 		}
 
 		//Additional secondary maneuver constraints
@@ -1332,6 +1478,74 @@ void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 	}
 }
 
+OMPDefs::MANTYPE ShuttleFDOCore::GetOPMManeuverType(char *buf)
+{
+	OMPDefs::MANTYPE man = OMPDefs::MANTYPE::NOMAN;
+
+	if (strcmp(buf, "HA") == 0)
+	{
+		man = OMPDefs::HA;
+	}
+	else if (strcmp(buf, "HASH") == 0)
+	{
+		man = OMPDefs::HASH;
+	}
+	else if (strcmp(buf, "NC") == 0)
+	{
+		man = OMPDefs::NC;
+	}
+	else if (strcmp(buf, "EXDV") == 0)
+	{
+		man = OMPDefs::EXDV;
+	}
+	else if (strcmp(buf, "NH") == 0)
+	{
+		man = OMPDefs::NH;
+	}
+	else if (strcmp(buf, "SOI") == 0)
+	{
+		man = OMPDefs::SOI;
+	}
+	else if (strcmp(buf, "SOR") == 0)
+	{
+		man = OMPDefs::SOR;
+	}
+	else if (strcmp(buf, "NPC") == 0)
+	{
+		man = OMPDefs::NPC;
+	}
+	else if (strcmp(buf, "NCC") == 0)
+	{
+		man = OMPDefs::NCC;
+	}
+	else if (strcmp(buf, "APSO") == 0)
+	{
+		man = OMPDefs::APSO;
+	}
+	else if (strcmp(buf, "CIRC") == 0)
+	{
+		man = OMPDefs::CIRC;
+	}
+	else if (strcmp(buf, "NHRD") == 0)
+	{
+		man = OMPDefs::NHRD;
+	}
+	else if (strcmp(buf, "NSR") == 0)
+	{
+		man = OMPDefs::NSR;
+	}
+	else if (strcmp(buf, "NOSH") == 0)
+	{
+		man = OMPDefs::NOSH;
+	}
+	else if (strcmp(buf, "PC") == 0)
+	{
+		man = OMPDefs::PC;
+	}
+
+	return man;
+}
+
 void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 {
 	if (type == OMPDefs::MANTYPE::HA)
@@ -1386,6 +1600,14 @@ void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 	{
 		sprintf_s(buf, 100, "NSR");
 	}
+	else if (type == OMPDefs::MANTYPE::NOSH)
+	{
+		sprintf_s(buf, 100, "NOSH");
+	}
+	else if (type == OMPDefs::MANTYPE::PC)
+	{
+		sprintf_s(buf, 100, "PC");
+	}
 	else
 	{
 		sprintf_s(buf, 100, "N/A");
@@ -1409,25 +1631,6 @@ VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 	V2 = sv_A.V + tmul(OrbMech::LVLH_Matrix(sv_A.R, sv_A.V), DV_PC_LV);
 	V2 = unit(V2)*length(sv_A.V);
 	return V2 - sv_A.V;
-}
-
-VECTOR3 ShuttleFDOCore::CircManeuverAuto(SV sv_A)
-{
-	if (useNonSphericalGravity)
-	{
-		return HeightManeuverAuto(sv_A, length(sv_A.R));
-	}
-	else
-	{
-		VECTOR3 U_H, U_hor, V_apo;
-		double v_circ;
-
-		U_H = unit(crossp(sv_A.R, sv_A.V));
-		U_hor = unit(crossp(U_H, unit(sv_A.R)));
-		v_circ = sqrt(mu / length(sv_A.R));
-		V_apo = U_hor * v_circ;
-		return V_apo - sv_A.V;
-	}
 }
 
 double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
@@ -1473,7 +1676,7 @@ double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
 	int i = 0;
 	dt_abs = 0.0;
 
-	sv_P1 = GeneralTrajectoryPropagation(sv_P, 0, sv_A1.GMT);
+	sv_P1 = GeneralTrajectoryPropagation(sv_P, 0, sv_A1.GMT, 0.0, useNonSphericalGravity);
 
 	do
 	{
@@ -2222,11 +2425,11 @@ SV ShuttleFDOCore::timetoapo_auto(SV sv_A, double revs)
 		double v_r = dotp(sv_A.R, sv_A.V) / length(sv_A.R);
 		if (v_r > 0)
 		{
-			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs - 1.0);
+			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs - 1.0, useNonSphericalGravity);
 		}
 		else
 		{
-			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs);
+			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs, useNonSphericalGravity);
 		}
 	}
 	else
@@ -2270,7 +2473,7 @@ SV ShuttleFDOCore::DeltaOrbitsAuto(SV sv0, double M)
 {
 	if (useNonSphericalGravity)
 	{
-		return GeneralTrajectoryPropagation(sv0, 3, 0.0, M);
+		return GeneralTrajectoryPropagation(sv0, 3, 0.0, M, useNonSphericalGravity);
 	}
 	else
 	{
@@ -2311,12 +2514,12 @@ SV ShuttleFDOCore::FindNthApsidalCrossingAuto(SV sv0, double N)
 		if (fact*v_r > 0)
 		{
 			//Apoapsis
-			return GeneralTrajectoryPropagation(sv0, 1, PI, DN);
+			return GeneralTrajectoryPropagation(sv0, 1, PI, DN, useNonSphericalGravity);
 		}
 		else
 		{
 			//Periapsis
-			return GeneralTrajectoryPropagation(sv0, 1, 0, DN);
+			return GeneralTrajectoryPropagation(sv0, 1, 0, DN, useNonSphericalGravity);
 		}
 	}
 	else
@@ -2417,64 +2620,436 @@ bool ShuttleFDOCore::FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double 
 	return true;
 }
 
-VECTOR3 ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double r_D)
+bool ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double r_D, bool horizontal, VECTOR3 &DV)
 {
-	VECTOR3 DV;
+	SV sv_A_apo, sv_D;
+	OrbMech::OELEMENTS coe;
+	VECTOR3 am, U_hor;
+	double eps, p_H, c_I, u_b, u_d, DN, v_H, e_H, e_Ho, v_Ho;
+	int s_F;
 
-	if (useNonSphericalGravity)
+	sv_A_apo = sv_A;
+
+	//Some helping vectors
+	am = unit(crossp(sv_A.R, sv_A.V));
+	U_hor = unit(crossp(am, unit(sv_A.R)));
+
+	//Tolerance
+	eps = 250.0*0.3048;
+	//Set up iterator
+	p_H = c_I = 0.0;
+	s_F = 0;
+
+	//Set up desired argument of latitude (only used with non-spherical gravity)
+	coe = OrbMech::coe_from_sv(sv_A.R, sv_A.V, mu);
+	u_b = fmod(coe.TA + coe.w, PI2);
+	u_d = u_b + PI;
+	if (u_d < PI2)
 	{
-		OrbMech::OELEMENTS coe;
-		SV sv_A_apo, sv_D;
-		VECTOR3 am;
-		double u_b, dv_H, u_d, DN, e_H, e_Ho, p_H, c_I, eps, dv_Ho;
-		int s_F;
+		DN = 0.0;
+	}
+	else
+	{
+		u_d = u_d - PI2;
+		DN = 1.0;
+	}
 
-		eps = 1.0;
-		dv_H = 0.0;
-		am = unit(crossp(sv_A.R, sv_A.V));
-		sv_A_apo = sv_A;
-		p_H = c_I = 0.0;
-		s_F = 0;
+	//Initial guess
+	if (horizontal)
+	{
+		v_H = 0.0;
+	}
+	else
+	{
+		v_H = sqrt(2.0*mu / (length(sv_A.R)*(1.0 + length(sv_A.R) / r_D)));
+	}
 
-		coe = OrbMech::coe_from_sv(sv_A.R, sv_A.V, mu);
-		u_b = fmod(coe.TA + coe.w, PI2);
-		u_d = u_b + PI;
-		if (u_d < PI2)
+	do
+	{
+		if (horizontal)
 		{
+			sv_A_apo.V = sv_A.V + U_hor * v_H;
+		}
+		else
+		{
+			sv_A_apo.V = U_hor * v_H;
+		}
+
+		if (useNonSphericalGravity)
+		{
+			sv_D = GeneralTrajectoryPropagation(sv_A_apo, 2, u_d, DN, useNonSphericalGravity);
+		}
+		else
+		{
+			double dt_temp;
+			OrbMech::REVUP(sv_A_apo.R, sv_A_apo.V, 0.5, mu, sv_D.R, sv_D.V, dt_temp);
+		}
+
+		e_H = length(sv_D.R) - r_D;
+		if (abs(e_H) >= eps)
+		{
+			OrbMech::ITER(c_I, s_F, e_H, p_H, v_H, e_Ho, v_Ho);
+			if (s_F == 1)
+			{
+				//Error
+				return true;
+			}
+		}
+	} while (abs(e_H) >= eps);
+
+	DV = sv_A_apo.V - sv_A.V;
+	return false;
+}
+
+SV ShuttleFDOCore::FindOptimumNodeShiftPoint(SV sv0, double dh)
+{
+	SV sv1;
+	OrbMech::InvariantElements coe;
+	double U_D, U_B, DN;
+
+	coe = OrbMech::CalculateInvariantElementsBlock(sv0, mu, 0.0, useNonSphericalGravity);
+	U_B = fmod(OrbMech::MeanToTrueAnomaly(coe.l, coe.e) + coe.g, PI2);
+
+	U_D = atan2(1.0 + cos(dh), -sin(dh)*cos(coe.i));
+	if (U_D < 0)
+	{
+		U_D += PI2;
+	}
+
+	if (U_B < U_D)
+	{
+		DN = 0.0;
+	}
+	else
+	{
+		if (U_B < U_D + PI)
+		{
+			U_D = U_D + PI;
 			DN = 0.0;
 		}
 		else
 		{
-			u_d = u_d - PI2;
 			DN = 1.0;
 		}
-
-		do
-		{
-			DV = unit(crossp(am, sv_A.R))*dv_H;
-			sv_A_apo.V = sv_A.V + DV;
-			sv_D = GeneralTrajectoryPropagation(sv_A_apo, 2, u_d, DN);
-
-			e_H = length(sv_D.R) - r_D;
-			if (p_H == 0 || abs(e_H) >= eps)
-			{
-				OrbMech::ITER(c_I, s_F, e_H, p_H, dv_H, e_Ho, dv_Ho);
-				if (s_F == 1)
-				{
-					return _V(0, 0, 0);
-				}
-			}
-		} while (abs(e_H) >= eps);
+	}
+	if (useNonSphericalGravity)
+	{
+		sv1 = GeneralTrajectoryPropagation(sv0, 2, U_D, DN, useNonSphericalGravity);
 	}
 	else
 	{
-		VECTOR3 Rtemp, Vtemp;
-		double dt_temp, dh;
+		double dt = OrbMech::time_theta(sv0.R, sv0.V, U_D + DN * PI2 - U_B, mu);
+		sv1 = sv0;
+		OrbMech::rv_from_r0v0(sv0.R, sv0.V, dt, sv1.R, sv1.V, mu);
+		sv1.GMT = sv0.GMT + dt;
+	}
+	return sv1;
+}
 
-		OrbMech::REVUP(sv_A.R, sv_A.V, 0.5, mu, Rtemp, Vtemp, dt_temp);
-		dh = r_D - length(Rtemp);
-		DV = OrbMech::HeightManeuver(sv_A.R, sv_A.V, dh, mu);
+VECTOR3 ShuttleFDOCore::NodeShiftManeuver(SV sv0, double dh_D)
+{
+	OrbMech::CELEMENTS coe_b, coe_a;
+	VECTOR3 Rtemp, Vtemp;
+	double cos_u_a, sin_u_a, u_b, u_a, cos_dw, sin_dw, dw, f_a, f_b;
+
+	coe_b = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu);
+	f_b = OrbMech::MeanToTrueAnomaly(coe_b.l, coe_b.e);
+	u_b = fmod(f_b + coe_b.g, PI2);
+
+	coe_a = coe_b;
+	f_a = f_b;
+
+	cos_u_a = cos(dh_D)*cos(u_b) + sin(dh_D)*sin(u_b)*cos(coe_b.i);
+	sin_u_a = sqrt(1.0 - cos_u_a * cos_u_a);
+	if (u_b > PI)
+	{
+		sin_u_a = -sin_u_a;
+	}
+	u_a = atan2(sin_u_a, cos_u_a);
+	if (u_a < 0)
+	{
+		u_a = PI2;
+	}
+	cos_dw = (cos(dh_D) - cos(u_b)*cos(u_a)) / (sin(u_b)*sin(u_a));
+	sin_dw = sin(dh_D)*sin(coe_b.i) / sin_u_a;
+	dw = atan2(sin_dw, cos_dw);
+	coe_a.i = acos(cos(coe_b.i)*cos_dw - sin(coe_b.i)*sin_dw*cos(u_b));
+	coe_a.h = coe_b.h + dh_D;
+	coe_a.h = fmod(coe_a.h, PI2);
+	coe_a.g = u_a - f_a;
+	if (coe_a.h < 0)
+	{
+		coe_a.h += PI2;
+	}
+	if (coe_a.g < 0)
+	{
+		coe_a.g += PI2;
+	}
+	OrbMech::KeplerianToCartesian(coe_a, mu, Rtemp, Vtemp);
+
+	return Vtemp - sv0.V;
+}
+
+VECTOR3 ShuttleFDOCore::PlaneChangeManeuver(SV sv0, double dw_D)
+{
+	OrbMech::CELEMENTS coe_b, coe_a;
+	VECTOR3 Rtemp, Vtemp;
+	double f_b, u_b, sin_dh, cos_dh, dh, sin_u_a, cos_u_a, u_a, f_a;
+
+	coe_b = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu);
+	f_b = OrbMech::MeanToTrueAnomaly(coe_b.l, coe_b.e);
+	u_b = fmod(f_b + coe_b.g, PI2);
+
+	coe_a = coe_b;
+	f_a = f_b;
+
+	coe_a.i = acos(cos(coe_b.i)*cos(dw_D) - sin(coe_b.i)*sin(dw_D)*cos(u_b));
+	sin_dh = sin(dw_D)*sin(u_b) / sin(coe_a.i);
+	cos_dh = (cos(dw_D) - cos(coe_b.i)*cos(coe_a.i)) / (sin(coe_b.i)*sin(coe_a.i));
+	dh = atan2(sin_dh, cos_dh);
+	coe_a.h = coe_b.h + dh;
+	if (coe_a.h < 0)
+	{
+		coe_a.h += PI2;
+	}
+	else if (coe_a.h >= PI2)
+	{
+		coe_a.h -= PI2;
+	}
+	sin_u_a = sin(u_b)*sin(coe_b.i) / sin(coe_a.i);
+	cos_u_a = cos(u_b)*cos(dh) + sin(u_b)*sin(dh)*cos(coe_b.i);
+	u_a = atan2(sin_u_a, cos_u_a);
+	if (u_a < 0)
+	{
+		u_a += PI2;
+	}
+	coe_a.g = u_a - f_a;
+	if (coe_a.g < 0)
+	{
+		coe_a.g += PI2;
 	}
 
-	return DV;
+	OrbMech::KeplerianToCartesian(coe_a, mu, Rtemp, Vtemp);
+	return Vtemp - sv0.V;
+}
+
+bool TLAT(VECTOR3 R, VECTOR3 V, double lat, int C, double & K_AD, double &dtheta)
+{
+	VECTOR3 H, N;
+	double i, U, Ulat;
+	
+	H = unit(crossp(R, V));
+	N = unit(crossp(_V(0, 0, 1), H));
+	i = acos(H.z);
+	if (abs(lat) > i) return true;
+	U = OrbMech::PHSANG(R, V, N);
+	if (U < 0)
+	{
+		U += PI2;
+	}
+	Ulat = asin(abs(sin(lat)) / sin(i));
+	if (C == 0)
+	{
+		K_AD = -1.0;
+	}
+	if (lat < 0)
+	{
+		U = U - PI;
+	}
+	U = atan2(sin(U), cos(U));
+	if (U < 0)
+	{
+		U += PI2;
+	}
+	if (K_AD > 0)
+	{
+		Ulat = PI - Ulat;
+	}
+	if (C == 0)
+	{
+		double Ulat_pi = PI - Ulat;
+
+		if (U >= Ulat)
+		{
+			if (U < Ulat_pi)
+			{
+				Ulat = Ulat_pi;
+				K_AD = 1.0;
+			}
+			else
+			{
+				Ulat = Ulat + PI2;
+			}
+		}
+	}
+	dtheta = Ulat - U;
+	if (C != 0)
+	{
+		if (abs(dtheta) > PI)
+		{
+			dtheta = dtheta - PI2 * sign(dtheta);
+		}
+	}
+	return false;
+}
+
+double TLON(VECTOR3 R, VECTOR3 V, double t, double lng, int C)
+{
+	VECTOR3 N, H;
+	double alpha1, alpha2, I, NODE, U, pro, U_lng, dtheta;
+
+	H = unit(crossp(R, V));
+	N = unit(crossp(_V(0, 0, 1), H));
+	I = acos(H.z);
+	NODE = atan2(N.y, N.x);
+	U = OrbMech::PHSANG(R, V, N);
+	if (U < 0)
+	{
+		U += PI2;
+	}
+	pro = 1.0;
+	if (PI05 - I < 0)
+	{
+		pro = -1.0;
+	}
+
+	alpha1 = pro*(lng - NODE);
+	alpha2 = alpha1 + OrbMech::w_Earth*t;
+	U_lng = atan2(sin(alpha2), pro*cos(alpha2)*cos(I));
+	if (U_lng < 0)
+	{
+		U_lng += PI2;
+	}
+	if (C == 0)
+	{
+		if (U_lng < U)
+		{
+			U_lng = U_lng + PI2;
+		}
+		dtheta = U_lng - U;
+	}
+	else
+	{
+		dtheta = U_lng - U;
+		if (abs(dtheta) >= PI)
+		{
+			dtheta = dtheta - sign(dtheta)*PI2;
+		}
+	}
+	return dtheta;
+}
+
+bool TALT(VECTOR3 R, VECTOR3 V, double rad, int C, double mu, double &dtheta)
+{
+	double r, v, r_dot, P, a, ecosE, esinE, e, r_MIN, r_MAX, theta_D, theta;
+
+	r = length(R);
+	v = length(V);
+	r_dot = dotp(V, R) / r;
+	P = pow(length(crossp(R, V)), 2) / mu;
+	a = r / (2.0 - v * v*r / mu);
+	ecosE = (a - r) / a;
+	esinE = r * r_dot / sqrt(mu*a);
+	e = sqrt(esinE*esinE + ecosE * ecosE);
+	r_MIN = P / (1.0 + e);
+	r_MAX = 2.0*a - r_MIN;
+
+	//Error condition
+	if (rad < r_MIN || r > r_MAX) return true;
+
+	theta_D = acos((P / rad - 1.0) / e);
+	theta = acos((P / r - 1.0) / e);
+	
+	if (C != 0)
+	{
+		dtheta = theta_D - theta;
+		if (r_dot < 0)
+		{
+			dtheta = -dtheta;
+		}
+	}
+	else
+	{
+		dtheta = 0.0;
+
+		if (r_dot > 0)
+		{
+			if (theta_D > theta)
+			{
+				dtheta = theta_D - theta;
+			}
+			else if (theta_D < theta)
+			{
+				dtheta = PI2 - (theta_D + theta);
+			}
+		}
+		else
+		{
+			if (theta_D > theta)
+			{
+				dtheta = theta + theta_D;
+			}
+			else if (theta_D < theta)
+			{
+				dtheta = theta - theta_D;
+			}
+		}
+	}
+	return false;
+}
+
+bool ShuttleFDOCore::SEARMT(SV sv0, int opt, double val, SV &sv1)
+{
+	double K_AD, dtheta, dt;
+	int C;
+	bool CEND;
+
+	const int CMAX = 20;
+	const double eps4 = 0.011*RAD;
+
+	C = 0;
+	CEND = false;
+	sv1 = sv0;
+
+	do
+	{
+		if (opt == OMPDefs::SECONDARIES::LAT || opt == OMPDefs::SECONDARIES::DEC)
+		{
+			if (TLAT(sv1.R, sv1.V, val, C, K_AD, dtheta))
+			{
+				//Error
+				return true;
+			 }
+		}
+		else if (opt == OMPDefs::SECONDARIES::ALT)
+		{
+			if (TALT(sv1.R, sv1.V, val + R_E, C, mu, dtheta))
+			{
+				//Error
+				return true;
+			}
+		}
+		else
+		{
+			dtheta = TLON(sv1.R, sv1.V, sv1.GMT, val, C);
+		}
+
+		dt = OrbMech::time_theta(sv1.R, sv1.V, dtheta, mu, C == 0);
+		sv1 = coast_auto(sv1, dt);
+		//If we don't use nonspherical gravity, we might be already done
+		if (useNonSphericalGravity == false)
+		{
+			if (opt == OMPDefs::SECONDARIES::LAT || opt == OMPDefs::SECONDARIES::DEC || opt == OMPDefs::SECONDARIES::ALT)
+			{
+				break;
+			}
+		}
+		C++;
+	} while (abs(dtheta) > eps4 && C < CMAX);
+
+	if (C >= CMAX)
+	{
+		return true;
+	}
+	return false;
 }

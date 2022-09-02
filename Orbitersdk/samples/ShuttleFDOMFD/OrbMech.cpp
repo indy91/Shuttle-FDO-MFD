@@ -588,40 +588,6 @@ namespace OrbMech
 		delete coast;
 	}
 
-	VECTOR3 HeightManeuver(VECTOR3 R, VECTOR3 V, double dh, double mu)
-	{
-		VECTOR3 R3, V3, am, V_HF;
-		double dt3, r_D, dv_H, e_H, eps, p_H, c_I, e_Ho, dv_Ho;
-		int s_F;
-
-		OrbMech::REVUP(R, V, 0.5, mu, R3, V3, dt3);
-		r_D = length(R3) + dh;
-		am = unit(crossp(R, V));
-		dv_H = 0.0;
-		eps = 1.0;
-		p_H = c_I = 0.0;
-		s_F = 0;
-
-		do
-		{
-			V_HF = V + unit(crossp(am, R))*dv_H;
-			OrbMech::REVUP(R, V_HF, 0.5, mu, R3, V3, dt3);
-
-			e_H = length(R3) - r_D;
-
-			if (p_H == 0 || abs(e_H) >= eps)
-			{
-				OrbMech::ITER(c_I, s_F, e_H, p_H, dv_H, e_Ho, dv_Ho);
-				if (s_F == 1)
-				{
-					return _V(0, 0, 0);
-				}
-			}
-		} while (abs(e_H) >= eps);
-
-		return V_HF - V;
-	}
-
 	VECTOR3 elegant_lambert(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double dt, int N, bool prog, double mu)
 	{
 		double tol, ratio, r1, r2, c, s, theta, lambda, T, l, m, x, h1, h2, B, y, z, x_new, A, root;
@@ -1527,6 +1493,18 @@ namespace OrbMech
 		}
 	}
 
+	SV coast_auto(SV sv0, double dt, bool precision)
+	{
+		if (precision)
+		{
+			return coast(sv0, dt);
+		}
+		else
+		{
+			return coast_osc(sv0, dt, mu_Earth);
+		}
+	}
+
 	SV coast(SV sv0, double dt)
 	{
 		SV sv1;
@@ -1549,7 +1527,7 @@ namespace OrbMech
 		return sv1;
 	}
 
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN)
+	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision)
 	{
 		//Update to the given time
 		if (opt == 0)
@@ -1558,25 +1536,32 @@ namespace OrbMech
 
 			GMT1 = param;
 			dt = GMT1 - sv0.GMT;
-			return coast(sv0, dt);
+			return coast_auto(sv0, dt, precision);
 		}
 		//Update to the given mean anomaly
 		else
 		{
 			SV sv1;
 			OrbMech::CELEMENTS osc0, osc1;
-			double DX_L, X_L, X_L_dot, dt, ddt, L_D, ll_dot, n0, g_dot, J20;
+			double DX_L, X_L, X_L_dot, dt, ddt, L_D, ll_dot, n0, g_dot;
 			int LINE, COUNT;
 			bool DH;
-
-			J20 = 1082.6269e-6;
-
+			
 			sv1 = sv0;
 			osc0 = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu_Earth);
 
 			n0 = sqrt(mu_Earth / (osc0.a*osc0.a*osc0.a));
 			ll_dot = n0;
-			g_dot = n0 * ((3.0 / 4.0)*(J20*R_Earth*R_Earth*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
+
+			if (precision)
+			{
+				double J20 = 1082.6269e-6;
+				g_dot = n0 * ((3.0 / 4.0)*(J20*R_Earth*R_Earth*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
+			}
+			else
+			{
+				g_dot = 0.0;
+			}
 
 			osc1 = osc0;
 			if (opt != 3)
@@ -1669,7 +1654,7 @@ namespace OrbMech
 
 
 				dt += ddt;
-				sv1 = coast(sv1, ddt);
+				sv1 = coast_auto(sv1, ddt, precision);
 				osc1 = OrbMech::CartesianToKeplerian(sv1.R, sv1.V, mu_Earth);
 
 				COUNT--;
@@ -1721,6 +1706,34 @@ namespace OrbMech
 			elem.l_dot = sqrt(mu / pow(elem.a, 3));
 		}
 		return elem;
+	}
+
+	VECTOR3 PROJCT(VECTOR3 U1, VECTOR3 U2, VECTOR3 X)
+	{
+		VECTOR3 N, X1, X_PROJ;
+
+		N = unit(crossp(U1, U2));
+		X1 = X - N * dotp(X, N);
+		X_PROJ = unit(X1)*length(X);
+		return X_PROJ;
+	}
+
+	double PHSANG(VECTOR3 R, VECTOR3 V, VECTOR3 RD)
+	{
+		VECTOR3 H1, H2, R_PROJ;
+		double theta, PHSANG;
+
+		H1 = unit(crossp(R, V));
+		H2 = unit(crossp(RD, R));
+
+		R_PROJ = PROJCT(R, V, RD);
+		theta = acos(dotp(R, R_PROJ) / length(R) / length(RD));
+		PHSANG = theta;
+		if (dotp(H1, H2) < 0)
+		{
+			PHSANG = -PHSANG;
+		}
+		return PHSANG;
 	}
 
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
