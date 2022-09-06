@@ -716,8 +716,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "%.1f %.1f %.1f", G->DV_MPS.x*MPS2FPS, G->DV_MPS.y*MPS2FPS, G->DV_MPS.z*MPS2FPS);
 		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "%.3f°", G->LWP_Settings.DELNO*DEG);
-		skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
+		//sprintf_s(Buffer, "%.3f°", G->LWP_Settings.DELNO*DEG);
+		//skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
 
 		sprintf_s(Buffer, "%.0f lbm", G->LWP_Settings.CWHT/LBM2KG);
 		skp->Text(1 * W / 8, 12 * H / 14, Buffer, strlen(Buffer));
@@ -770,6 +770,21 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 16, 9 * H / 14, Buffer, strlen(Buffer));
 		sprintf_s(Buffer, "%.3f°", G->LPW_Summary.IIGM*DEG);
 		skp->Text(1 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "NODE:");
+		skp->Text(1 * W / 16, 11 * H / 14, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%.3f°", G->LPW_Summary.TIGM*DEG);
+		skp->Text(1 * W / 16, 12 * H / 14, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "DELN:");
+		skp->Text(10 * W / 16, 9 * H / 14, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%.6f°", G->LPW_Summary.DELNO*DEG);
+		skp->Text(10 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
+
+		if (G->LPW_Summary.LWPERROR)
+		{
+			GetLWPError(Buffer, G->LPW_Summary.LWPERROR);
+			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
+		}
 	}
 	else if (screen == 9)
 	{
@@ -1580,6 +1595,28 @@ void ShuttleFDOMFD::menuCycleGravityOption()
 	G->useNonSphericalGravity = !G->useNonSphericalGravity;
 }
 
+void ShuttleFDOMFD::GetLWPError(char *buf, int err)
+{
+	switch (err)
+	{
+	case 3:
+		sprintf_s(buf, 100, "Error: ITERV terminated");
+		break;
+	case 4:
+		sprintf_s(buf, 100, "Error: NPLAN did not converge");
+		break;
+	case 5:
+		sprintf_s(buf, 100, "Error: Star table filled");
+		break;
+	case 6:
+		sprintf_s(buf, 100, "Error: GMTLS did not converge");
+		break;
+	case 8:
+		sprintf_s(buf, 100, "Error: RLOT not converging on TYAW");
+		break;
+	}
+}
+
 void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 {
 	if (err == 1)
@@ -1674,6 +1711,10 @@ void ShuttleFDOMFD::GetOMPError(char *buf, int err)
 	{
 		sprintf_s(buf, 100, "Error: CIRC maneuver failed to converge");
 	}
+	else if (err == 31)
+	{
+		sprintf_s(buf, 100, "Error: Failed to converge on common node");
+	}
 	else if (err == 100)
 	{
 		sprintf_s(buf, 100, "Error: No target vessel.");
@@ -1749,21 +1790,51 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 	if (myfile.is_open())
 	{
 		G->ManeuverConstraintsTable.clear();
-		G->chaserSVOption = false;
 
 		int Year, Day, Hour, Minute;
 		double launchdateSec;
+		bool founddate = false, foundtime = false;
 
 		std::string line;
 		while (std::getline(myfile, line))
 		{
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE0", Year);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE1", Day);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE2", Hour);
-			papiReadScenario_int(line.c_str(), "LAUNCHDATE3", Minute);
-			papiReadScenario_double(line.c_str(), "LAUNCHDATE4", launchdateSec);
-			papiReadScenario_string(line.c_str(), "SHUTTLE", shuttlebuff);
-			papiReadScenario_string(line.c_str(), "TARGET", targetbuff);
+			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE0", Year)) founddate = true;
+			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE1", Day)) founddate = true;
+			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE2", Hour)) foundtime = true;
+			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE3", Minute)) foundtime = true;
+			if (papiReadScenario_double(line.c_str(), "LAUNCHDATE4", launchdateSec)) foundtime = true;
+			if (papiReadScenario_string(line.c_str(), "SHUTTLE", shuttlebuff))
+			{
+				G->chaserSVOption = false;
+
+				OBJHANDLE hShuttle = oapiGetVesselByName(shuttlebuff);
+				if (hShuttle)
+				{
+					G->shuttle = oapiGetVesselInterface(hShuttle);
+					for (unsigned i = 0;i < oapiGetVesselCount();i++)
+					{
+						if (hShuttle == oapiGetVesselByIndex(i))
+						{
+							G->shuttlenumber = i;
+						}
+					}
+				}
+			}
+			if (papiReadScenario_string(line.c_str(), "TARGET", targetbuff))
+			{
+				OBJHANDLE hTarget = oapiGetVesselByName(targetbuff);
+				if (hTarget)
+				{
+					G->target = oapiGetVesselInterface(hTarget);
+					for (unsigned i = 0;i < oapiGetVesselCount();i++)
+					{
+						if (hTarget == oapiGetVesselByIndex(i))
+						{
+							G->targetnumber = i;
+						}
+					}
+				}
+			}
 			papiReadScenario_bool(line.c_str(), "NONSPHERICAL", G->useNonSphericalGravity);
 			if (strcmp(line.c_str(), "END_MCT") == 0) isMCT = false;
 			if (isMCT) ReadMCTLine(line.c_str());
@@ -1772,35 +1843,9 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 
 		myfile.close();
 
-		//Processing
-		G->SetLaunchDay(Year, Day);
-		G->SetLaunchTime(Hour, Minute, launchdateSec);
-
-		OBJHANDLE hShuttle = oapiGetVesselByName(shuttlebuff);
-		if (hShuttle)
-		{
-			G->shuttle = oapiGetVesselInterface(hShuttle);
-			for (unsigned i = 0;i < oapiGetVesselCount();i++)
-			{
-				if (hShuttle == oapiGetVesselByIndex(i))
-				{
-					G->shuttlenumber = i;
-				}
-			}
-		}
-
-		OBJHANDLE hTarget = oapiGetVesselByName(targetbuff);
-		if (hTarget)
-		{
-			G->target = oapiGetVesselInterface(hTarget);
-			for (unsigned i = 0;i < oapiGetVesselCount();i++)
-			{
-				if (hTarget == oapiGetVesselByIndex(i))
-				{
-					G->targetnumber = i;
-				}
-			}
-		}
+		//Process times
+		if (founddate) G->SetLaunchDay(Year, Day);
+		if (foundtime) G->SetLaunchTime(Hour, Minute, launchdateSec);
 
 		return true;
 	}

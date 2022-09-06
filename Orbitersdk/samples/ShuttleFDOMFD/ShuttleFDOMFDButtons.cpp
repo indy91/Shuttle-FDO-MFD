@@ -268,7 +268,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "DV ET SEP", 0, 'V' },
 		{ "DT MPS Dump", 0, 'T' },
 		{ "DV MPS Dump", 0, 'M' },
-		{ "Nodal bias", 0, 'L' },
+		{ "", 0, ' ' },
 		{ "Pre OMS-2 weight", 0, 'W' },
 
 		{ "Set DTOPT", 0, 'O' },
@@ -285,7 +285,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("DVE", OAPI_KEY_V, &ShuttleFDOMFD::menuLWPSetDVETSEP);
 	RegisterFunction("DTM", OAPI_KEY_T, &ShuttleFDOMFD::menuLWPSetDTMPS);
 	RegisterFunction("DVM", OAPI_KEY_M, &ShuttleFDOMFD::menuLWPSetDVMPS);
-	RegisterFunction("DEL", OAPI_KEY_L, &ShuttleFDOMFD::menuLWPSetDELNO);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("WT", OAPI_KEY_W, &ShuttleFDOMFD::menuLWPSetWT);
 
 	RegisterFunction("OPT", OAPI_KEY_O, &ShuttleFDOMFD::menuLWPSetDTOPT);

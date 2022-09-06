@@ -82,6 +82,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	LaunchGMT = 0.0;
 	BaseMJD = 0.0;
 	M_EFTOECL_AT_EPOCH = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	M_TEGTOECL = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
 	MTTSlotData[0].SLOT = 1;
 	MTTSlotData[0].thrusters = OMPDefs::THRUSTERS::OBP;
@@ -185,8 +186,6 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DMT.GMTI = 0.0;
 	DMT.PETI = 0.0;
 	DMT.DV_M = 0.0;
-
-	LWP.SetGlobalConstants(mu, w_E, R_E);
 
 	LWP_Settings.NS = 0;
 	LWP_Settings.TSTART = -5.0*60.0;
@@ -986,17 +985,19 @@ int ShuttleFDOCore::CalculateOMPPlan()
 			}
 			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::CN)
 			{
+				bool err;
+
 				//First iteration
 				if (sv_phantom.GMT == 0.0)
 				{
 					SV sv_P1 = coast_auto(sv_P_cur, sv_bef_table[i].GMT - sv_P_cur.GMT);
-					dt = FindCommonNode(sv_bef_table[i], sv_P1, add_constraint[i]);
+					err = FindCommonNode(sv_bef_table[i], sv_P1, add_constraint[i], dt);
 				}
 				else
 				{
-					dt = FindCommonNode(sv_bef_table[i], sv_phantom, add_constraint[i]);
+					err = FindCommonNode(sv_bef_table[i], sv_phantom, add_constraint[i], dt);
 				}
-
+				if (err) return 31;
 
 				sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
 			}
@@ -1127,6 +1128,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					else
 					{
 						iterstate[l].converged = true;
+						iterstate[l].c_I = 0;
 					}
 				}
 				//NH Maneuver Iterator
@@ -1161,6 +1163,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					else
 					{
 						iterstate[l].converged = true;
+						iterstate[l].c_I = 0;
 					}
 				}
 				//NPC Iterator
@@ -1209,6 +1212,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 					else
 					{
 						iterstate[l].converged = true;
+						iterstate[l].c_I = 0;
 					}
 				}
 			}
@@ -1633,91 +1637,66 @@ VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 	return V2 - sv_A.V;
 }
 
-double ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d)
+bool ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d, double &dt)
 {
-	SV sv_A1;
-	VECTOR3 u1, u2, u_node[2];
-	double theta, dt[2], ddt;
+	SV sv_A1, sv_P1;
+	VECTOR3 H_A, H_P, C_N;
+	double dtheta, ddt, eps_C;
+	int C, CMAX;
 
 	sv_A1 = sv_A;
-
-	//Spherical gravity
-	if (useNonSphericalGravity == false)
-	{
-		u1 = unit(crossp(sv_A1.V, sv_A1.R));
-		u2 = unit(crossp(sv_P.V, sv_P.R));
-
-		u_node[0] = unit(crossp(u1, u2));
-		u_node[1] = -u_node[0];
-
-		for (int j = 0;j < 2;j++)
-		{
-			theta = OrbMech::sign(dotp(crossp(sv_A1.R, u_node[j]), crossp(sv_A1.R, sv_A1.V)))*OrbMech::acos2(dotp(sv_A1.R / length(sv_A1.R), u_node[j]));
-			dt[j] = OrbMech::time_theta(sv_A1.R, sv_A1.V, theta, mu, true);
-		}
-
-		if (abs(dt[0]) > abs(dt[1]))
-		{
-			ddt = dt[1];
-		}
-		else
-		{
-			ddt = dt[0];
-		}
-
-		u_d = -u2;
-
-		return ddt;
-	}
-
-	//Nonspherical gravity
-	SV sv_P1;
-	double dt_abs;
-	int i = 0;
-	dt_abs = 0.0;
-
 	sv_P1 = GeneralTrajectoryPropagation(sv_P, 0, sv_A1.GMT, 0.0, useNonSphericalGravity);
+	C = 0;
+	dt = 0.0;
+
+	CMAX = 20;
+	eps_C = 0.0115*RAD;
 
 	do
 	{
 		sv_P1 = PositionMatch(sv_P1, sv_A1);
 
-		u1 = unit(crossp(sv_A1.V, sv_A1.R));
-		u2 = unit(crossp(sv_P1.V, sv_P1.R));
+		H_A = unit(crossp(sv_A1.R, sv_A1.V));
+		H_P = unit(crossp(sv_P1.R, sv_P1.V));
+		C_N = crossp(H_A, H_P);
 
-		u_node[0] = unit(crossp(u1, u2));
-		u_node[1] = -u_node[0];
-
-		for (int j = 0;j < 2;j++)
+		if (C == 0)
 		{
-			theta = OrbMech::sign(dotp(crossp(sv_A1.R, u_node[j]), crossp(sv_A1.R, sv_A1.V)))*OrbMech::acos2(dotp(sv_A1.R / length(sv_A1.R), u_node[j]));
-			dt[j] = OrbMech::time_theta(sv_A1.R, sv_A1.V, theta, mu, i == 0);
-		}
-
-		if (abs(dt[0]) > abs(dt[1]))
-		{
-			ddt = dt[1];
+			VECTOR3 T_EST = crossp(sv_A1.R, C_N);
+			if (dotp(T_EST, H_A) < 0)
+			{
+				C_N = -C_N;
+			}
+			dtheta = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, C_N);
 		}
 		else
 		{
-			ddt = dt[0];
-		}
+			double dtheta1, dtheta2;
 
+			dtheta1 = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, C_N);
+			dtheta2 = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, -C_N);
+			if (abs(dtheta1) < abs(dtheta2))
+			{
+				dtheta = dtheta1;
+			}
+			else
+			{
+				dtheta = dtheta2;
+			}
+		}
+		ddt = OrbMech::time_theta(sv_A1.R, sv_A1.V, dtheta, mu, false);
 		sv_A1 = coast_auto(sv_A1, ddt);
-		dt_abs += ddt;
-		i++;
+		dt += ddt;
+		C++;
+		if (useNonSphericalGravity == false) break;
+	} while (abs(dtheta) >= eps_C && C < CMAX);
 
-		//If wedge angle is below 0.01° or 10 iterations have been done, go back
-		if (acos(dotp(u1, u2)) < 0.01*RAD || i >= 10)
-		{
-			//sprintf(oapiDebugString(), "%d %f", i, acos(dotp(u1, u2))*DEG);
-			break;
-		}
-
-	} while (abs(ddt) > 0.1);
-
-	u_d = -u2;
-	return dt_abs;
+	u_d = H_P;
+	if (C >= CMAX)
+	{
+		return true;
+	}
+	return false;
 }
 
 VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
@@ -1815,7 +1794,7 @@ int ShuttleFDOCore::subThread()
 		{
 			LWP_Settings.SVPROP = 0;
 		}
-		LWP_Settings.GMTPLANE = sv_T.GMT;
+		LWP_Settings.TPLANE = sv_T.GMT;
 		LWP_Settings.TRGVEC = sv_T;
 		LWP_Settings.lwp_param_table = &LWP_Parameters;
 
@@ -1828,7 +1807,7 @@ int ShuttleFDOCore::subThread()
 		{
 			if (LWP_Settings.LW == 0)
 			{
-				InPlaneGMT = LPW_Summary.GMTPLANE;
+				InPlaneGMT = LPW_Summary.TPLANE;
 			}
 			else
 			{
@@ -1841,7 +1820,7 @@ int ShuttleFDOCore::subThread()
 			//Post insertion state vector processing
 			SV sv_P1, sv_P2;
 
-			sv_P1 = coast_auto(LPW_Summary.sv_P, DTIG_ET_SEP);
+			sv_P1 = coast_auto(LWP.LWPSV.sv_P, DTIG_ET_SEP);
 			sv_P1.V += tmul(LVLH_Matrix(sv_P1.R, sv_P1.V), DV_ET_SEP);
 
 			sv_P2 = coast_auto(sv_P1, DTIG_MPS - DTIG_ET_SEP);
@@ -2141,9 +2120,9 @@ void ShuttleFDOCore::CalcDMT()
 	{
 		RR_BOD = _V(0, 0, -1);
 	}
-	RORB = OrbMech::Ecl2M50(hEarth, input.sv_tig.R);
-	VORB = OrbMech::Ecl2M50(hEarth, input.sv_tig.V);
-	VEC_M50 = OrbMech::Ecl2M50(hEarth, u_D);
+	RORB = TEG2M50(input.sv_tig.R);
+	VORB = TEG2M50(input.sv_tig.V);
+	VEC_M50 = TEG2M50(u_D);
 	ROLL = input.TV_ROLL + PI05;
 	RR_M50 = -unit(crossp(RORB, VORB));
 	YN = unit(crossp(VEC_BOD, RR_BOD));
@@ -2380,7 +2359,9 @@ void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 	BaseMJD = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
 	//Calculate rotation matrix
 	M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(BaseMJD);
-
+	//Calculate matrix from TEG to M50
+	MATRIX3 M_M50TOECL = OrbMech::GetObliquityMatrix(33281.923357);
+	M_TEGTOECL = mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH);
 	//sprintf(oapiDebugString(), "%f", BaseMJD);
 }
 
@@ -3052,4 +3033,9 @@ bool ShuttleFDOCore::SEARMT(SV sv0, int opt, double val, SV &sv1)
 		return true;
 	}
 	return false;
+}
+
+VECTOR3 ShuttleFDOCore::TEG2M50(VECTOR3 v_TEG)
+{
+	return rhmul(M_TEGTOECL, v_TEG);
 }

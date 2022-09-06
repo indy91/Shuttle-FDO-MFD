@@ -30,6 +30,8 @@ namespace OrbMech
 	const double R_Earth = 6.37101e6;
 	const double mu_Earth = 398600439968871.2;
 	const double J2_Earth = 1082.6269e-6;
+	const double J3_Earth = -2.51e-6;
+	const double J4_Earth = -1.60e-6;
 	const double w_Earth = PI2 / 86164.10132;
 
 	struct SV
@@ -129,7 +131,7 @@ namespace OrbMech
 	void orbitmidnight(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool night, double &v1);
 	//Analytical sun ephemeris
 	VECTOR3 SUN(double MJD, const MATRIX3 &RM);
-	void BrouwerSecularRates(CELEMENTS mean, double mu, double &l_dot, double &g_dot, double &h_dot, double &n0);
+	void BrouwerSecularRates(CELEMENTS coe_osc, CELEMENTS coe_mean, double &l_dot, double &g_dot, double &h_dot);
 	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime);
 	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double GMT, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &GMT_out);
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go);
@@ -158,6 +160,7 @@ namespace OrbMech
 	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu);
 	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V);
 	MATRIX3 GetRotationMatrix(double t, bool earth = true);
+	MATRIX3 GetObliquityMatrix(double t, bool earth = true);
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng);
 	VECTOR3 Polar2CartesianVel(double r, double lat, double lng, double r_dot, double lat_dot, double lng_dot);
 	VECTOR3 rhmul(const MATRIX3 &A, const VECTOR3 &b);
@@ -172,7 +175,6 @@ namespace OrbMech
 	double Date2MJD(int Y, int D, int H, int M, double S);
 	void mjd2date(double mjd, int &year, int &month, int &day, int &hour, int &minute, double &second);
 	void mjd2ydoy(double mjd, int &Y, int &D, int &H, int &M, double &S);
-	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl);
 	double jd2mjd(double jd);
 	double mjd2jd(double mjd);
 	void jd2date(double jd, int &year, int &month, int &day);

@@ -233,7 +233,7 @@ public:
 	//Search for maneuver time routine
 	bool SEARMT(SV sv0, int opt, double val, SV &sv1);
 
-	double FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d);
+	bool FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d, double &dt);
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
 
@@ -301,12 +301,16 @@ protected:
 	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
 
+	VECTOR3 TEG2M50(VECTOR3 v_TEG);
+
 	//MJD at midnight before launch
 	double BaseMJD;
 	//GMT of launch
 	double LaunchGMT;
 	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to Ecliptic, left handed
 	MATRIX3 M_EFTOECL_AT_EPOCH;
+	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, left handed
+	MATRIX3 M_TEGTOECL;
 	double R_E;
 	double w_E;
 

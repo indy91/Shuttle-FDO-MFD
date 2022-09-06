@@ -164,6 +164,7 @@ public:
 	void GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type);
 	void GetMTTGuidanceType(char *buf, OMPDefs::GUID type);
 	void GetOMPError(char *buf, int err);
+	void GetLWPError(char *buf, int err);
 
 protected:
 

@@ -222,6 +222,53 @@ namespace OrbMech
 		return R;
 	}
 
+	MATRIX3 GetObliquityMatrix(double t, bool earth)
+	{
+		double t0, T_p, L_0, e_rel, phi_0, T_s, e_ref, L_ref, L_rel, phi, e_ecl, L_ecl;
+		MATRIX3 Rot1, Rot2, Rot3, Rot4, Rot5, Rot6, R_ref, R_rel, R_rot, Rot;
+		VECTOR3 s;
+
+		if (earth)
+		{
+			t0 = 51544.5;								//LAN_MJD, MJD of the LAN in the "beginning"
+			T_p = -9413040.4;							//Precession Period
+			L_0 = 0.0;									//LAN in the "beginning"
+			e_rel = 0.4090928023;						//Obliquity / axial tilt of the Earth in radians
+			phi_0 = 4.88948754;							//Sidereal Rotational Offset
+			T_s = 86164.10132 / 24.0 / 60.0 / 60.0;	//Sidereal Rotational Period
+			e_ref = 0;									//Precession Obliquity
+			L_ref = 0;									//Precession LAN
+		}
+		else
+		{
+			t0 = 51544.5;							//LAN_MJD, MJD of the LAN in the "beginning"
+			T_p = -6793.219721;						//Precession Period
+			L_0 = 1.71817749;						//LAN in the "beginning"
+			e_rel = 0.02692416821;					//Obliquity / axial tilt of the Moon in radians
+			phi_0 = 4.769465382;					//Sidereal Rotational Offset
+			T_s = 2360588.15 / 24.0 / 60.0 / 60.0;	//Sidereal Rotational Period
+			e_ref = 7.259562816e-005;				//Precession Obliquity
+			L_ref = 0.4643456618;					//Precession LAN
+		}
+
+		L_rel = L_0 + PI2 * (t - t0) / T_p;
+		Rot1 = _M(cos(L_ref), 0.0, -sin(L_ref), 0.0, 1.0, 0.0, sin(L_ref), 0.0, cos(L_ref));
+		Rot2 = _M(1.0, 0.0, 0.0, 0.0, cos(e_ref), -sin(e_ref), 0.0, sin(e_ref), cos(e_ref));
+		R_ref = mul(Rot1, Rot2);
+		Rot3 = _M(cos(L_rel), 0.0, -sin(L_rel), 0.0, 1.0, 0.0, sin(L_rel), 0.0, cos(L_rel));
+		Rot4 = _M(1.0, 0.0, 0.0, 0.0, cos(e_rel), -sin(e_rel), 0.0, sin(e_rel), cos(e_rel));
+		R_rel = mul(Rot3, Rot4);
+		phi = phi_0 + PI2 * (t - t0) / T_s + (L_0 - L_rel)*cos(e_rel);
+		R_rot = _M(cos(phi), 0.0, -sin(phi), 0.0, 1.0, 0.0, sin(phi), 0.0, cos(phi));
+		Rot = mul(R_ref, mul(R_rel, R_rot));
+		s = mul(Rot, _V(0.0, 1.0, 0.0));
+		e_ecl = acos(s.y);
+		L_ecl = atan(-s.x / s.z);
+		Rot5 = _M(cos(L_ecl), 0.0, -sin(L_ecl), 0.0, 1.0, 0.0, sin(L_ecl), 0.0, cos(L_ecl));
+		Rot6 = _M(1.0, 0.0, 0.0, 0.0, cos(e_ecl), -sin(e_ecl), 0.0, sin(e_ecl), cos(e_ecl));
+		return mul(Rot5, Rot6);
+	}
+
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng)
 	{
 		return _V(r*cos(lat)*cos(lng), r*cos(lat)*sin(lng), r*sin(lat));
@@ -1727,7 +1774,7 @@ namespace OrbMech
 		H2 = unit(crossp(RD, R));
 
 		R_PROJ = PROJCT(R, V, RD);
-		theta = acos(dotp(R, R_PROJ) / length(R) / length(RD));
+		theta = acos2(dotp(unit(R), unit(R_PROJ)));
 		PHSANG = theta;
 		if (dotp(H1, H2) < 0)
 		{
@@ -1900,13 +1947,6 @@ namespace OrbMech
 	double mjd2jd(double mjd)
 	{
 		return mjd + 2400000.5;
-	}	
-
-	VECTOR3 Ecl2M50(OBJHANDLE hEarth, VECTOR3 ecl)
-	{
-		MATRIX3 obliquityMat;
-		oapiGetPlanetObliquityMatrix(hEarth, &obliquityMat);
-		return rhtmul(obliquityMat, ecl);
 	}
 
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu)
@@ -2410,40 +2450,50 @@ namespace OrbMech
 		return out;
 	}
 
-	void BrouwerSecularRates(CELEMENTS mean, double mu, double &l_dot, double &g_dot, double &h_dot, double &n0)
+	void BrouwerSecularRates(CELEMENTS coe_osc, CELEMENTS coe_mean, double &l_dot, double &g_dot, double &h_dot)
 	{
-		//Orbiter 2016
-		double re = 6.37101e6;
-		double j2 = 1082.6269e-6;
-		double j4 = -1.60e-6;
+		double mu, n0, eccdp2, cn, cn2, theta, theta2, theta3, theta4, k2, k4, gm2, gm4, gmp2, gmp4, J2, J3, J4, R_e;
+		double esing, ecosg, L, u, f, sin_lat, R, ainv;
 
-		double ae = 1.0;
-		double smadp = mean.a / re;
-		double eccdp = mean.e;
-		double incdp = mean.i;
+		mu = mu_Earth;
+		J2 = J2_Earth;
+		J3 = J3_Earth;
+		J4 = J4_Earth;
+		R_e = R_Earth;
 
-		n0 = sqrt(mu / (pow(mean.a, 3.0)));
-		double eccdp2 = eccdp * eccdp;
-		double cn2 = 1.0 - eccdp2;
-		double cn = sqrt(cn2);
-		double bk2 = (1.0 / 2.0)*(j2*ae*ae);
-		double bk4 = -(3.0 / 8.0)*j4*pow(ae, 4.0);
-		double gm2 = bk2 / pow(smadp, 2.0);
-		double gmp2 = gm2 / (cn2*cn2);
-		double gm4 = bk4 / pow(smadp, 4.0);
-		double gmp4 = gm4 / pow(cn, 8.0);
-		double theta = cos(incdp);
-		double theta2 = theta * theta;
-		double theta3 = theta2 * theta;
-		double theta4 = theta2 * theta2;
+		n0 = sqrt(mu / pow(coe_mean.a, 3));
+		eccdp2 = coe_mean.e * coe_mean.e;
+		cn2 = 1.0 - eccdp2;
+		cn = sqrt(cn2);
+		theta = cos(coe_mean.i);
+		theta2 = theta * theta;
+		theta3 = theta2 * theta;
+		theta4 = theta2 * theta2;
+		k2 = J2 * pow(R_e, 2) / 2.0;
+		k4 = -3.0 * J4*pow(R_e, 4) / 8.0;
+		gm2 = k2 / pow(coe_mean.a, 2);
+		gm4 = k4 / pow(coe_mean.a, 4);
+		gmp2 = gm2 / pow(cn2, 2);
+		gmp4 = gm4 / pow(cn2, 4);
 
-		l_dot = n0 * cn*(gmp2*((3.0 / 2.0)*(3.0*theta2 - 1.0) + (3.0 / 32.0)*gmp2*(25.0*cn2 + 16.0*cn - 15.0 + (30.0 - 96.0*cn - 90.0*cn2)*theta2 +
-			(105.0 + 144.0*cn + 25.0*cn2)*theta4)) + (15.0 / 16.0)*gmp4*eccdp2*(3.0 - 30.0*theta2 + 35.0*theta4));
-		g_dot = n0 * (gmp2*((3.0 / 2.0)*(5.0*theta2 - 1.0) + (3.0 / 32.0)*gmp2*(25.0*cn2 + 24.0*cn - 35.0
+		esing = coe_osc.e*sin(coe_osc.g);
+		ecosg = coe_osc.e*cos(coe_osc.g);
+		L = coe_osc.l + coe_osc.g;
+		u = L + (2.0*ecosg*sin(L) - 2.0*esing*cos(L))*(1.0 + 5.0 / 4.0*ecosg*cos(L) + esing * sin(L));
+		f = u - coe_osc.g;
+		sin_lat = sin(u)*sin(coe_osc.i);
+		R = coe_osc.a*(1.0 - coe_osc.e*coe_osc.e) / (1.0 + coe_osc.e*cos(f));
+		ainv = 1.0 / coe_osc.a + J2 * pow(R_e, 2) / pow(R, 3)*(1.0 - 3.0*pow(sin_lat, 2)) + J3 * pow(R_e, 3) / pow(R, 4)*(3.0*sin_lat - 5.0*pow(sin_lat, 3)) -
+			J4 * pow(R_e, 4) / pow(R, 5)*(1.0 - 10.0*pow(sin_lat, 2) + 35.0 / 3.0*pow(sin_lat, 4));
+		l_dot = sqrt(mu*pow(ainv, 3));
+
+		//l_dot = n0 + n0 * cn*(gmp2*(3.0 / 2.0*(3.0*theta2 - 1.0) + 3.0 / 32.0*gmp2*(25.0*cn2 + 16.0*cn - 15.0 + (30.0 - 96.0*cn - 90.0*cn2)*theta2
+		//	+ (105.0 + 144.0*cn + 25.0*cn2)*theta4)) + 15.0 / 16.0*gmp4*eccdp2*(3.0 - 30.0*theta2 + 35.0*theta4));
+		g_dot = n0 * (gmp2*(3.0 / 2.0*(5.0*theta2 - 1.0) + 3.0 / 32.0*gmp2*(25.0*cn2 + 24.0*cn - 35.0
 			+ (90.0 - 192.0*cn - 126.0*cn2)*theta2 + (385.0 + 360.0*cn + 45.0*cn2)*theta4))
-			+ (5.0 / 16.0)*gmp4*(21.0 - 9.0*cn2 + (126.0*cn2 - 270.0)*theta2 + (385.0 - 189.0*cn2)*theta4));
-		h_dot = n0 * (gmp2*((3.0 / 8.0)*gmp2*((9.0*cn2 + 12.0*cn - 5.0)*theta - (35.0 + 36.0*cn + 5.0*cn2)*theta3) - 3.0*theta)
-			+ (5.0 / 4.0)*gmp4*theta*(5.0 - 3.0*cn2)*(3.0 - 7.0*theta2));
+			+ 5.0 / 16.0*gmp4*(21.0 - 9.0*cn2 + (126.0*cn2 - 270.0)*theta2 + (385.0 - 189.0*cn2)*theta4));
+		h_dot = n0 * (gmp2*(3.0 / 8.0*gmp2*((9.0*cn2 + 12.0*cn - 5.0)*theta - (35.0 + 36.0*cn + 5.0*cn2)*theta3) - 3.0*theta)
+			+ 5.0 / 4.0*gmp4*theta*(5.0 - 3.0*cn2)*(3.0 - 7.0*theta2));
 	}
 
 	CELEMENTS OsculatingToBrouwerMeanLong(CELEMENTS osc, double mu)
@@ -2636,12 +2686,11 @@ namespace OrbMech
 		//INPUT:
 		//opt: 0 = update to time, 1 = update to mean anomaly, 2 = update to argument of latitude, 3 = update to maneuver counter line
 
-		double l_dot, g_dot, h_dot, n0, dt, ll_dot;
+		double ll_dot, g_dot, h_dot, dt;
 		CELEMENTS mean0, mean1, osc1;
 
 		mean0 = OsculatingToBrouwerMeanLong(osc0, mu);
-		BrouwerSecularRates(mean0, mu, l_dot, g_dot, h_dot, n0);
-		ll_dot = l_dot + n0;
+		BrouwerSecularRates(osc0, mean0, ll_dot, g_dot, h_dot);
 
 		if (opt == 0)
 		{
