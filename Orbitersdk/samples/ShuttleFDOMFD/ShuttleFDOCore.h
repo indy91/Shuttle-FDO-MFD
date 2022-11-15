@@ -208,7 +208,6 @@ public:
 
 	SV StateVectorCalc(VESSEL *v, double SVGMT = 0.0);
 	SV coast_auto(SV sv0, double dt);
-	void ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p);
 	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	SV PositionMatch(SV sv_A, SV sv_P);

@@ -280,51 +280,6 @@ void ShuttleFDOCore::ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &
 	OrbMech::PIFAAP(a, coe.e, coe.i, coe.TA, u, r, R_E, r_A, r_P);
 }
 
-void ShuttleFDOCore::ApsidesDeterminationSubroutine(SV sv0, SV &sv_a, SV &sv_p)
-{
-	OrbMech::OELEMENTS coe;
-	bool lowecclogic;
-
-	coe = OrbMech::coe_from_sv(sv0.R, sv0.V, mu);
-
-	if (coe.e > 0.005)
-	{
-		lowecclogic = false;
-	}
-	else
-	{
-		lowecclogic = true;
-	}
-
-	if (lowecclogic == false)
-	{
-		sv_p = GeneralTrajectoryPropagation(sv0, 1, 0.0, 0.0, useNonSphericalGravity);
-		sv_a = GeneralTrajectoryPropagation(sv0, 1, PI, 0.0, useNonSphericalGravity);
-	}
-	else
-	{
-		SV sv1, sv2;
-		double u_x, u_y;
-
-		//First guess
-		ApsidesArgumentofLatitudeDetermination(sv0, u_x, u_y);
-
-		sv1 = GeneralTrajectoryPropagation(sv0, 2, u_x, 0.0, useNonSphericalGravity);
-		sv2 = GeneralTrajectoryPropagation(sv0, 2, u_y, 0.0, useNonSphericalGravity);
-
-		if (length(sv1.R) > length(sv2.R))
-		{
-			sv_a = sv1;
-			sv_p = sv2;
-		}
-		else
-		{
-			sv_p = sv1;
-			sv_a = sv2;
-		}
-	}
-}
-
 void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
 {
 	OrbMech::OELEMENTS coe;
@@ -385,7 +340,7 @@ SV ShuttleFDOCore::PositionMatch(SV sv_A, SV sv_P)
 		}
 		n = OrbMech::GetMeanMotion(sv_A1.R, sv_A1.V, mu);
 		ddt = phase / n;
-		sv_A1 = coast(sv_A1, ddt);
+		sv_A1 = coast_auto(sv_A1, ddt);
 		dt += ddt;
 	} while (abs(ddt) > 0.01);
 
@@ -1621,19 +1576,10 @@ void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
 
 VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
 {
-	VECTOR3 u1, u2, DV_PC_LV, V2;
-	double Y_C_dot;
+	VECTOR3 I_T, V2;
 
-	u1 = unit(crossp(sv_A.V, sv_A.R));
-	u2 = -unit(H_P);
-
-	Y_C_dot = dotp(sv_A.V, u2);
-	DV_PC_LV = _V(0, -Y_C_dot, 0);
-
-	//return tmul(OrbMech::LVLH_Matrix(sv_A.R, sv_A.V), DV_PC_LV);
-
-	V2 = sv_A.V + tmul(OrbMech::LVLH_Matrix(sv_A.R, sv_A.V), DV_PC_LV);
-	V2 = unit(V2)*length(sv_A.V);
+	I_T = unit(H_P);
+	V2 = unit(sv_A.V - I_T * dotp(sv_A.V, I_T))*length(sv_A.V);
 	return V2 - sv_A.V;
 }
 
