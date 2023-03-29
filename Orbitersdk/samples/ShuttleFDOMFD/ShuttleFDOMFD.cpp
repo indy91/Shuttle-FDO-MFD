@@ -140,6 +140,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
 		skp->Text(15 * W / 16, 2 * H / 14, "Deorbit Opportunities", 21);
+		skp->Text(15 * W / 16, 4 * H / 14, "Deorbit Planning", 16);
 	}
 	else if (screen == 1)
 	{
@@ -362,18 +363,32 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		if (G->LWP_LaunchSite == 1)
 		{
 			sprintf_s(Buffer, "39A");
-			skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
 		}
 		else if (G->LWP_LaunchSite == 2)
 		{
 			sprintf_s(Buffer, "39B");
-			skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
 		}
+		else if (G->LWP_LaunchSite == 3)
+		{
+			sprintf_s(Buffer, "SLC-6");
+		}
+		else
+		{
+			sprintf_s(Buffer, "Manual");
+		}
+		skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "%.3f°", G->LWP_Settings.LATLS*DEG);
+		sprintf_s(Buffer, "%.4f° %.4f°", G->LWP_Settings.LATLS*DEG, G->LWP_Settings.LONGLS*DEG);
 		skp->Text(1 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "%.3f°", G->LWP_Settings.LONGLS*DEG);
+		if (G->LWP_Settings.NS == 0)
+		{
+			sprintf_s(Buffer, "North");
+		}
+		else
+		{
+			sprintf_s(Buffer, "South");
+		}
 		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
 
 		sprintf_s(Buffer, "%.3f°", G->LWP_Settings.YSMAX*DEG);
@@ -702,22 +717,28 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	{
 		double mm, ss;
 
-		SS2MMSS(G->DTIG_ET_SEP, mm, ss);
+		SS2MMSS(G->LWP_Settings.DTIG_ET_SEP, mm, ss);
 		sprintf_s(Buffer, "% 03.0f:%04.1f", mm, ss);
 		skp->Text(1 * W / 8, 2 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "%.1f %.1f %.1f", G->DV_ET_SEP.x*MPS2FPS, G->DV_ET_SEP.y*MPS2FPS, G->DV_ET_SEP.z*MPS2FPS);
+		sprintf_s(Buffer, "%.1f %.1f %.1f", G->LWP_Settings.DV_ET_SEP.x*MPS2FPS, G->LWP_Settings.DV_ET_SEP.y*MPS2FPS, G->LWP_Settings.DV_ET_SEP.z*MPS2FPS);
 		skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
 
-		SS2MMSS(G->DTIG_MPS, mm, ss);
+		SS2MMSS(G->LWP_Settings.DTIG_MPS, mm, ss);
 		sprintf_s(Buffer, "% 03.0f:%04.1f", mm, ss);
 		skp->Text(1 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "%.1f %.1f %.1f", G->DV_MPS.x*MPS2FPS, G->DV_MPS.y*MPS2FPS, G->DV_MPS.z*MPS2FPS);
+		sprintf_s(Buffer, "%.1f %.1f %.1f", G->LWP_Settings.DV_MPS.x*MPS2FPS, G->LWP_Settings.DV_MPS.y*MPS2FPS, G->LWP_Settings.DV_MPS.z*MPS2FPS);
 		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
 
-		//sprintf_s(Buffer, "%.3f°", G->LWP_Settings.DELNO*DEG);
-		//skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
+		if (G->LWP_Settings.DirectInsertion)
+		{
+			skp->Text(1 * W / 8, 10 * H / 14, "Direct Insertion", 16);
+		}
+		else
+		{
+			skp->Text(1 * W / 8, 10 * H / 14, "Standard Insertion", 18);
+		}
 
 		sprintf_s(Buffer, "%.0f lbm", G->LWP_Settings.CWHT/LBM2KG);
 		skp->Text(1 * W / 8, 12 * H / 14, Buffer, strlen(Buffer));
@@ -744,45 +765,31 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	else if (screen == 8)
 	{
 		skp->Text(1 * W / 16, 2 * H / 14, "OPTIMUM L/O", 11);
-		LWPGMT2String(Buffer, G->InPlaneGMT);
+		LWPGMT2String(Buffer, G->LWP_Output.GMTOPT);
 		skp->Text(4 * W / 8, 2 * H / 14, Buffer, strlen(Buffer));
 		skp->Text(2 * W / 8, 3 * H / 14, "PHASE", 5);
-		sprintf_s(Buffer, "%.1f°", G->LPW_Summary.PA*DEG);
+		sprintf_s(Buffer, "%.1f°", G->LWP_Output.PA_GMTOPT);
 		skp->Text(4 * W / 8, 3 * H / 14, Buffer, strlen(Buffer));	
 
 		skp->Text(1 * W / 16, 5 * H / 14, "PLANAR OPEN", 11);
 		skp->Text(1 * W / 16, 6 * H / 14, "L/O", 3);
 		skp->Text(1 * W / 16, 7 * H / 14, "PHASE", 5);
-		LWPGMT2String(Buffer, G->LWP_PlanarOpenGMT);
+		LWPGMT2String(Buffer, G->LWP_Output.GMTPO);
 		skp->Text(3 * W / 16, 6 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.1f°", G->LWP_Parameters.PHASE[0]*DEG);
+		sprintf_s(Buffer, "%.1f°", G->LWP_Output.PA_GMTPO);
 		skp->Text(5 * W / 16, 7 * H / 14, Buffer, strlen(Buffer));
 
 		skp->Text(4 * W / 8, 5 * H / 14, "PLANAR CLOSE", 12);
 		skp->Text(4 * W / 8, 6 * H / 14, "L/O", 3);
 		skp->Text(4 * W / 8, 7 * H / 14, "PHASE", 5);
-		LWPGMT2String(Buffer, G->LWP_PlanarCloseGMT);
+		LWPGMT2String(Buffer, G->LWP_Output.GMTPC);
 		skp->Text(5 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.1f°", G->LWP_Parameters.PHASE[1] * DEG);
+		sprintf_s(Buffer, "%.1f°", G->LWP_Output.PA_GMTPC);
 		skp->Text(11 * W / 16, 7 * H / 14, Buffer, strlen(Buffer));
 
-		sprintf_s(Buffer, "IMECO:");
-		skp->Text(1 * W / 16, 9 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.3f°", G->LPW_Summary.IIGM*DEG);
-		skp->Text(1 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "NODE:");
-		skp->Text(1 * W / 16, 11 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.3f°", G->LPW_Summary.TIGM*DEG);
-		skp->Text(1 * W / 16, 12 * H / 14, Buffer, strlen(Buffer));
-
-		sprintf_s(Buffer, "DELN:");
-		skp->Text(10 * W / 16, 9 * H / 14, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "%.6f°", G->LPW_Summary.DELNO*DEG);
-		skp->Text(10 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
-
-		if (G->LPW_Summary.LWPERROR)
+		if (G->LWP_Output.LWPERROR)
 		{
-			GetLWPError(Buffer, G->LPW_Summary.LWPERROR);
+			GetLWPError(Buffer, G->LWP_Output.LWPERROR);
 			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
 		}
 	}
@@ -849,6 +856,206 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			if (i == 26) break;
 		}
 	}
+	else if (screen == 10)
+	{
+		skp->Text(1 * W / 4, 2 * H / 36, "DEORBIT MANEUVER PLANNING", 25);
+		if (G->DMPOpt.ITIGFR == 1)
+		{
+			sprintf(Buffer, "TIG free");
+		}
+		else
+		{
+			sprintf(Buffer, "TIG fixed");
+		}
+		skp->Text(1 * W / 8, 2 * H / 14, Buffer, strlen(Buffer));
+
+		if (G->DMPOpt.ITIGFR == 1)
+		{
+			DMTMET2String(Buffer, G->DMPOpt.TTHRSH);
+		}
+		else
+		{
+			DMTMET2String(Buffer, G->DMPOpt.TIG);
+		}
+		skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
+
+		if (G->DMPOpt.INGPR == 12)
+		{
+			sprintf(Buffer, "RCS");
+		}
+		else if (G->DMPOpt.INGPR == 14)
+		{
+			sprintf(Buffer, "1OMS");
+		}
+		else
+		{
+			sprintf(Buffer, "2OMS");
+		}
+		skp->Text(1 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
+
+		if (G->DMPOpt.INGBU == 12)
+		{
+			sprintf(Buffer, "RCS");
+		}
+		else if (G->DMPOpt.INGBU == 14)
+		{
+			sprintf(Buffer, "1OMS");
+		}
+		else
+		{
+			sprintf(Buffer, "2OMS");
+		}
+		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
+
+		sprintf(Buffer, "%s", G->DMPLandingSite.c_str());
+		skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
+	}
+	else if (screen == 11)
+	{
+		skp->SetFont(font2);
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
+		skp->Text(1 * W / 2, 2 * H / 36, "LAUNCH TARGETING PROCESSOR OUTPUT", 33);
+
+		skp->Text(10 * W / 32, 4 * H / 36, "GMT L/O", 7);
+
+		skp->Text(8 * W / 32, 6 * H / 36, "CHASER", 6);
+		skp->Text(8 * W / 32, 7 * H / 36, "MECO", 4);
+		skp->Text(8 * W / 32, 19 * H / 36, "MPS DUMP", 8);
+		skp->Text(24 * W / 32, 6 * H / 36, "OMS-2", 5);
+		skp->Text(24 * W / 32, 18 * H / 36, "TGT (AT ASCN)", 13);
+
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+
+		skp->Text(4 * W / 32, 9 * H / 36, "MECO", 4);
+		skp->Text(4 * W / 32, 10 * H / 36, "VMECO", 5);
+		skp->Text(4 * W / 32, 11 * H / 36, "RMECO", 5);
+		skp->Text(4 * W / 32, 12 * H / 36, "GMECO", 5);
+		skp->Text(4 * W / 32, 13 * H / 36, "IMECO", 5);
+		skp->Text(4 * W / 32, 14 * H / 36, "PHASE", 5);
+		skp->Text(4 * W / 32, 15 * H / 36, "HA", 2);
+		skp->Text(4 * W / 32, 16 * H / 36, "HP", 2);
+		skp->Text(4 * W / 32, 17 * H / 36, "LONG", 4);
+
+		skp->Text(4 * W / 32, 21 * H / 36, "TIG", 3);
+		skp->Text(4 * W / 32, 22 * H / 36, "DELTA V", 7);
+		skp->Text(4 * W / 32, 23 * H / 36, "HA", 2);
+		skp->Text(4 * W / 32, 24 * H / 36, "HP", 2);
+
+		skp->Text(20 * W / 32, 9 * H / 36, "TIG", 3);
+		skp->Text(20 * W / 32, 10 * H / 36, "DELTA V", 7);
+		skp->Text(20 * W / 32, 11 * H / 36, "HA", 2);
+		skp->Text(20 * W / 32, 12 * H / 36, "HP", 2);
+		skp->Text(20 * W / 32, 14 * H / 36, "NODE", 4);
+		skp->Text(20 * W / 32, 15 * H / 36, "PHASE", 5);
+		skp->Text(20 * W / 32, 16 * H / 36, "PERIOD", 6);
+
+		skp->Text(20 * W / 32, 20 * H / 36, "HA", 2);
+		skp->Text(20 * W / 32, 21 * H / 36, "HP", 2);
+		skp->Text(20 * W / 32, 23 * H / 36, "LONG", 4);
+		skp->Text(20 * W / 32, 24 * H / 36, "DELN", 4);
+		skp->Text(20 * W / 32, 25 * H / 36, "PERIOD", 6);
+
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+		skp->Text(14 * W / 32, 10 * H / 36, "fps", 3);
+		skp->Text(14 * W / 32, 11 * H / 36, "nm", 2);
+		skp->Text(14 * W / 32, 12 * H / 36, "deg", 3);
+		skp->Text(14 * W / 32, 13 * H / 36, "deg", 3);
+		skp->Text(14 * W / 32, 14 * H / 36, "deg", 3);
+		skp->Text(14 * W / 32, 15 * H / 36, "nm", 2);
+		skp->Text(14 * W / 32, 16 * H / 36, "nm", 2);
+		skp->Text(14 * W / 32, 17 * H / 36, "deg", 3);
+		skp->Text(14 * W / 32, 22 * H / 36, "fps", 3);
+		skp->Text(14 * W / 32, 23 * H / 36, "nm", 2);
+		skp->Text(14 * W / 32, 24 * H / 36, "nm", 2);
+
+		skp->Text(30 * W / 32, 10 * H / 36, "fps", 3);
+		skp->Text(30 * W / 32, 11 * H / 36, "nm", 2);
+		skp->Text(30 * W / 32, 12 * H / 36, "nm", 2);
+		skp->Text(30 * W / 32, 14 * H / 36, "deg", 3);
+		skp->Text(30 * W / 32, 15 * H / 36, "deg", 3);
+		skp->Text(30 * W / 32, 20 * H / 36, "nm", 2);
+		skp->Text(30 * W / 32, 21 * H / 36, "nm", 2);
+		skp->Text(30 * W / 32, 23 * H / 36, "deg", 3);
+		skp->Text(30 * W / 32, 24 * H / 36, "deg", 3);
+
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+
+		LTPGMT2String(Buffer, G->LWP_Settings.GMTLOR);
+		skp->Text(22 * W / 32, 4 * H / 36, Buffer, strlen(Buffer));
+
+		double hh, mm, ss;
+
+		SS2HHMMSS(G->LTP_Output.MET_MECO, hh, mm, ss);
+		sprintf_s(Buffer, "%02.0f:%04.1f", mm, ss);
+		skp->Text(13 * W / 32, 9 * H / 36, Buffer, strlen(Buffer));
+
+		sprintf(Buffer, "%.1lf", G->LTP_Output.V_MECO);
+		skp->Text(13 * W / 32, 10 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.4lf", G->LTP_Output.R_MECO);
+		skp->Text(13 * W / 32, 11 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.4lf", G->LTP_Output.G_MECO);
+		skp->Text(13 * W / 32, 12 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.3lf", G->LTP_Output.I_MECO);
+		skp->Text(13 * W / 32, 13 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.PHASE_MECO);
+		skp->Text(13 * W / 32, 14 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HA_MECO);
+		skp->Text(13 * W / 32, 15 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HP_MECO);
+		skp->Text(13 * W / 32, 16 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.LONG_MECO);
+		skp->Text(13 * W / 32, 17 * H / 36, Buffer, strlen(Buffer));
+
+		SS2HHMMSS(G->LTP_Output.TIG_MPS, hh, mm, ss);
+		sprintf_s(Buffer, "%02.0f:%04.1f", mm, ss);
+		skp->Text(13 * W / 32, 21 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.DV_MPS);
+		skp->Text(13 * W / 32, 22 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HA_MPS);
+		skp->Text(13 * W / 32, 23 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HP_MPS);
+		skp->Text(13 * W / 32, 24 * H / 36, Buffer, strlen(Buffer));
+
+		SS2HHMMSS(G->LTP_Output.TIG_OMS2, hh, mm, ss);
+		sprintf_s(Buffer, "%02.0f:%04.1f", mm, ss);
+		skp->Text(29 * W / 32, 9 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.DV_OMS2);
+		skp->Text(29 * W / 32, 10 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HA_OMS2);
+		skp->Text(29 * W / 32, 11 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HP_OMS2);
+		skp->Text(29 * W / 32, 12 * H / 36, Buffer, strlen(Buffer));
+
+		sprintf(Buffer, "%.1lf", G->LTP_Output.NODE_OMS2);
+		skp->Text(29 * W / 32, 14 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.PHASE_OMS2);
+		skp->Text(29 * W / 32, 15 * H / 36, Buffer, strlen(Buffer));
+		SS2HHMMSS(G->LTP_Output.PERIOD_OMS2, hh, mm, ss);
+		sprintf_s(Buffer, "%.0lf:%02.0f:%04.1f", hh, mm, ss);
+		skp->Text(29 * W / 32, 16 * H / 36, Buffer, strlen(Buffer));
+
+		//TGT
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HA_TGT);
+		skp->Text(29 * W / 32, 20 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.1lf", G->LTP_Output.HP_TGT);
+		skp->Text(29 * W / 32, 21 * H / 36, Buffer, strlen(Buffer));
+
+		sprintf(Buffer, "%.1lf", G->LTP_Output.LONG_TGT);
+		skp->Text(29 * W / 32, 23 * H / 36, Buffer, strlen(Buffer));
+		sprintf(Buffer, "%.6lf", G->LTP_Output.DELN);
+		skp->Text(29 * W / 32, 24 * H / 36, Buffer, strlen(Buffer));
+		SS2HHMMSS(G->LTP_Output.PERIOD_TGT, hh, mm, ss);
+		sprintf_s(Buffer, "%.0lf:%02.0f:%04.1f", hh, mm, ss);
+		skp->Text(29 * W / 32, 25 * H / 36, Buffer, strlen(Buffer));
+
+	}
+	else if (screen == 12)
+	{
+		skp->SetFont(font2);
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
+		skp->Text(1 * W / 2, 2 * H / 36, "LNCH REF TGT SETS", 17);
+	}
 	return true;
 }
 
@@ -905,6 +1112,16 @@ void ShuttleFDOMFD::menuSetDOPSPage()
 	SetScreen(9);
 }
 
+void ShuttleFDOMFD::menuSetDMPPage()
+{
+	SetScreen(10);
+}
+
+void ShuttleFDOMFD::menuSetLTPPage()
+{
+	SetScreen(11);
+}
+
 void ShuttleFDOMFD::SetScreen(int s)
 {
 	screen = s;
@@ -946,7 +1163,12 @@ void ShuttleFDOMFD::GMT2String2(char *buf, double GMT)
 void ShuttleFDOMFD::LWPGMT2String(char *buf, double GMT)
 {
 	GMT = round(GMT*1000.0) / 1000.0;
-	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(GMT / 86400.0), floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%04.1f", floor(GMT / 86400.0) + (double)G->launchdate[1], floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+}
+
+void ShuttleFDOMFD::LTPGMT2String(char *buf, double GMT)
+{
+	sprintf_s(buf, 100, "%d:%03.0f:%02.0f:%02.0f:%06.3f", G->launchdate[0], floor(GMT / 86400.0) + (double)G->launchdate[1], floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
 double ShuttleFDOMFD::DDDHHHMMSS2MET(int dd, int hh, int mm, double ss)
@@ -1342,9 +1564,24 @@ void ShuttleFDOMFD::menuCalcLaunchTime()
 	G->CalcLaunchTime();
 }
 
+void ShuttleFDOMFD::menuCalcLTP()
+{
+	G->CalcLTP();
+}
+
+void ShuttleFDOMFD::menuExportLTP()
+{
+	G->ExportLTP();
+}
+
 void ShuttleFDOMFD::menuCalcDeorbitOpportunities()
 {
 	G->CalcDeorbitOpportunities();
+}
+
+void ShuttleFDOMFD::menuCalcDMP()
+{
+	G->CalcDMP();
 }
 
 void ShuttleFDOMFD::menuTransferToMTT()
@@ -1613,6 +1850,9 @@ void ShuttleFDOMFD::GetLWPError(char *buf, int err)
 		break;
 	case 8:
 		sprintf_s(buf, 100, "Error: RLOT not converging on TYAW");
+		break;
+	case 9:
+		sprintf_s(buf, 100, "Error: PEG4 did not converge");
 		break;
 	}
 }
@@ -1968,79 +2208,62 @@ void ShuttleFDOMFD::set_LWP_DTOPT(double dtopt)
 
 void ShuttleFDOMFD::menuLWPSetLS()
 {
-	bool LWPLSInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Input launch site:", LWPLSInput, 0, 20, (void*)this);
-}
-
-bool LWPLSInput(void *id, char *str, void *data)
-{
-	if (strcmp(str, "39A") == 0)
+	if (G->LWP_LaunchSite < 3)
 	{
-		((ShuttleFDOMFD*)data)->set_LWP_LS(1);
-		return true;
+		G->LWP_LaunchSite++;
+		set_LWP_LS(G->LWP_LaunchSite);
 	}
-	else if (strcmp(str, "39B") == 0)
+	else
 	{
-		((ShuttleFDOMFD*)data)->set_LWP_LS(2);
-		return true;
+		G->LWP_LaunchSite = 0;
+		G->LWP_Settings.LATLS = 0.0;
+		G->LWP_Settings.LONGLS = 0.0;
 	}
-
-	return false;
 }
 
 void ShuttleFDOMFD::set_LWP_LS(int ls)
 {
-	G->LWP_LaunchSite = ls;
 	G->LWP_Settings.LATLS = LAUNCHSITE_LATITUDE[ls - 1]*RAD;
 	G->LWP_Settings.LONGLS = LAUNCHSITE_LONGITUDE[ls - 1]*RAD;
 }
 
-void ShuttleFDOMFD::menuLWPSetLSLat()
+void ShuttleFDOMFD::menuLWPSetLSLatLng()
 {
-	bool LWPLSLatInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Input launch site latitude in degrees:", LWPLSLatInput, 0, 20, (void*)this);
+	if (G->LWP_LaunchSite == 0)
+	{
+		bool LWPLSLatLngInput(void *id, char *str, void *data);
+		oapiOpenInputBox("Input launch site latitude and longitude in degrees:", LWPLSLatLngInput, 0, 20, (void*)this);
+	}
 }
 
-bool LWPLSLatInput(void *id, char *str, void *data)
+bool LWPLSLatLngInput(void *id, char *str, void *data)
 {
-	double lat;
+	double lat, lng;
 
-	if (sscanf_s(str, "%lf", &lat) == 1)
+	if (sscanf_s(str, "%lf %lf", &lat, &lng) == 2)
 	{
-		((ShuttleFDOMFD*)data)->set_LWP_LSLat(lat);
+		((ShuttleFDOMFD*)data)->set_LWP_LSLatLng(lat, lng);
 		return true;
 	}
 	return false;
 }
 
-void ShuttleFDOMFD::set_LWP_LSLat(double lat)
+void ShuttleFDOMFD::set_LWP_LSLatLng(double lat, double lng)
 {
-	G->LWP_LaunchSite = 0;
 	G->LWP_Settings.LATLS = lat * RAD;
-}
-
-void ShuttleFDOMFD::menuLWPSetLSLng()
-{
-	bool LWPLSLngInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Input launch site longitude in degrees:", LWPLSLatInput, 0, 20, (void*)this);
-}
-
-bool LWPLSLngInput(void *id, char *str, void *data)
-{
-	double lng;
-
-	if (sscanf_s(str, "%lf", &lng) == 1)
-	{
-		((ShuttleFDOMFD*)data)->set_LWP_LSLng(lng);
-		return true;
-	}
-	return false;
-}
-
-void ShuttleFDOMFD::set_LWP_LSLng(double lng)
-{
-	G->LWP_LaunchSite = 0;
 	G->LWP_Settings.LONGLS = lng * RAD;
+}
+
+void ShuttleFDOMFD::menuLWPLaunchAzimuthDirectionFlag()
+{
+	if (G->LWP_Settings.NS == 0)
+	{
+		G->LWP_Settings.NS = 1;
+	}
+	else
+	{
+		G->LWP_Settings.NS = 0;
+	}
 }
 
 void ShuttleFDOMFD::menuLWPSetYS()
@@ -2201,7 +2424,7 @@ bool LWPDTETSEPInput(void *id, char *str, void *data)
 
 void ShuttleFDOMFD::set_LWP_DTETSEP(double dt)
 {
-	G->DTIG_ET_SEP = dt;
+	G->LWP_Settings.DTIG_ET_SEP = dt;
 }
 
 void ShuttleFDOMFD::menuLWPSetDTMPS()
@@ -2224,7 +2447,7 @@ bool LWPDTMPSInput(void *id, char *str, void *data)
 
 void ShuttleFDOMFD::set_LWP_DTMPS(double dt)
 {
-	G->DTIG_MPS = dt;
+	G->LWP_Settings.DTIG_MPS = dt;
 }
 
 void ShuttleFDOMFD::menuLWPSetDVETSEP()
@@ -2247,7 +2470,7 @@ bool LWPDVETSEPInput(void *id, char *str, void *data)
 
 void ShuttleFDOMFD::set_LWP_DVETSEP(VECTOR3 DV)
 {
-	G->DV_ET_SEP = DV / MPS2FPS;
+	G->LWP_Settings.DV_ET_SEP = DV / MPS2FPS;
 }
 
 void ShuttleFDOMFD::menuLWPSetDVMPS()
@@ -2270,7 +2493,7 @@ bool LWPDVMPSInput(void *id, char *str, void *data)
 
 void ShuttleFDOMFD::set_LWP_DVMPS(VECTOR3 DV)
 {
-	G->DV_MPS = DV / MPS2FPS;
+	G->LWP_Settings.DV_MPS = DV / MPS2FPS;
 }
 
 void ShuttleFDOMFD::menuLWPSetWT()
@@ -2394,6 +2617,30 @@ void ShuttleFDOMFD::set_LWP_WRAPFLAG(int flag)
 	G->LWP_Settings.WRAP = flag;
 }
 
+void ShuttleFDOMFD::menuSetLTPLaunchTime()
+{
+	bool LTPLaunchTimeInput(void *id, char *str, void *data);
+	oapiOpenInputBox("Set time of liftoff HH:MM:SS.SSS:", LTPLaunchTimeInput, 0, 20, (void*)this);
+}
+
+bool LTPLaunchTimeInput(void *id, char *str, void *data)
+{
+	int hh, mm;
+	double ss;
+
+	if (sscanf_s(str, "%d:%d:%lf", &hh, &mm, &ss) == 3)
+	{
+		((ShuttleFDOMFD*)data)->set_LTPLiftoffTime(hh*3600.0 + mm*60.0 + ss);
+		return true;
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::set_LTPLiftoffTime(double gmt)
+{
+	G->LWP_Settings.GMTLOR = gmt;
+}
+
 void ShuttleFDOMFD::menuDOPSSetGETS()
 {
 	GenericMETInput(&G->DOPS_GETS, "MET for start of search in DD:HH:MM:SS");
@@ -2412,6 +2659,77 @@ void ShuttleFDOMFD::menuDOPSSetRev()
 void ShuttleFDOMFD::menuDOPSSetMaxXRNG()
 {
 	GenericDoubleInput(&G->DOPS_MaxXRNG, "Maximum crossrange in nautical miles:");
+}
+
+void ShuttleFDOMFD::menuDMPCycleTIGOption()
+{
+	if (G->DMPOpt.ITIGFR < 1)
+	{
+		G->DMPOpt.ITIGFR = 1;
+	}
+	else
+	{
+		G->DMPOpt.ITIGFR = 0;
+	}
+}
+
+void ShuttleFDOMFD::menuDMPInputTIG()
+{
+	if (G->DMPOpt.ITIGFR == 0)
+	{
+		GenericMETInput(&G->DMPOpt.TIG, "Input time of ignition in DD:HH:MM:SS");
+	}
+	else
+	{
+		GenericMETInput(&G->DMPOpt.TTHRSH, "Input threshold time in DD:HH:MM:SS");
+	}
+}
+
+void ShuttleFDOMFD::menuDMPCyclePrimaryThruster()
+{
+	if (G->DMPOpt.INGPR < 16)
+	{
+		G->DMPOpt.INGPR += 2;
+	}
+	else
+	{
+		G->DMPOpt.INGPR = 12;
+	}
+}
+
+void ShuttleFDOMFD::menuDMPCycleBackupThruster()
+{
+	if (G->DMPOpt.INGBU < 16)
+	{
+		G->DMPOpt.INGBU += 2;
+	}
+	else
+	{
+		G->DMPOpt.INGBU = 12;
+	}
+}
+
+void ShuttleFDOMFD::menuDMPLandingSite()
+{
+	GenericStringInput(&G->DMPLandingSite, "Input landing site:");
+}
+
+void ShuttleFDOMFD::GenericStringInput(std::string *val, char* message)
+{
+	bool GenericStringInputBox(void *id, char *str, void *data);
+	oapiOpenInputBox(message, GenericStringInputBox, 0, 25, (void*)(val));
+}
+
+bool GenericStringInputBox(void *id, char *str, void *data)
+{
+	std::string *str2 = static_cast<std::string*>(data);
+
+	std::string str3;
+
+	str3.assign(str);
+	*str2 = str3;
+
+	return true;
 }
 
 void ShuttleFDOMFD::GenericMETInput(double *get, char *message)

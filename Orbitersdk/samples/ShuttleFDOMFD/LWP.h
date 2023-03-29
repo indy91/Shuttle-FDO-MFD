@@ -22,42 +22,88 @@
 
 #include "OrbMech.h"
 
-struct LWPSummary
+struct LWPOutput
 {
+	double GMTOPT = 0.0;
+	double PA_GMTOPT = 0.0;
+	double PFT = 0.0;
+	double PFA = 0.0;
+	double DTO = 0.0;
+	double DTC = 0.0;
+	double OPT = 0.0;
+	int PHASE = 0;
+	int WRAP = 0;
+	//Planar open
+	double GMTPO = 0.0;
+	double PA_GMTPO = 0.0;
+	//Planar close
+	double GMTPC = 0.0;
+	double PA_GMTPC = 0.0;
+	//Phase open
+	double PA_OPEN = 0.0;
+	double GMTLO_OPEN = 0.0;
+	//Phase close
+	double PA_CLOSE = 0.0;
+	double GMTLO_CLOSE = 0.0;
 	int LWPERROR = 0;
+};
+
+struct LTPOutput
+{
 	double GMTLO = 0.0;
-	double GMTINS = 0.0;
-	double AZL = 0.0;
-	double VIGM = 0.0;
-	double RIGM = 0.0;
-	double GIGM = 0.0;
-	double IIGM = 0.0;
-	double TIGM = 0.0;
-	double TDIGM = 0.0;
-	double DN = 0.0;
-	double DELNO = 0.0;
-	double PA = 0.0;
-	double TPLANE = 0.0;
-	double LATLS = 0.0;
-	double LONGLS = 0.0;
-	
+	//MECO
+	double MET_MECO = 0.0;
+	double V_MECO = 0.0;
+	double R_MECO = 0.0;
+	double G_MECO = 0.0;
+	double I_MECO = 0.0;
+	double PHASE_MECO = 0.0;
+	double HA_MECO = 0.0;
+	double HP_MECO = 0.0;
+	double LONG_MECO = 0.0;
+	//MPS Dump
+	double TIG_MPS = 0.0;
+	double DV_MPS = 0.0;
+	double HA_MPS = 0.0;
+	double HP_MPS = 0.0;
+	//OMS-2
+	double TIG_OMS2 = 0.0;
+	double DV_OMS2 = 0.0;
+	double HA_OMS2 = 0.0;
+	double HP_OMS2 = 0.0;
+	double NODE_OMS2 = 0.0;
+	double PHASE_OMS2 = 0.0;
+	double PERIOD_OMS2 = 0.0;
+	//TGT
+	double HA_TGT = 0.0;
+	double HP_TGT = 0.0;
+	double LONG_TGT = 0.0;
+	double DELN = 0.0;
+	double PERIOD_TGT = 0.0;
+
+	//IYD vectors
+	VECTOR3 IY_MECO = _V(0, 0, 1);
+	VECTOR3 IY_OMS1 = _V(0, 0, 1);
+	VECTOR3 IY_OMS2 = _V(0, 0, 1);
+
+	int LWPERROR = 0;
 };
 
 struct LWPStateVectorTable
 {
-	OrbMech::SV sv_P, sv_T0, sv_T_MECO;
+	//Target state vectors
+	OrbMech::SV sv_T0, sv_T_MECO;
+	//Chaser state vectors
+	OrbMech::SV sv_P_MECO, sv_P_ET_Sep, sv_P_MPS_Dump, sv_P_OMS2_before, sv_P_OMS2_after;
 };
 
-struct LWPParameterTable
+struct OMSTargetSet
 {
-	double GMTLO[2] = { 0.0, 0.0 };
-	double GPAZ[2] = { 0.0, 0.0 };
-	double AZL[2] = { 0.0, 0.0 };
-	double YP[2] = { 0.0, 0.0 };
-	double WEDGE[2] = { 0.0, 0.0 };
-	double DVPC[2] = { 0.0, 0.0 };
-	double PHASE[2] = { 0.0, 0.0 };
-	double TIGM[2] = { 0.0, 0.0 };
+	double DTIG;
+	double C1;
+	double C2;
+	double HTGT;
+	double THETA;
 };
 
 struct LWPSettings
@@ -95,7 +141,7 @@ struct LWPSettings
 	//GMT of inplane lift-off time (normally computed internally)
 	double TPLANE;
 	//Launch window/launch targeting options
-	//0 = LW, 1 = LT, 2 = LW and LT
+	//0 = LW (should not be used), 1 = LT, 2 = LW and LT
 	int LW;
 	//Delta time prior to in-plane time to start parameter table
 	double TSTART;
@@ -128,7 +174,19 @@ struct LWPSettings
 	int INSCO;
 	//Recommended or threshold lift-off GMT
 	double GMTLOR;
-	LWPParameterTable *lwp_param_table;
+	//DTIG between MECO and ET SEP
+	double DTIG_ET_SEP;
+	//DTIG between MECO and MPS Dump
+	double DTIG_MPS;
+	//ET SEP DV
+	VECTOR3 DV_ET_SEP;
+	//MPS Dump DV
+	VECTOR3 DV_MPS;
+	//false = Standard Insertion, true = Direct Insertion
+	bool DirectInsertion;
+	OMSTargetSet OMS1, OMS2;
+	LWPOutput *lwp_table;
+	LTPOutput *ltp_table;
 };
 
 class LaunchWindowProcessor
@@ -137,7 +195,6 @@ public:
 	LaunchWindowProcessor();
 	void Init(LWPSettings &set);
 	void LWP();
-	void GetOutput(LWPSummary &out);
 
 	LWPStateVectorTable LWPSV;
 protected:
@@ -150,10 +207,9 @@ protected:
 	void RLOT();
 	void TARGT();
 	void NSERT(double GMTLO, double &UINS, double &DH);
-	void LWPT();
-	void LWDSP();
-	void RLOTD();
-	void LWPOT();
+	void LWPOut();
+	void LTPOut();
+	void OMS2();
 
 	//Nominal semimajor axis at insertion
 	double ANOM;
@@ -193,8 +249,6 @@ protected:
 	double IIGM;
 	//Angle measured from launch site meridian to chaser descending node
 	double TIGM;
-	//Rate of change of TIGM
-	double TDIGM;
 	//Optimum launch azimuth
 	double AZL;
 	//Target vector Earth-fixed descending node
@@ -223,6 +277,10 @@ protected:
 	int STABLE;
 	//Time of minimum yaw steering
 	double TYAW;
+	//Unit launch site position in TEG coordinates
+	VECTOR3 URLS;
+	//Velocity-to-go of OMS-2
+	VECTOR3 VGO_OMS2;
 
 	//Constants
 	//Maximum iterations limit
@@ -230,6 +288,7 @@ protected:
 
 	LWPSettings inp;
 
-	LWPParameterTable *lwp_param_table;
+	LWPOutput *lwp_table;
+	LTPOutput *ltp_table;
 	int error;
 };

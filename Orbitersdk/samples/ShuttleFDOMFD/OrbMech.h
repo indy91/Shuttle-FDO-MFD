@@ -24,10 +24,11 @@
 
 namespace OrbMech
 {
-	const double LAUNCHSITE_LATITUDE[2] = { 28.60833333, 28.627 };
-	const double LAUNCHSITE_LONGITUDE[2] = { -80.60416667, -80.621 };
+	const double LAUNCHSITE_LATITUDE[3] = { 28.60833333, 28.627, 34.580847 };
+	const double LAUNCHSITE_LONGITUDE[3] = { -80.60416667, -80.621, -120.62595 };
 
-	const double R_Earth = 6.37101e6;
+	const double EARTH_RADIUS_EQUATOR = 6378166.0;
+	const double EARTH_RADIUS_GRAV = 6.37101e6;
 	const double mu_Earth = 398600439968871.2;
 	const double J2_Earth = 1082.6269e-6;
 	const double J3_Earth = -2.51e-6;
@@ -145,6 +146,7 @@ namespace OrbMech
 	//Apogee and Perigee Radius Magnitude
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
 	//Apogee/Perigee Magnitude Determination
+	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
 	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P);
 	SV coast_auto(SV sv0, double dt, bool precision);
 	SV coast(SV sv0, double dt);
@@ -153,6 +155,7 @@ namespace OrbMech
 	InvariantElements CalculateInvariantElementsBlock(SV sv, double mu, double Area, bool precision);
 	VECTOR3 PROJCT(VECTOR3 U1, VECTOR3 U2, VECTOR3 X);
 	double PHSANG(VECTOR3 R, VECTOR3 V, VECTOR3 RD);
+	double REVTIM(VECTOR3 R, VECTOR3 V, bool SPERT);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
@@ -165,6 +168,7 @@ namespace OrbMech
 	VECTOR3 Polar2CartesianVel(double r, double lat, double lng, double r_dot, double lat_dot, double lng_dot);
 	VECTOR3 rhmul(const MATRIX3 &A, const VECTOR3 &b);
 	VECTOR3 rhtmul(const MATRIX3 &A, const VECTOR3 &b);
+	MATRIX3 MatrixRH_LH(MATRIX3 A);
 	void REL_COMP(VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 &R_S_INER, VECTOR3 &R_REL);
 	void REL_COMP(bool INER_TO_LVC, VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 &R_S_INER, VECTOR3 &V_S_INER, VECTOR3 &R_REL, VECTOR3 &V_REL);
 	double MJDToDate(double MJD);

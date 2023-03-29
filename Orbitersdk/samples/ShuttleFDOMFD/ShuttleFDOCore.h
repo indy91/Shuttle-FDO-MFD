@@ -24,6 +24,7 @@
 #include "ShuttleFDOMFDButtons.h"
 #include "LWP.h"
 #include "DeorbitOpportunities.h"
+#include "DMP.h"
 #include "OrbMech.h"
 
 using namespace OrbMech;
@@ -187,6 +188,9 @@ public:
 	void ExecuteMTT();
 	void CalcDMT();
 	void CalcDeorbitOpportunities();
+	void CalcDMP();
+	void CalcLTP();
+	void ExportLTP();
 
 	void AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins = 0);
 	void AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time);
@@ -208,7 +212,6 @@ public:
 
 	SV StateVectorCalc(VESSEL *v, double SVGMT = 0.0);
 	SV coast_auto(SV sv0, double dt);
-	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P);
 	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
 	SV PositionMatch(SV sv_A, SV sv_P);
 	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double GMT0, VECTOR3 RP_off, double dt, int N, bool prog);
@@ -248,8 +251,6 @@ public:
 
 	unsigned DMT_MNVR;
 
-	double InPlaneGMT;
-
 	// SUBTHREAD MANAGEMENT
 	HANDLE hThread;
 	int subThreadMode;										// What should the subthread do?
@@ -272,19 +273,10 @@ public:
 	//false = vessel, true = LWP
 	bool chaserSVOption;
 	LWPSettings LWP_Settings;
-	LWPSummary LPW_Summary;
-	LWPParameterTable LWP_Parameters;
-	//0 = manual, 1 = LC-39A, 2 = LC-39B
+	LWPOutput LWP_Output;
+	LTPOutput LTP_Output;
+	//0 = manual, 1 = LC-39A, 2 = LC-39B, 3 = SLC-6
 	int LWP_LaunchSite;
-	//DTIG between MECO and ET SEP
-	double DTIG_ET_SEP;
-	//DTIG between MECO and MPS Dump
-	double DTIG_MPS;
-	//ET SEP DV
-	VECTOR3 DV_ET_SEP;
-	//MPS Dump DV
-	VECTOR3 DV_MPS;
-	double LWP_PlanarOpenGMT, LWP_PlanarCloseGMT;
 
 	//Deorbit Opportunities
 	LOPTOutput DODS_Output;
@@ -293,12 +285,17 @@ public:
 	int DOPS_InitialRev;
 	double DOPS_MaxXRNG;
 
+	//Deorbit Maneuver Planning
+	DMPOptions DMPOpt;
+	std::string DMPLandingSite;
+
 	OBJHANDLE hEarth;
 	double mu;
 protected:
 	int CalculateOMPPlan();
 	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
+	void ReadLandingSiteData(std::vector<LOPTSite> &sites) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
 
@@ -308,9 +305,8 @@ protected:
 	double LaunchGMT;
 	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to Ecliptic, left handed
 	MATRIX3 M_EFTOECL_AT_EPOCH;
-	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, left handed
+	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, right handed
 	MATRIX3 M_TEGTOECL;
-	double R_E;
 	double w_E;
 
 	SV sv_chaser, sv_target;

@@ -33,8 +33,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Transfer Page", 0, 'M' },
 		{ "Detailed Maneuver Table" , 0, 'D' },
 
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Deorb Opport", 0, 'B' },
+		{ "Deorb Plan", 0, 'T' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -51,7 +51,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
 
 	RegisterFunction("DOP", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDOPSPage);
-	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("DMP", OAPI_KEY_T, &ShuttleFDOMFD::menuSetDMPPage);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
@@ -130,8 +130,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	{
 		{ "Set target", 0, 'T' },
 		{ "Set launch site", 0, 'L' },
-		{ "Set LS latitude", 0, 'A' },
-		{ "Set LS longitude", 0, 'G' },
+		{ "Set LS coordinates", 0, 'A' },
+		{ "Launch direction", 0, 'D' },
 		{ "Max yaw steering", 0, 'Y' },
 		{ "Back to menu", 0, 'B' },
 
@@ -147,8 +147,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("TGT", OAPI_KEY_T, &ShuttleFDOMFD::set_target);
 	RegisterFunction("LS", OAPI_KEY_L, &ShuttleFDOMFD::menuLWPSetLS);
-	RegisterFunction("LAT", OAPI_KEY_A, &ShuttleFDOMFD::menuLWPSetLSLat);
-	RegisterFunction("LNG", OAPI_KEY_G, &ShuttleFDOMFD::menuLWPSetLSLng);
+	RegisterFunction("LAT", OAPI_KEY_A, &ShuttleFDOMFD::menuLWPSetLSLatLng);
+	RegisterFunction("AZI", OAPI_KEY_D, &ShuttleFDOMFD::menuLWPLaunchAzimuthDirectionFlag);
 	RegisterFunction("YS", OAPI_KEY_Y, &ShuttleFDOMFD::menuLWPSetYS);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 
@@ -326,7 +326,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("LTP", OAPI_KEY_H, &ShuttleFDOMFD::menuSetLTPPage);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 
 
@@ -358,6 +358,74 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcDeorbitOpportunities);
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu10[] =
+	{
+		{ "Fixed or free TIG", 0, 'F' },
+		{ "Input TIG or threshold", 0, 'T' },
+		{ "Primary thruster", 0, 'P' },
+		{ "Backup thruster", 0, 'B' },
+		{ "Landing site", 0, 'L' },
+		{ "", 0, ' ' },
+
+		{ "Calculate", 0, 'C' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu10, sizeof(mnu10) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("ITI", OAPI_KEY_F, &ShuttleFDOMFD::menuDMPCycleTIGOption);
+	RegisterFunction("TIG", OAPI_KEY_S, &ShuttleFDOMFD::menuDMPInputTIG);
+	RegisterFunction("TPR", OAPI_KEY_P, &ShuttleFDOMFD::menuDMPCyclePrimaryThruster);
+	RegisterFunction("TBU", OAPI_KEY_T, &ShuttleFDOMFD::menuDMPCycleBackupThruster);
+	RegisterFunction("SIT", OAPI_KEY_L, &ShuttleFDOMFD::menuDMPLandingSite);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcDMP);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu11[] =
+	{
+		{ "Input launch time", 0, 'M' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Calculate LTP", 0, 'C' },
+		{ "Export solution", 0, 'T' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu11, sizeof(mnu11) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("TLO", OAPI_KEY_M, &ShuttleFDOMFD::menuSetLTPLaunchTime);
+	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcLTP);
+	RegisterFunction("EXP", OAPI_KEY_T, &ShuttleFDOMFD::menuExportLTP);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);

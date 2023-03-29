@@ -39,7 +39,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 	out.data.clear();
 
 	//Convert crossrange to angle
-	ANG = opt.XRNG *1852.0 / OrbMech::R_Earth;
+	ANG = opt.XRNG *1852.0 / OrbMech::EARTH_RADIUS_EQUATOR;
 	GMTS = opt.GETS + opt.GMTR;
 	GMTF = opt.GETF + opt.GMTR;
 
@@ -182,7 +182,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 								Left = 'R';
 							}
 
-							sprintf(Buffer, "%.0f%c%c", abs(XRNG)*OrbMech::R_Earth / 1852.0, Ascending, Left);
+							sprintf(Buffer, "%.0f%c%c", abs(XRNG)*OrbMech::EARTH_RADIUS_EQUATOR / 1852.0, Ascending, Left);
 							temp.XRNG.assign(Buffer);
 
 							//Calculate local sun angle

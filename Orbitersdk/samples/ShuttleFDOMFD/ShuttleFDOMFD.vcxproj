@@ -109,7 +109,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DeorbitOpportunities.cpp" />
+    <ClCompile Include="DMP.cpp" />
     <ClCompile Include="LWP.cpp" />
+    <ClCompile Include="PEG4.cpp" />
     <ClCompile Include="ShuttleFDOoapiModule.cpp" />
     <ClCompile Include="ShuttleFDOCore.cpp" />
     <ClCompile Include="ShuttleFDOMFD.cpp" />
@@ -118,7 +120,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DeorbitOpportunities.h" />
+    <ClInclude Include="DMP.h" />
     <ClInclude Include="LWP.h" />
+    <ClInclude Include="PEG4.h" />
     <ClInclude Include="ShuttleFDOoapiModule.h" />
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="ShuttleFDOCore.h" />

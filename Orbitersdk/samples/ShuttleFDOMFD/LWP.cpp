@@ -19,6 +19,7 @@
   **************************************************************************/
 
 #include "Orbitersdk.h"
+#include "PEG4.h"
 #include "LWP.h"
 
 LWPSettings::LWPSettings()
@@ -54,6 +55,10 @@ LWPSettings::LWPSettings()
 	TRANS = 0.0;
 	INSCO = 1;
 	GMTLOR = 0.0;
+	DTIG_ET_SEP = 12.0;
+	DTIG_MPS = 1.0*60.0 + 54.0;
+	DV_ET_SEP = _V(5.0, 0.0, -5.0)*0.3048;
+	DV_MPS = _V(9.7, 0.2, -1.0)*0.3048;
 }
 
 
@@ -79,7 +84,6 @@ LaunchWindowProcessor::LaunchWindowProcessor()
 	IIGM = 0.0;
 	AZL = 0.0;
 	TIGM = 0.0;
-	TDIGM = 0.0;
 	DN = 0.0;
 	PA = 0.0;
 	STABLE = 2;
@@ -97,7 +101,8 @@ void LaunchWindowProcessor::Init(LWPSettings &set)
 	VT = set.TRGVEC.V;
 	TT = set.TRGVEC.GMT;
 
-	lwp_param_table = set.lwp_param_table;
+	lwp_table = set.lwp_table;
+	ltp_table = set.ltp_table;
 	error = 0;
 }
 
@@ -107,20 +112,16 @@ void LaunchWindowProcessor::LWP()
 	if (inp.LW != 1)
 	{
 		LWT();
-		if (error) return;
-		LWDSP();
-		if (LPT > 0)
-		{
-			LWPT();
-		}
+		//if (error) return;
 	}
 	if (inp.LW != 0)
 	{
 		RLOT();
-		if (error) return;
-		RLOTD();
-		LWPOT();
+		//if (error) return;
 	}
+
+	if (inp.LW == 2) LWPOut();
+	if (inp.LW == 1) LTPOut();
 }
 
 void LaunchWindowProcessor::UPDAT(VECTOR3 &R, VECTOR3 &V, double &T, double TF)
@@ -152,7 +153,7 @@ void LaunchWindowProcessor::LENSR(double GMTLO)
 {
 	OrbMech::OELEMENTS coe;
 	MATRIX3 MATR1, MATR2, MATR3;
-	VECTOR3 URLS, H, K, J;
+	VECTOR3 H, K, J;
 	double psi, Gamma, DYAW, LONG;
 
 	GMTINS = GMTLO + inp.PFT;
@@ -253,7 +254,7 @@ LWT1:
 
 	iter.dv = 0.0;
 	NPLAN(GMTIP);
-	if (error) return;
+	//if (error) return;
 	GMTIP0 = GMTIP;
 	do
 	{
@@ -275,16 +276,17 @@ LWT1:
 			if (iter.s_F)
 			{
 				error = 3;
-				return;
+				GMTIP = GMTIP0;
 			}
 		}
-	} while (abs(iter.err) > DVTOL);
+	} while (abs(iter.err) > DVTOL && iter.s_F == 0);
 
 	if (inp.NS != 1)
 	{
 		OPEN = GMTIP + inp.DTOPT;
 		inp.TPLANE = OPEN;
 		LENSR(inp.TPLANE);
+		OMS2();
 		PAO = PHANG();
 	}
 	if (inp.NS == 2)
@@ -298,6 +300,7 @@ LWT1:
 		GMTINS = CLOSE + inp.PFT;
 		inp.TPLANE = CLOSE;
 		LENSR(inp.TPLANE);
+		OMS2();
 		PAC = PHANG();
 	}
 }
@@ -335,6 +338,99 @@ double LaunchWindowProcessor::PHANG()
 	return phase;
 }
 
+void LaunchWindowProcessor::OMS2()
+{
+	double TGO, TF, FT, VEX;
+	PEG4 peg4;
+
+	FT = 2.0*26700.0;
+	VEX = 316.0 * 9.80665;
+
+	//Assumes RP, RT etc. are insertion state vectors
+
+	//Save insertion state vector
+	LWPSV.sv_P_MECO.R = RP;
+	LWPSV.sv_P_MECO.V = VP;
+	LWPSV.sv_P_MECO.GMT = TP;
+
+	//Propagate to ET sep
+	TF = TP + inp.DTIG_ET_SEP;
+	UPDAT(RP, VP, TP, TF);
+	//Simulate ET sep
+	VP += tmul(OrbMech::LVLH_Matrix(RP, VP), inp.DV_ET_SEP);
+
+	//Save ET sep state vector
+	LWPSV.sv_P_ET_Sep.R = RP;
+	LWPSV.sv_P_ET_Sep.V = VP;
+	LWPSV.sv_P_ET_Sep.GMT = TP;
+
+	if (inp.DirectInsertion)
+	{
+		//Propagate to MPS dump
+		TF = LWPSV.sv_P_MECO.GMT + inp.DTIG_MPS;
+		UPDAT(RP, VP, TP, TF);
+
+		//Simulate MPS dump
+		VP += tmul(OrbMech::LVLH_Matrix(RP, VP), inp.DV_MPS);
+
+		//Save MPS dump state vector
+		LWPSV.sv_P_MPS_Dump.R = RP;
+		LWPSV.sv_P_MPS_Dump.V = VP;
+		LWPSV.sv_P_MPS_Dump.GMT = TP;
+		LWPSV.sv_P_MPS_Dump.mass = inp.CWHT;
+	}
+	else
+	{
+		VECTOR3 VGO;
+
+		//Propagate to OMS-1 TIG
+		TF = LWPSV.sv_P_MECO.GMT + inp.OMS1.DTIG;
+		UPDAT(RP, VP, TP, TF);
+
+		//Simulate OMS-1 burn
+		if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS1.C1, inp.OMS1.C2, inp.OMS1.HTGT, inp.OMS1.THETA, FT, VEX, inp.CWHT))
+		{
+			error = 9;
+			return;
+		}
+		peg4.GetOutput(RP, VP, VGO, TGO, LWPSV.sv_P_MPS_Dump.mass);
+		TP = TP + TGO;
+
+		//Save MPS dump state vector
+		LWPSV.sv_P_MPS_Dump.R = RP;
+		LWPSV.sv_P_MPS_Dump.V = VP;
+		LWPSV.sv_P_MPS_Dump.GMT = TP;
+		LWPSV.sv_P_MPS_Dump.mass = inp.CWHT; //?
+	}
+
+	//Propagate to OMS-2 TIG
+	TF = LWPSV.sv_P_MECO.GMT + inp.OMS2.DTIG;
+	UPDAT(RP, VP, TP, TF);
+
+	//Save state vector before OMS-2
+	LWPSV.sv_P_OMS2_before.R = RP;
+	LWPSV.sv_P_OMS2_before.V = VP;
+	LWPSV.sv_P_OMS2_before.GMT = TP;
+	LWPSV.sv_P_OMS2_before.mass = inp.CWHT;
+
+	//Simulate OMS-2 burn
+	if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS2.C1, inp.OMS2.C2, inp.OMS2.HTGT, inp.OMS2.THETA, FT, VEX, inp.CWHT))
+	{
+		error = 9;
+		return;
+	}
+	peg4.GetOutput(LWPSV.sv_P_OMS2_after.R, LWPSV.sv_P_OMS2_after.V, VGO_OMS2, TGO, LWPSV.sv_P_OMS2_after.mass);
+	LWPSV.sv_P_OMS2_after.GMT = TP + TGO;
+
+	RP = LWPSV.sv_P_OMS2_after.R;
+	VP = LWPSV.sv_P_OMS2_after.V;
+	TP = LWPSV.sv_P_OMS2_after.GMT;
+
+	//Propagate target state vector to OMS-2 burnout time
+	TF = LWPSV.sv_P_OMS2_after.GMT;
+	UPDAT(RT, VT, TT, TF);
+}
+
 void LaunchWindowProcessor::GMTLS(double TI, double TF)
 {
 	double TLO, DT, phase, l_dot;
@@ -355,6 +451,7 @@ void LaunchWindowProcessor::GMTLS(double TI, double TF)
 		do
 		{
 			LENSR(TLO);
+			OMS2();
 			phase = PHANG();
 			l_dot = OrbMech::GetMeanMotion(RP, VP, OrbMech::mu_Earth);
 			DT = phase / l_dot;
@@ -414,7 +511,7 @@ void LaunchWindowProcessor::RLOT()
 		break;
 	}
 
-	GMTLS(GMTLO, GMTLO + 1.0); //The 1.0 doesn't matter as STABLE is set to 2
+	//GMTLS(GMTLO, GMTLO + 1.0); //The 1.0 doesn't matter as STABLE is set to 2
 
 	do
 	{
@@ -455,7 +552,7 @@ void LaunchWindowProcessor::RLOT()
 				}
 			} while (abs(DALT) >= DELH);
 
-			inp.BIAS = GMTLO - GSTAR;
+			//inp.BIAS = GMTLO - GSTAR;
 			TARGT();
 			if (LAST == 1)
 			{
@@ -551,7 +648,7 @@ void LaunchWindowProcessor::TARGT()
 
 	if (inp.SVPROP == 1)
 	{
-		DN = DN + 1.5*OrbMech::J2_Earth*pow(OrbMech::R_Earth, 2) / (2.0*pow(coe_osc_C.a, 2)*pow(1.0 - pow(coe_osc_C.e, 2), 2))*cos(coe_mean_T.i)*sin(2.0*UC);
+		DN = DN + 1.5*OrbMech::J2_Earth*pow(OrbMech::EARTH_RADIUS_GRAV, 2) / (2.0*pow(coe_osc_C.a, 2)*pow(1.0 - pow(coe_osc_C.e, 2), 2))*cos(coe_mean_T.i)*sin(2.0*UC);
 	}
 
 	if (inp.DELNOF)
@@ -567,7 +664,7 @@ void LaunchWindowProcessor::TARGT()
 	IIGM = coe_mean_T.i;
 	if (inp.SVPROP == 1)
 	{
-		IIGM = IIGM + 1.5*OrbMech::J2_Earth*pow(OrbMech::R_Earth, 2) / (4.0*pow(coe_osc_C.a, 2)*pow(1.0 - pow(coe_osc_C.e, 2), 2))*sin(2.0*coe_mean_T.i)*cos(2.0*UC);
+		IIGM = IIGM + 1.5*OrbMech::J2_Earth*pow(OrbMech::EARTH_RADIUS_GRAV, 2) / (4.0*pow(coe_osc_C.a, 2)*pow(1.0 - pow(coe_osc_C.e, 2), 2))*sin(2.0*coe_mean_T.i)*cos(2.0*UC);
 	}
 
 	TIGM = DN - inp.LONGLS + inp.DELNO + OrbMech::w_Earth*(inp.PFT + inp.DTGRR);
@@ -575,7 +672,6 @@ void LaunchWindowProcessor::TARGT()
 	{
 		TIGM += PI2;
 	}
-	TDIGM = HDOTT - OrbMech::w_Earth + DELNOD;
 
 	//Compute AZL
 	AZL = inp.LAZCOE[0] + inp.LAZCOE[1] * IIGM + inp.LAZCOE[2] * TIGM + inp.LAZCOE[3] * IIGM*TIGM;
@@ -603,65 +699,146 @@ void LaunchWindowProcessor::NSERT(double GMTLO, double &UINS, double &DH)
 	UINS = 0.0;
 }
 
-void LaunchWindowProcessor::LWPT()
+//Launch Window Processor Output Table routine
+void LaunchWindowProcessor::LWPOut()
 {
-	//lwp_param_table->GMTLO[0] = inp.TPLANE + inp.TSTART;
-	//LENSR(lwp_param_table->GMTLO[0]);
-	//lwp_param_table->PHASE[0] = PHANG();
+	double UINS, DH;
 
-	//lwp_param_table->GMTLO[1] = inp.TPLANE + inp.TEND;
-	//LENSR(lwp_param_table->GMTLO[1]);
-	//lwp_param_table->PHASE[1] = PHANG();
+	lwp_table->GMTOPT = GMTLO;
+	
+	//Simulate through OMS-2 for optimum launch time
+	OMS2();
+	lwp_table->PA_GMTOPT = PHANG()*DEG;
+
+	//Simulate launch for planar opening
+	GMTLO = lwp_table->GMTOPT + inp.TSTART;
+	lwp_table->GMTPO = GMTLO;
+	NSERT(GMTLO, UINS, DH);
+	TARGT();
+	OMS2();
+	lwp_table->PA_GMTPO = PHANG()*DEG;
+
+	//Simulate launch for planar close
+	GMTLO = lwp_table->GMTOPT + inp.TEND;
+	lwp_table->GMTPC = GMTLO;
+	NSERT(GMTLO, UINS, DH);
+	TARGT();
+	OMS2();
+	lwp_table->PA_GMTPC = PHANG()*DEG;
+
+	//Save inputs
+	lwp_table->PFT = inp.PFT;
+	lwp_table->PFA = inp.PFA*DEG;
+	lwp_table->DTO = inp.TSTART;
+	lwp_table->DTC = inp.TEND;
+	lwp_table->OPT = inp.DTOPT;
+	lwp_table->PHASE = inp.NEGTIV;
+	lwp_table->WRAP = inp.WRAP;
+
+	lwp_table->LWPERROR = error;
 }
 
-void LaunchWindowProcessor::LWDSP()
+//Launch Targeting Processor Output Table routine
+void LaunchWindowProcessor::LTPOut()
 {
+	VECTOR3 H, N;
+	double r_A, r_P, lng;
+	OrbMech::SV sv_temp;
 
-}
+	ltp_table->GMTLO = GMTLO;
 
-//Recommended Lift-off-Time (RLOT) display routine
-void LaunchWindowProcessor::RLOTD()
-{
+	//MECO
+	ltp_table->MET_MECO = inp.PFT;
+	ltp_table->V_MECO = inp.VINS / 0.3048;
+	ltp_table->R_MECO = inp.RINS / 1852.0;
+	ltp_table->G_MECO = inp.GAMINS*DEG;
+	ltp_table->I_MECO = IIGM * DEG;
+	ltp_table->PHASE_MECO = PA * DEG;
 
-}
+	sv_temp.R = RP;
+	sv_temp.V = VP;
+	sv_temp.GMT = TP;
 
-//Launch Window Processor Output Tables routine
-void LaunchWindowProcessor::LWPOT()
-{
-	LWPSV.sv_P.R = RP;
-	LWPSV.sv_P.V = VP;
-	LWPSV.sv_P.GMT = TP;
-	LWPSV.sv_P.mass = inp.CWHT;
-	LWPSV.sv_T0 = inp.TRGVEC;
-	LWPSV.sv_T_MECO.R = RT;
-	LWPSV.sv_T_MECO.V = VT;
-	LWPSV.sv_T_MECO.GMT = TT;
-	LWPSV.sv_T_MECO.mass = inp.TRGVEC.mass;
+	OrbMech::ApsidesMagnitudeDetermination(sv_temp, r_A, r_P);
+	ltp_table->HA_MECO = (r_A - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->HP_MECO = (r_P - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	lng = atan2(RP.y, RP.x) - OrbMech::w_Earth*TP;
+	lng = OrbMech::normalize_angle(lng, -PI, PI);
+	ltp_table->LONG_MECO = lng * DEG;
 
-	lwp_param_table->GMTLO[0] = GMTLO + inp.TSTART;
-	LENSR(lwp_param_table->GMTLO[0]);
-	lwp_param_table->PHASE[0] = PHANG();
+	//Simulate MPS dump and OMS-2
+	OMS2();
 
-	lwp_param_table->GMTLO[1] = GMTLO + inp.TEND;
-	LENSR(lwp_param_table->GMTLO[1]);
-	lwp_param_table->PHASE[1] = PHANG();
-}
+	//MPS Dump
+	ltp_table->TIG_MPS = LWPSV.sv_P_MPS_Dump.GMT - GMTLO;
+	ltp_table->DV_MPS = length(inp.DV_MPS) / 0.3048;
+	OrbMech::ApsidesMagnitudeDetermination(LWPSV.sv_P_MPS_Dump, r_A, r_P);
+	ltp_table->HA_MPS = (r_A - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->HP_MPS = (r_P - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
 
-void LaunchWindowProcessor::GetOutput(LWPSummary &out)
-{
-	out.LWPERROR = error;
-	out.GMTLO = GMTLO;
-	out.GMTINS = GMTINS;
-	out.AZL = AZL;
-	out.VIGM = inp.VINS;
-	out.RIGM = inp.RINS;
-	out.IIGM = IIGM;
-	out.TIGM = TIGM;
-	out.TDIGM = TDIGM;
-	out.DN = DN;
-	out.DELNO = inp.DELNO;
-	out.PA = PA;
-	out.TPLANE = inp.TPLANE;
-	out.LATLS = inp.LATLS;
-	out.LONGLS = inp.LONGLS;
+	//OMS2
+	ltp_table->TIG_OMS2 = LWPSV.sv_P_OMS2_before.GMT - GMTLO;
+	ltp_table->DV_OMS2 = length(VGO_OMS2) / 0.3048;
+	OrbMech::ApsidesMagnitudeDetermination(LWPSV.sv_P_OMS2_after, r_A, r_P);
+	ltp_table->HA_OMS2 = (r_A - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->HP_OMS2 = (r_P - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->PHASE_OMS2 = PHANG()*DEG;
+	ltp_table->PERIOD_OMS2 = OrbMech::REVTIM(LWPSV.sv_P_OMS2_after.R, LWPSV.sv_P_OMS2_after.V, inp.SVPROP);
+	H = crossp(LWPSV.sv_P_OMS2_after.R, LWPSV.sv_P_OMS2_after.V);
+	N = _V(-H.y, H.x, 0.0);
+	ltp_table->NODE_OMS2 = acos(N.x / length(N));
+	if (N.y < 0)
+	{
+		ltp_table->NODE_OMS2 = PI2 - ltp_table->NODE_OMS2;
+	}
+	if (ltp_table->NODE_OMS2 > PI)
+	{
+		ltp_table->NODE_OMS2 -= PI2;
+	}
+	ltp_table->NODE_OMS2 *= DEG;
+
+	//Target
+
+	double i, iter, U, dt, eta, TF;
+
+	iter = 0;
+	eta = PI2 / OrbMech::REVTIM(RT, VT, inp.SVPROP);
+
+	do
+	{
+		H = unit(crossp(RT, VT));
+		N = unit(crossp(_V(0, 0, 1), H));
+		i = acos(H.z);
+		U = OrbMech::PHSANG(RT, VT, N);
+		if (iter == 0 && U < 0)
+		{
+			U += PI2;
+		}
+		dt = U / eta;
+		TF = TT - dt;
+		UPDAT(RT, VT, TT, TF);
+
+		iter++;
+	} while (abs(U) > 0.01*RAD && iter < 10);
+
+	sv_temp.R = RT;
+	sv_temp.V = VT;
+	sv_temp.GMT = TT;
+
+	OrbMech::ApsidesMagnitudeDetermination(sv_temp, r_A, r_P);
+	ltp_table->HA_TGT = (r_A - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->HP_TGT = (r_P - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	ltp_table->PERIOD_TGT = OrbMech::REVTIM(RT, VT, inp.SVPROP);
+	lng = atan2(RT.y, RT.x) - OrbMech::w_Earth*TT;
+	lng = OrbMech::normalize_angle(lng, -PI, PI);
+	ltp_table->LONG_TGT = lng * DEG;
+
+	ltp_table->DELN = inp.DELNO*DEG;
+
+	//IYs
+	ltp_table->IY_MECO = unit(crossp(LWPSV.sv_P_MECO.V, LWPSV.sv_P_MECO.R));
+	ltp_table->IY_OMS1 = unit(crossp(LWPSV.sv_P_MPS_Dump.V, LWPSV.sv_P_MPS_Dump.R));
+	ltp_table->IY_OMS2 = unit(crossp(LWPSV.sv_P_OMS2_after.V, LWPSV.sv_P_OMS2_after.R));
+
+	ltp_table->LWPERROR = error;
 }

@@ -26,13 +26,15 @@ static DWORD WINAPI OMPMFD_Trampoline(LPVOID ptr) {
 	return(core->subThread());
 }
 
+const double PITCH_BIAS = 15.82*RAD;
+const double YAW_BIAS = 6.5*RAD;
+
 ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 {
 	vessel = v;
 
 	hEarth = oapiGetObjectByName("Earth");
 	mu = GGRAV * oapiGetMass(hEarth);
-	R_E = oapiGetSize(hEarth);
 	w_E = PI2 / oapiGetPlanetPeriod(hEarth);
 	
 	shuttlenumber = -1;
@@ -65,7 +67,6 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 
 	//LoadPlanC();
 
-	InPlaneGMT = 0.0;
 	DMT_MNVR = 0;
 	useNonSphericalGravity = vessel->NonsphericalGravityEnabled();
 	OMPErrorCode = 0;
@@ -201,23 +202,27 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	LWP_Settings.RINS = 21241700.0*0.3048;
 	LWP_Settings.VINS = 25818.88*0.3048;//25928.0*0.3048;
 	LWP_Settings.YSMAX = 14.0*RAD;
-	LWP_Settings.LW = 2;
 	LWP_Settings.DELNO = 0.0;
-	LWP_Settings.LOT = 6;
 	LWP_Settings.CWHT = 251679.0*LBM2KG;
+	LWP_Settings.OMS1.DTIG = 1.0*60.0 + 54.0;
+	LWP_Settings.OMS1.HTGT = 120.0*1852.0;
+	LWP_Settings.OMS1.THETA = 133.0*RAD;
+	LWP_Settings.OMS1.C1 = 0.0;
+	LWP_Settings.OMS1.C2 = 0.0;
+	LWP_Settings.OMS2.DTIG = 29.0*60.0 + 12.0;
+	LWP_Settings.OMS2.HTGT = 111.0*1852.0;
+	LWP_Settings.OMS2.THETA = 315.0*RAD;
+	LWP_Settings.OMS2.C1 = 0.0;
+	LWP_Settings.OMS2.C2 = 0.0;
+	LWP_Settings.DirectInsertion = true;
 
 	LWP_LaunchSite = 1;
-	DTIG_ET_SEP = 12.0;
-	DTIG_MPS = 1.0*60.0 + 54.0;
-	DV_ET_SEP = _V(5.0, 0.0, -5.0)*0.3048;
-	DV_MPS = _V(9.7, 0.2, -1.0)*0.3048;
-
-	LWP_PlanarOpenGMT = 0.0;
-	LWP_PlanarCloseGMT = 0.0;
 
 	DOPS_GETS = DOPS_GETF = 0.0;
 	DOPS_InitialRev = 1;
 	DOPS_MaxXRNG = 800.0;
+
+	DMPLandingSite = "EDW";
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -265,19 +270,6 @@ SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVGMT)
 	}
 
 	return sv1;
-}
-
-void ShuttleFDOCore::ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P)
-{
-	OrbMech::OELEMENTS coe;
-	double r, a, u;
-
-	coe = OrbMech::coe_from_sv(sv0.R, sv0.V, mu);
-	a = OrbMech::GetSemiMajorAxis(sv0.R, sv0.V, mu);
-	r = length(sv0.R);
-	u = coe.TA + coe.w;
-
-	OrbMech::PIFAAP(a, coe.e, coe.i, coe.TA, u, r, R_E, r_A, r_P);
 }
 
 void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
@@ -1178,7 +1170,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		//MANEUVER
 		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
 		{
-			if (HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x, true, DV))
+			if (HeightManeuverAuto(sv_bef_table[i], OrbMech::EARTH_RADIUS_EQUATOR + add_constraint[i].x, true, DV))
 			{
 				return 28;	//HA maneuver failed to converge
 			}
@@ -1186,7 +1178,7 @@ int ShuttleFDOCore::CalculateOMPPlan()
 		}
 		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
 		{
-			if (HeightManeuverAuto(sv_bef_table[i], R_E + add_constraint[i].x, false, DV))
+			if (HeightManeuverAuto(sv_bef_table[i], OrbMech::EARTH_RADIUS_EQUATOR + add_constraint[i].x, false, DV))
 			{
 				return 29;	//HASH maneuver failed to converge
 			}
@@ -1391,8 +1383,8 @@ void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
 		{
 			OrbMech::periapo(sv_cur.R, sv_cur.V, mu, apo, peri);
 		}
-		man.HA = (apo - R_E) / 1852.0;
-		man.HP = (peri - R_E) / 1852.0;
+		man.HA = (apo - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+		man.HP = (peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
 
 		sv_Pcur = coast_auto(sv_P0, sv_cur.GMT - sv_P0.GMT);
 		u = unit(crossp(sv_Pcur.R, sv_Pcur.V));
@@ -1700,6 +1692,27 @@ void ShuttleFDOCore::CalcDeorbitOpportunities()
 	startSubthread(3);
 }
 
+void ShuttleFDOCore::CalcDMP()
+{
+	startSubthread(4);
+}
+
+void ShuttleFDOCore::CalcLTP()
+{
+	startSubthread(5);
+}
+
+void ShuttleFDOCore::ExportLTP()
+{
+	VECTOR3 IYD;
+	double TLOREF;
+
+	TLOREF = LTP_Output.GMTLO + launchdate[1] * 24.0*3600.0;
+	IYD = TEG2M50(LTP_Output.IY_MECO);
+
+	//TBD
+}
+
 int ShuttleFDOCore::subThread()
 {
 	//Do nothing if mission not initialized
@@ -1726,7 +1739,7 @@ int ShuttleFDOCore::subThread()
 		Result = 0;
 	}
 	break;
-	case 2: //Launch Window/Targeting Processor
+	case 2: //Launch Window Processor
 	{
 		SV sv_T;
 
@@ -1742,49 +1755,14 @@ int ShuttleFDOCore::subThread()
 		}
 		LWP_Settings.TPLANE = sv_T.GMT;
 		LWP_Settings.TRGVEC = sv_T;
-		LWP_Settings.lwp_param_table = &LWP_Parameters;
+		LWP_Settings.LOT = 6;
+		LWP_Settings.LW = 2;
+		LWP_Settings.lwp_table = &LWP_Output;
 
 		LWP.Init(LWP_Settings);
 		LWP.LWP();
-		LWP.GetOutput(LPW_Summary);
 
-		//No error
-		if (LPW_Summary.LWPERROR == 0)
-		{
-			if (LWP_Settings.LW == 0)
-			{
-				InPlaneGMT = LPW_Summary.TPLANE;
-			}
-			else
-			{
-				InPlaneGMT = LPW_Summary.GMTLO;
-			}
-
-			LWP_PlanarOpenGMT = LWP_Parameters.GMTLO[0];
-			LWP_PlanarCloseGMT = LWP_Parameters.GMTLO[1];
-
-			//Post insertion state vector processing
-			SV sv_P1, sv_P2;
-
-			sv_P1 = coast_auto(LWP.LWPSV.sv_P, DTIG_ET_SEP);
-			sv_P1.V += tmul(LVLH_Matrix(sv_P1.R, sv_P1.V), DV_ET_SEP);
-
-			sv_P2 = coast_auto(sv_P1, DTIG_MPS - DTIG_ET_SEP);
-			sv_P2.V += tmul(LVLH_Matrix(sv_P2.R, sv_P2.V), DV_MPS);
-			sv_P2.mass = LWP_Settings.CWHT;
-
-			//Store SV
-			sv_chaser = sv_P2;
-			chaserSVOption = true;
-
-			//Save launch time
-			int hh, mm;
-			double ss;
-
-			OrbMech::days2hms(InPlaneGMT / 24.0 / 3600.0, hh, mm, ss);
-			SetLaunchTime(hh, mm, ss);
-		}
-
+		LWP_Settings.GMTLOR = LWP_Output.GMTOPT;
 
 		Result = 0;
 	}
@@ -1794,41 +1772,103 @@ int ShuttleFDOCore::subThread()
 		LandingOpportunitiesProcessor lop;
 		LOPTInput opt;
 
-		std::ifstream myfile;
-		myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\LandingSites.txt");
-		if (myfile.is_open())
+		ReadLandingSiteData(opt.sites);
+
+		if (opt.sites.size() > 0)
 		{
-			char Buffer[128];
-			LOPTSite temp;
-			opt.sites.clear();
+			opt.sv_in = StateVectorCalc(vessel);
+			opt.GETS = DOPS_GETS;
+			opt.GETF = DOPS_GETF;
+			opt.INORB = DOPS_InitialRev;
+			opt.SVPROP = useNonSphericalGravity;
+			opt.GMTR = LaunchGMT;
+			opt.XRNG = DOPS_MaxXRNG;
+			opt.BaseMJD = BaseMJD;
+			opt.RM = M_EFTOECL_AT_EPOCH;
 
-			std::string line;
-			while (std::getline(myfile, line))
+			lop.LOPT(opt, DODS_Output);
+		}
+	}
+	break;
+	case 4: //Deorbit Maneuver Planning
+	{
+		DMPOptions opt2 = DMPOpt;
+
+		opt2.TIG += LaunchGMT;
+		opt2.TTHRSH += LaunchGMT;
+		opt2.INTEGF = useNonSphericalGravity;
+
+		SV sv = StateVectorCalc(vessel);
+
+		opt2.TIMEC = sv.GMT;
+
+		opt2.XYZI = sv.R;
+		opt2.XYZID = sv.V;
+		opt2.CD = 2.0;
+		opt2.AREA = 0.0;
+		opt2.WT = sv.mass;
+
+		std::vector<LOPTSite> sites;
+		ReadLandingSiteData(sites);
+
+		bool found = false;
+		unsigned i;
+		for (i = 0; i < sites.size(); i++)
+		{
+			if (sites[i].name == DMPLandingSite)
 			{
-				if (sscanf(line.c_str(), "%s %lf %lf %lf %d", Buffer, &temp.lat, &temp.lng, &temp.rad, &temp.timezone) == 5)
-				{
-					temp.name.assign(Buffer);
-					temp.lat *= RAD;
-					temp.lng *= RAD;
-					opt.sites.push_back(temp);
-				}
-			}
-
-			if (opt.sites.size() > 0)
-			{
-				opt.sv_in = StateVectorCalc(vessel);
-				opt.GETS = DOPS_GETS;
-				opt.GETF = DOPS_GETF;
-				opt.INORB = DOPS_InitialRev;
-				opt.SVPROP = useNonSphericalGravity;
-				opt.GMTR = LaunchGMT;
-				opt.XRNG = DOPS_MaxXRNG;
-				opt.BaseMJD = BaseMJD;
-				opt.RM = M_EFTOECL_AT_EPOCH;
-
-				lop.LOPT(opt, DODS_Output);
+				found = true;
+				break;
 			}
 		}
+		if (!found) return(0);
+
+		opt2.TLATD = sites[i].lat;
+		opt2.TLONG = sites[i].lng;
+		opt2.TALTD = 0.0;
+		opt2.RAZ = 0.0;
+
+		DMP dmp;
+
+		dmp.Executive(opt2);
+	}
+	break;
+	case 5: //Launch Targeting Processor
+	{
+		SV sv_T;
+
+		sv_T = StateVectorCalc(target);
+
+		if (useNonSphericalGravity)
+		{
+			LWP_Settings.SVPROP = 1;
+		}
+		else
+		{
+			LWP_Settings.SVPROP = 0;
+		}
+		LWP_Settings.TRGVEC = sv_T;
+		LWP_Settings.LW = 1;
+		LWP_Settings.LOT = 1;
+		LWP_Settings.DELNO = 0.0;
+		LWP_Settings.ltp_table = &LTP_Output;
+
+		LWP.Init(LWP_Settings);
+		LWP.LWP();
+
+		//Post insertion state vector processing
+		//Store SV
+		sv_chaser = LWP.LWPSV.sv_P_MPS_Dump;
+		chaserSVOption = true;
+
+		//Save launch time
+		int hh, mm;
+		double ss;
+
+		OrbMech::days2hms(LWP_Settings.GMTLOR / 24.0 / 3600.0, hh, mm, ss);
+		SetLaunchTime(hh, mm, ss);
+
+		Result = 0;
 	}
 	break;
 	}
@@ -1858,6 +1898,31 @@ int ShuttleFDOCore::startSubthread(int fcn) {
 		return(-1);
 	}
 	return(0);
+}
+
+void ShuttleFDOCore::ReadLandingSiteData(std::vector<LOPTSite> &sites) const
+{
+	sites.clear();
+
+	std::ifstream myfile;
+	myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\LandingSites.txt");
+	if (myfile.is_open())
+	{
+		char Buffer[128];
+		LOPTSite temp;
+
+		std::string line;
+		while (std::getline(myfile, line))
+		{
+			if (sscanf(line.c_str(), "%s %lf %lf %lf %d", Buffer, &temp.lat, &temp.lng, &temp.rad, &temp.timezone) == 5)
+			{
+				temp.name.assign(Buffer);
+				temp.lat *= RAD;
+				temp.lng *= RAD;
+				sites.push_back(temp);
+			}
+		}
+	}
 }
 
 bool ShuttleFDOCore::MET2MTT()
@@ -1998,7 +2063,7 @@ void ShuttleFDOCore::CalcDMT()
 		DMT.TRIMS_LY = LY * DEG;
 		DMT.TRIMS_RY = RY * DEG;
 
-		p_T = P - 15.82*RAD;
+		p_T = P - PITCH_BIAS;
 		y_T = 0.0;
 	}
 	else if (input.thrusters == OMPDefs::THRUSTERS::OL || input.thrusters == OMPDefs::THRUSTERS::OR)
@@ -2011,13 +2076,13 @@ void ShuttleFDOCore::CalcDMT()
 
 		if (input.thrusters == OMPDefs::THRUSTERS::OL)
 		{
-			p_T = P - 15.82*RAD;
-			y_T = LY + 6.5*RAD;
+			p_T = P - PITCH_BIAS;
+			y_T = LY + YAW_BIAS;
 		}
 		else
 		{
-			p_T = P - 15.82*RAD;
-			y_T = RY - 6.5*RAD;
+			p_T = P - PITCH_BIAS;
+			y_T = RY - YAW_BIAS;
 		}
 	}
 	else
@@ -2105,10 +2170,18 @@ void ShuttleFDOCore::CalcDMT()
 	sv_cut = PoweredFlightProcessor(input.sv_tig, DV_iner_act, F, isp, useNonSphericalGravity);
 
 	double apo, peri;
-	OrbMech::periapo(sv_cut.R, sv_cut.V, mu, apo, peri);
 
-	DMT.TGT_HA = (apo - R_E) / 1852.0;
-	DMT.TGT_HP = (peri - R_E) / 1852.0;
+	if (useNonSphericalGravity)
+	{
+		ApsidesMagnitudeDetermination(sv_cut, apo, peri);
+	}
+	else
+	{
+		OrbMech::periapo(sv_cut.R, sv_cut.V, mu, apo, peri);
+	}
+
+	DMT.TGT_HA = (apo - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+	DMT.TGT_HP = (peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
 }
 
 void ShuttleFDOCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
@@ -2307,7 +2380,7 @@ void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 	M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(BaseMJD);
 	//Calculate matrix from TEG to M50
 	MATRIX3 M_M50TOECL = OrbMech::GetObliquityMatrix(33281.923357);
-	M_TEGTOECL = mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH);
+	M_TEGTOECL = OrbMech::MatrixRH_LH(mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH));
 	//sprintf(oapiDebugString(), "%f", BaseMJD);
 }
 
@@ -2332,16 +2405,21 @@ void ShuttleFDOCore::OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, do
 
 	if (parallel == false)
 	{
-		P = 15.82*RAD - atan2(C, A);
-		LY = -6.5*RAD + atan2(D, R1);
-		RY = 6.5*RAD + atan2(B, R1);
+		P = PITCH_BIAS - atan2(C, A);
+		LY = -YAW_BIAS + atan2(D, R1);
+		RY = YAW_BIAS + atan2(B, R1);
 	}
 	else
 	{
-		P = 15.82*RAD - atan2(C, A);
+		P = PITCH_BIAS - atan2(C, A);
 		LY = -5.7*RAD + atan2(CG.y, R1);
 		RY = 5.7*RAD + atan2(CG.y, R1);
 	}
+}
+
+MATRIX3 MATRIX(VECTOR3 A, VECTOR3 B, VECTOR3 C)
+{
+	return _M(A.x, A.y, A.z, B.x, B.y, B.z, C.x, C.y, C.z);
 }
 
 SV ShuttleFDOCore::timetoapo_auto(SV sv_A, double revs)
@@ -2950,7 +3028,7 @@ bool ShuttleFDOCore::SEARMT(SV sv0, int opt, double val, SV &sv1)
 		}
 		else if (opt == OMPDefs::SECONDARIES::ALT)
 		{
-			if (TALT(sv1.R, sv1.V, val + R_E, C, mu, dtheta))
+			if (TALT(sv1.R, sv1.V, val + OrbMech::EARTH_RADIUS_EQUATOR, C, mu, dtheta))
 			{
 				//Error
 				return true;
@@ -2983,5 +3061,5 @@ bool ShuttleFDOCore::SEARMT(SV sv0, int opt, double val, SV &sv1)
 
 VECTOR3 ShuttleFDOCore::TEG2M50(VECTOR3 v_TEG)
 {
-	return rhmul(M_TEGTOECL, v_TEG);
+	return mul(M_TEGTOECL, v_TEG);
 }

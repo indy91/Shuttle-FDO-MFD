@@ -299,6 +299,11 @@ namespace OrbMech
 			A.m12*b.x + A.m22*b.z + A.m32*b.y);
 	}
 
+	MATRIX3 MatrixRH_LH(MATRIX3 A)
+	{
+		return _M(A.m11, A.m13, A.m12, A.m31, A.m33, A.m32, A.m21, A.m23, A.m22);
+	}
+
 	void rv_from_r0v0(VECTOR3 R0, VECTOR3 V0, double t, VECTOR3 &R1, VECTOR3 &V1, double mu, double x)	//computes the state vector (R,V) from the initial state vector (R0,V0) and the elapsed time
 	{
 		double r0, v0, vr0, alpha, f, g, fdot, gdot, r, xx, paratol, x0;
@@ -1513,6 +1518,19 @@ namespace OrbMech
 		RPE = R_av - XR;
 	}
 
+	void ApsidesMagnitudeDetermination(SV sv0, double &r_A, double &r_P)
+	{
+		OrbMech::OELEMENTS coe;
+		double r, a, u;
+
+		coe = OrbMech::coe_from_sv(sv0.R, sv0.V, mu_Earth);
+		a = OrbMech::GetSemiMajorAxis(sv0.R, sv0.V, mu_Earth);
+		r = length(sv0.R);
+		u = coe.TA + coe.w;
+
+		PIFAAP(a, coe.e, coe.i, coe.TA, u, r, OrbMech::EARTH_RADIUS_GRAV, r_A, r_P);
+	}
+
 	void PIFAAP(double a, double e, double i, double f, double u, double r, double R_E, double &r_A, double &r_P)
 	{
 		double J, a_ref, e_ref, p_ref, p, K1, K2, df, r_1, r_2;
@@ -1603,7 +1621,7 @@ namespace OrbMech
 			if (precision)
 			{
 				double J20 = 1082.6269e-6;
-				g_dot = n0 * ((3.0 / 4.0)*(J20*R_Earth*R_Earth*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
+				g_dot = n0 * ((3.0 / 4.0)*(J20*EARTH_RADIUS_GRAV*EARTH_RADIUS_GRAV*(5.0*cos(osc0.i)*cos(osc0.i) - 1.0)) / (osc0.a*osc0.a*pow(1.0 - osc0.e*osc0.e, 2.0)));
 			}
 			else
 			{
@@ -1740,10 +1758,10 @@ namespace OrbMech
 			L = elem.l + elem.g;
 			u = L + (2.0*ecosg*sin(L) - 2.0*esing*cos(L))*(1.0 + 5.0 / 4.0*ecosg*cos(L) + esing * sin(L));
 			sin_lat = sin(u)*sin(elem.i);
-			ainv = 1.0 / elem.a + J2_Earth * pow(R_Earth, 2) / pow(length(sv.R), 3)*(1.0 - 3.0*pow(sin_lat, 2));
+			ainv = 1.0 / elem.a + J2_Earth * pow(EARTH_RADIUS_GRAV, 2) / pow(length(sv.R), 3)*(1.0 - 3.0*pow(sin_lat, 2));
 			elem.l_dot = sqrt(mu*pow(ainv, 3));
 
-			elem.h_dot = -(3.0 / 2.0*sqrt(mu)*J2_Earth*pow(R_Earth, 2.0) / (pow(1.0 - elem.e*elem.e, 2)*pow(elem.a, 3.5)))*cos(elem.i);
+			elem.h_dot = -(3.0 / 2.0*sqrt(mu)*J2_Earth*pow(EARTH_RADIUS_GRAV, 2.0) / (pow(1.0 - elem.e*elem.e, 2)*pow(elem.a, 3.5)))*cos(elem.i);
 			elem.g_dot = elem.h_dot*((5.0 / 2.0)*pow(sin(elem.i), 2) - 2.0) / cos(elem.i);
 		}
 		else
@@ -1781,6 +1799,25 @@ namespace OrbMech
 			PHSANG = -PHSANG;
 		}
 		return PHSANG;
+	}
+
+	double REVTIM(VECTOR3 R, VECTOR3 V, bool SPERT)
+	{
+		double AINV, r, eta;
+
+		r = length(R);
+		AINV = 2.0 / r - pow(length(V), 2) / mu_Earth;
+		if (SPERT)
+		{
+			double SINLAT;
+
+			SINLAT = R.z / r;
+			AINV = AINV + J2_Earth * pow(EARTH_RADIUS_GRAV, 2) / pow(r, 3)*(1.0 - 3.0*pow(SINLAT, 2)) +
+				J3_Earth * pow(EARTH_RADIUS_GRAV, 3) / pow(r, 4)*(3.0*SINLAT - 5.0*pow(SINLAT, 3)) +
+				J4_Earth * pow(EARTH_RADIUS_GRAV, 4) / pow(r, 5)*(3.0 - 30.0*pow(SINLAT, 2) + 35.0*pow(SINLAT, 4));
+		}
+		eta = sqrt(mu_Earth*pow(AINV, 3));
+		return PI2 / eta;
 	}
 
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
@@ -2459,7 +2496,7 @@ namespace OrbMech
 		J2 = J2_Earth;
 		J3 = J3_Earth;
 		J4 = J4_Earth;
-		R_e = R_Earth;
+		R_e = EARTH_RADIUS_GRAV;
 
 		n0 = sqrt(mu / pow(coe_mean.a, 3));
 		eccdp2 = coe_mean.e * coe_mean.e;

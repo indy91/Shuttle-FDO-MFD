@@ -56,6 +56,8 @@ public:
 	void menuDeleteOMPManeuver();
 	void menuCalculateOMPPlan();
 	void menuCalcLaunchTime();
+	void menuCalcLTP();
+	void menuExportLTP();
 	void menuTransferToMTT();
 	void menuMTTChangeSlot();
 	void menuExecuteMTT();
@@ -75,8 +77,8 @@ public:
 	void menuLWPSetDELNO();
 	void menuLWPSetDTOPT();
 	void menuLWPSetLS();
-	void menuLWPSetLSLat();
-	void menuLWPSetLSLng();
+	void menuLWPSetLSLatLng();
+	void menuLWPLaunchAzimuthDirectionFlag();
 	void menuLWPSetYS();
 	void menuLWPSetPFA();
 	void menuLWPSetPFT();
@@ -92,12 +94,20 @@ public:
 	void menuLWPSetDTC();
 	void menuLWPSetPHASEFLAG();
 	void menuLWPSetWRAPFLAG();
+	void menuSetLTPLaunchTime();
 
 	void menuCalcDeorbitOpportunities();
 	void menuDOPSSetGETS();
 	void menuDOPSSetGETF();
 	void menuDOPSSetRev();
 	void menuDOPSSetMaxXRNG();
+
+	void menuCalcDMP();
+	void menuDMPCycleTIGOption();
+	void menuDMPInputTIG();
+	void menuDMPCyclePrimaryThruster();
+	void menuDMPCycleBackupThruster();
+	void menuDMPLandingSite();
 
 	void menuSetMainMenu();
 	void menuSetMCTPage();
@@ -109,6 +119,8 @@ public:
 	void menuSetLWPPage2();
 	void menuSetLWPPage3();
 	void menuSetDOPSPage();
+	void menuSetDMPPage();
+	void menuSetLTPPage();
 	void SetScreen(int s);
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
@@ -129,8 +141,7 @@ public:
 	void set_LWP_DELNO(double delno);
 	void set_LWP_DTOPT(double dtopt);
 	void set_LWP_LS(int ls);
-	void set_LWP_LSLat(double lat);
-	void set_LWP_LSLng(double lng);
+	void set_LWP_LSLatLng(double lat, double lng);
 	void set_LWP_YS(double ys);
 	void set_LWP_PFA(double pfa);
 	void set_LWP_PFT(double pft);
@@ -146,6 +157,7 @@ public:
 	void set_LWP_DTC(double dt);
 	void set_LWP_PHASEFLAG(int flag);
 	void set_LWP_WRAPFLAG(int flag);
+	void set_LTPLiftoffTime(double gmt);
 
 	void MET2String(char *buf, double MET);
 	void MET2String2(char *buf, double MET);
@@ -153,6 +165,7 @@ public:
 	void GMT2String(char *buf, double GMT);
 	void GMT2String2(char *buf, double GMT);
 	void LWPGMT2String(char *buf, double GMT);
+	void LTPGMT2String(char *buf, double GMT);
 	double DDDHHHMMSS2MET(int dd, int hh, int mm, double ss);
 	void SS2HHMMSS(double val, double &hh, double &mm, double &ss);
 	void SS2MMSS(double val, double &mm, double &ss);
@@ -171,6 +184,7 @@ protected:
 	void GenericIntInput(int *val, char* message);
 	void GenericMETInput(double *get, char *message);
 	void GenericDoubleInput(double *val, char* message, double factor = 1.0);
+	void GenericStringInput(std::string *val, char* message);
 
 	oapi::Font *font;
 	oapi::Font *font2;
