@@ -191,7 +191,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	LWP_Settings.NS = 0;
 	LWP_Settings.TSTART = -5.0*60.0;
 	LWP_Settings.TEND = 5.0*60.0;
-	LWP_Settings.DTOPT = -(5.0*60.0 + 23.0);//-(5.0*60.0 + 40.0);
+	LWP_Settings.DTOPT = -(5.0*60.0 + 40.0);
 	LWP_Settings.WRAP = 0;
 	LWP_Settings.NEGTIV = 0;
 	LWP_Settings.GAMINS = 0.6*RAD;
@@ -204,12 +204,12 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	LWP_Settings.YSMAX = 14.0*RAD;
 	LWP_Settings.DELNO = 0.0;
 	LWP_Settings.CWHT = 251679.0*LBM2KG;
-	LWP_Settings.OMS1.DTIG = 1.0*60.0 + 54.0;
+	LWP_Settings.OMS1.DTIG = 2.0*60.0;
 	LWP_Settings.OMS1.HTGT = 120.0*1852.0;
 	LWP_Settings.OMS1.THETA = 133.0*RAD;
 	LWP_Settings.OMS1.C1 = 0.0;
 	LWP_Settings.OMS1.C2 = 0.0;
-	LWP_Settings.OMS2.DTIG = 29.0*60.0 + 12.0;
+	LWP_Settings.OMS2.DTIG = 29.0*60.0 + 18.0;
 	LWP_Settings.OMS2.HTGT = 111.0*1852.0;
 	LWP_Settings.OMS2.THETA = 315.0*RAD;
 	LWP_Settings.OMS2.C1 = 0.0;
@@ -1705,12 +1705,16 @@ void ShuttleFDOCore::CalcLTP()
 void ShuttleFDOCore::ExportLTP()
 {
 	VECTOR3 IYD;
-	double TLOREF;
+	double T_GMTLO_REF;
 
-	TLOREF = LTP_Output.GMTLO + launchdate[1] * 24.0*3600.0;
+	T_GMTLO_REF = LTP_Output.GMTLO + launchdate[1] * 24.0*3600.0;
 	IYD = TEG2M50(LTP_Output.IY_MECO);
 
-	//TBD
+	//LAUNCH TARGETING LOAD
+	//T_GMTLO_REF, IY_MIN_EF, IYD, IYD_NOM, DELTA_PSI, DELTA_NODE_PHASE, T_GMTLO_PHASE
+
+	//LAUNCH TARGETING LOAD OMS TGT
+	//IYD_OMS1, IYD_OMS2, DTIG_OMS1, HTGT_OMS1, THETA_OMS1, C1_OMS1, C2_OMS1, DTIG_OMS2, HTGT_OMS2, THETA_OMS2, C1_OMS2, C2_OMS2
 }
 
 int ShuttleFDOCore::subThread()
@@ -2104,14 +2108,14 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.PEG4_THETAT = 0.0;
 
 	Rot = OrbMech::LVLH_Matrix(input.sv_tig.R, input.sv_tig.V);
-	DV_LVLH = mul(Rot, input.DV_iner)*MPS2FPS;
+	DV_LVLH = mul(Rot, input.DV_iner) / FPS2MPS;
 
 	// Round this, so that it agrees with the input for the Shuttle computer
 	DV_LVLH.x = round(DV_LVLH.x*10.0) / 10.0;
 	DV_LVLH.y = round(DV_LVLH.y*10.0) / 10.0;
 	DV_LVLH.z = round(DV_LVLH.z*10.0) / 10.0;
 	//Actual inertial DV vector
-	DV_iner_act = tmul(Rot, DV_LVLH) / MPS2FPS;
+	DV_iner_act = tmul(Rot, DV_LVLH) * FPS2MPS;
 
 	DMT.PEG7_DV = DV_LVLH;
 
@@ -2161,7 +2165,7 @@ void ShuttleFDOCore::CalcDMT()
 	}
 
 	DMT.BURN_ATT = Att * DEG;
-	DMT.DVTOT = DMT.DV_M = length(DV_iner_act)*MPS2FPS;
+	DMT.DVTOT = DMT.DV_M = length(DV_iner_act) / FPS2MPS;
 
 	GetThrusterData(input.thrusters, F, isp);
 	DMT.TGO = isp / F * input.sv_tig.mass*(1.0 - exp(-length(DV_iner_act) / isp));

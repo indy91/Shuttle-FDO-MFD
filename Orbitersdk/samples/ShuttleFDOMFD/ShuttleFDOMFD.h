@@ -95,6 +95,14 @@ public:
 	void menuLWPSetPHASEFLAG();
 	void menuLWPSetWRAPFLAG();
 	void menuSetLTPLaunchTime();
+	void menuSetLW_OMS1_DTIG();
+	void menuSetLW_OMS2_DTIG();
+	void menuSetLWOMS1_C1_C2();
+	void menuSetLWOMS2_C1_C2();
+	void menuSetLW_OMS1_HT();
+	void menuSetLW_OMS2_HT();
+	void menuSetLW_OMS1_Theta();
+	void menuSetLW_OMS2_Theta();
 
 	void menuCalcDeorbitOpportunities();
 	void menuDOPSSetGETS();
@@ -121,6 +129,7 @@ public:
 	void menuSetDOPSPage();
 	void menuSetDMPPage();
 	void menuSetLTPPage();
+	void menuLWPOMSTargetSetsPage();
 	void SetScreen(int s);
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
@@ -146,7 +155,7 @@ public:
 	void set_LWP_PFA(double pfa);
 	void set_LWP_PFT(double pft);
 	void set_LWP_FPA(double fpa);
-	void set_LWP_RAD(double rad);
+	void set_LWP_RAD(double alt);
 	void set_LWP_VEL(double vel);
 	void set_LWP_DTETSEP(double dt);
 	void set_LWP_DVETSEP(VECTOR3 DV);
@@ -158,6 +167,7 @@ public:
 	void set_LWP_PHASEFLAG(int flag);
 	void set_LWP_WRAPFLAG(int flag);
 	void set_LTPLiftoffTime(double gmt);
+	void set_LWP_OMS_C1_C2(bool OMS1, double C1, double C2);
 
 	void MET2String(char *buf, double MET);
 	void MET2String2(char *buf, double MET);
