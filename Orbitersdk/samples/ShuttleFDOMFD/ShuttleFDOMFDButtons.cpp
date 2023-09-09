@@ -34,7 +34,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Detailed Maneuver Table" , 0, 'D' },
 
 		{ "Deorb Opport", 0, 'B' },
-		{ "", 0, ' ' },//{ "Deorb Plan", 0, 'T' },
+		{ "Deorb Plan", 0, 'T' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -51,7 +51,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
 
 	RegisterFunction("DOP", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDOPSPage);
-	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid); //RegisterFunction("DMP", OAPI_KEY_T, &ShuttleFDOMFD::menuSetDMPPage);
+	RegisterFunction("DMP", OAPI_KEY_T, &ShuttleFDOMFD::menuSetDMPPage);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
@@ -369,12 +369,12 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	{
 		{ "Fixed or free TIG", 0, 'F' },
 		{ "Input TIG or threshold", 0, 'T' },
+		{ "Propellant to be wasted", 0, 'A' },
 		{ "Primary thruster", 0, 'P' },
 		{ "Backup thruster", 0, 'B' },
 		{ "Landing site", 0, 'L' },
-		{ "", 0, ' ' },
 
-		{ "Calculate", 0, 'C' },
+		{ "To solution page", 0, 'C' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -386,12 +386,12 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("ITI", OAPI_KEY_F, &ShuttleFDOMFD::menuDMPCycleTIGOption);
 	RegisterFunction("TIG", OAPI_KEY_S, &ShuttleFDOMFD::menuDMPInputTIG);
+	RegisterFunction("WAS", OAPI_KEY_A, &ShuttleFDOMFD::menuDMPInputPropellantWaste);
 	RegisterFunction("TPR", OAPI_KEY_P, &ShuttleFDOMFD::menuDMPCyclePrimaryThruster);
 	RegisterFunction("TBU", OAPI_KEY_T, &ShuttleFDOMFD::menuDMPCycleBackupThruster);
 	RegisterFunction("SIT", OAPI_KEY_L, &ShuttleFDOMFD::menuDMPLandingSite);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 
-	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcDMP);
+	RegisterFunction("DTS", OAPI_KEY_C, &ShuttleFDOMFD::menuSetDMPSolutionPage);
 	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
@@ -465,6 +465,40 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("HT", OAPI_KEY_G, &ShuttleFDOMFD::menuSetLW_OMS2_HT);
 	RegisterFunction("THT", OAPI_KEY_H, &ShuttleFDOMFD::menuSetLW_OMS2_Theta);
 	RegisterFunction("NXT", OAPI_KEY_N, &ShuttleFDOMFD::menuSetLWPPage3);
+
+
+	static const MFDBUTTONMENU mnu13[] =
+	{
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Calculate", 0, 'C' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu13, sizeof(mnu13) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_P, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalcDMP);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDMPPage);
 }
 
 bool ShuttleFDOMFDButtons::SearchForKeysInOtherPages() const

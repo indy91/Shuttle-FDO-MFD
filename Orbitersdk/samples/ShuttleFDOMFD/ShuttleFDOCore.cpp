@@ -222,7 +222,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DOPS_InitialRev = 1;
 	DOPS_MaxXRNG = 800.0;
 
-	DMPLandingSite = "EDW";
+	DMPLandingSite = "EDW22";
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -1776,7 +1776,7 @@ int ShuttleFDOCore::subThread()
 		LandingOpportunitiesProcessor lop;
 		LOPTInput opt;
 
-		ReadLandingSiteData(opt.sites);
+		ReadDOPSLandingSiteData(opt.sites);
 
 		if (opt.sites.size() > 0)
 		{
@@ -1798,8 +1798,17 @@ int ShuttleFDOCore::subThread()
 	{
 		DMPOptions opt2 = DMPOpt;
 
-		opt2.TIG += LaunchGMT;
-		opt2.TTHRSH += LaunchGMT;
+		if (opt2.ITIGFR == 0)
+		{
+			opt2.TIG += LaunchGMT;
+			opt2.TTHRSH = 0.0;
+		}
+		else
+		{
+			opt2.TIG = 0.0;
+			opt2.TTHRSH += LaunchGMT;
+		}
+
 		opt2.INTEGF = useNonSphericalGravity;
 
 		SV sv = StateVectorCalc(vessel);
@@ -1812,8 +1821,8 @@ int ShuttleFDOCore::subThread()
 		opt2.AREA = 0.0;
 		opt2.WT = sv.mass;
 
-		std::vector<LOPTSite> sites;
-		ReadLandingSiteData(sites);
+		std::vector<DMPSite> sites;
+		ReadDMPLandingSiteData(sites);
 
 		bool found = false;
 		unsigned i;
@@ -1825,16 +1834,72 @@ int ShuttleFDOCore::subThread()
 				break;
 			}
 		}
-		if (!found) return(0);
+		if (!found)
+		{
+			DMPRes.ErrorMessage = "DTM: Landing site not in table (Error)";
+			Result = 0;
+			break;
+		}
 
-		opt2.TLATD = sites[i].lat;
-		opt2.TLONG = sites[i].lng;
-		opt2.TALTD = 0.0;
-		opt2.RAZ = 0.0;
+		opt2.TLATD = sites[i].Lat;
+		opt2.TLONG = sites[i].Lng;
+		opt2.TALTD = sites[i].Alt;
+		opt2.RAZ = sites[i].Azi;
+
+		if (opt2.WCGOMS != 0.0)
+		{
+			opt2.IFUEL = 1;
+		}
+		else
+		{
+			opt2.IFUEL = 2;
+		}
+		opt2.IPOUT = 0; //Debug option
 
 		DMP dmp;
 
-		dmp.Executive(opt2);
+		dmp.Executive(opt2, DMPRes);
+
+		if (DMPRes.ErrorCode == 0)
+		{
+			DMPRes.Site = DMPLandingSite;
+			DMPRes.TIG -= LaunchGMT;
+
+			//Calculate MM304 attitude
+			SV sv_MM304;
+			MATRIX3 Rot;
+			VECTOR3 R, V;
+			
+			sv_MM304 = coast_auto(DMPRes.sv_EI, -5.0*60.0);
+			R = TEG2M50(sv_MM304.R);
+			V = TEG2M50(sv_MM304.V);
+
+			Rot = _M(cos(40.0*RAD), 0.0, sin(40.0*RAD), 0.0, 1.0, 0.0, -sin(40.0*RAD), 0.0, cos(40.0*RAD));
+
+			VECTOR3 z_unit = -unit(R);
+			VECTOR3 y_unit = unit(crossp(V, R));
+			VECTOR3 x_unit = unit(crossp(y_unit, z_unit));
+
+			MATRIX3 Rot2 = _M(x_unit.x, x_unit.y, x_unit.z,
+				y_unit.x, y_unit.y, y_unit.z,
+				z_unit.x, z_unit.y, z_unit.z);
+
+			MATRIX3 LVLHMatrix = tmat(Rot2);
+			MATRIX3 M50Matrix = mul(LVLHMatrix, Rot);
+
+			DMPRes.EIminus5Att.x = atan2(-M50Matrix.m32, M50Matrix.m22);
+			DMPRes.EIminus5Att.y = atan2(-M50Matrix.m31, M50Matrix.m11);
+			DMPRes.EIminus5Att.z = asin(M50Matrix.m21);
+
+			for (int i = 0; i < 3; i++)
+			{
+				if (DMPRes.EIminus5Att.data[i] < 0.0)
+				{
+					DMPRes.EIminus5Att.data[i] += PI2;
+				}
+			}
+			DMPRes.EIminus5Att *= DEG;
+		}
 	}
 	break;
 	case 5: //Launch Targeting Processor
@@ -1904,12 +1969,12 @@ int ShuttleFDOCore::startSubthread(int fcn) {
 	return(0);
 }
 
-void ShuttleFDOCore::ReadLandingSiteData(std::vector<LOPTSite> &sites) const
+void ShuttleFDOCore::ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites) const
 {
 	sites.clear();
 
 	std::ifstream myfile;
-	myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\LandingSites.txt");
+	myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\DOPSLandingSites.txt");
 	if (myfile.is_open())
 	{
 		char Buffer[128];
@@ -1923,6 +1988,32 @@ void ShuttleFDOCore::ReadLandingSiteData(std::vector<LOPTSite> &sites) const
 				temp.name.assign(Buffer);
 				temp.lat *= RAD;
 				temp.lng *= RAD;
+				sites.push_back(temp);
+			}
+		}
+	}
+}
+
+void ShuttleFDOCore::ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const
+{
+	sites.clear();
+
+	std::ifstream myfile;
+	myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\LandingSites.txt");
+	if (myfile.is_open())
+	{
+		char Buffer[128];
+		DMPSite temp;
+
+		std::string line;
+		while (std::getline(myfile, line))
+		{
+			if (sscanf(line.c_str(), "%s %lf %lf %lf %lf", Buffer, &temp.Lat, &temp.Lng, &temp.Alt, &temp.Azi) == 5)
+			{
+				temp.name.assign(Buffer);
+				temp.Lat *= RAD;
+				temp.Lng *= RAD;
+				temp.Azi *= RAD;
 				sites.push_back(temp);
 			}
 		}

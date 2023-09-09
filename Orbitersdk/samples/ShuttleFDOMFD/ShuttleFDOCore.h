@@ -33,9 +33,6 @@ const double OMS_THRUST = 26700.0;
 const double OMS_ISP0 = 316 * 9.80665;
 const double RCS_THRUST = 7740.0;
 const double RCS_ISP0 = OMS_ISP0;
-const double LBM2KG = 0.45359237;
-const double FPS2MPS = 0.3048;		//Feet to meters
-const double NM2M = 1852.0;			//Nautical miles to meters
 const unsigned MAXSECONDARIES = 4;
 
 class OMPDefs
@@ -288,6 +285,7 @@ public:
 
 	//Deorbit Maneuver Planning
 	DMPOptions DMPOpt;
+	DMPResults DMPRes;
 	std::string DMPLandingSite;
 
 	OBJHANDLE hEarth;
@@ -296,7 +294,8 @@ protected:
 	int CalculateOMPPlan();
 	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
-	void ReadLandingSiteData(std::vector<LOPTSite> &sites) const;
+	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites) const;
+	void ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
 

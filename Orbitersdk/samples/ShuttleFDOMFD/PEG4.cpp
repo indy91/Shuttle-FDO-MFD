@@ -19,18 +19,21 @@
   **************************************************************************/
 
 #include "PEG4.h"
+#include "OrbMech.h"
 
 PEG4::PEG4()
 {
-
+	SFUELD = 0.0;
+	VGIP = _V(0, 0, 0);
 }
 
-bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_TEG, double C1, double C2, double HTGT, double THETA, double FT, double VEX, double M)
+bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_TEG, double C1, double C2, double HTGT, double THETA, double FT, double VEX, double M, bool ops1)
 {
+	//RLS_TEG: Launch site position vector in TEG coordinates
+
 	this->RGD = RGD;
 	this->VGD = VGD;
 	this->TGD = TGD;
-	this->RLS_TEG = RLS_TEG;
 	this->C1 = C1;
 	this->C2 = C2;
 	this->HTGT = HTGT;
@@ -39,7 +42,33 @@ bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_T
 	this->VEX = VEX;
 	this->M = M;
 
-	RT = HTHETA_M50_TGT_TSK();
+	if (ops1)
+	{
+		RT = HTHETA_M50_TGT_TSK(RLS_TEG);
+	}
+	else
+	{
+		VECTOR3 IR, IYO, IDR, IRT;
+		double RTMAG;
+
+		IR = unit(RGD);
+		IYO = unit(crossp(VGD, IR));
+		IDR = crossp(IR, IYO);
+		IRT = IR * cos(THETA) + IDR * sin(THETA);
+		RTMAG = 6.37101e6 + HTGT;
+		RT = IRT * RTMAG;
+
+		//Burnout mass
+		if (RLS_TEG.x)
+		{
+			MBO = M - abs(RLS_TEG.x);
+			SFUELD = OrbMech::sign(RLS_TEG.x);
+		}
+		else
+		{
+			SFUELD = 0.0;
+		}
+	}
 
 	RP = RGD;
 	VP = VGD;
@@ -53,6 +82,7 @@ bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_T
 
 	//Init
 	if (VelocityToBeGainedSubtask()) return true;
+	if (ops1 == false) VelocityToBeGainedFuelDepletionSubtask();
 
 	ATR = FT / M;
 
@@ -64,7 +94,16 @@ bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_T
 		ReferenceThrustVectorsSubtask();
 		BurnoutStateVectorPredictionSubtask();
 		if (VelocityToBeGainedSubtask()) return true;
+		if (ops1 == false) VelocityToBeGainedFuelDepletionSubtask();
 		ConvergenceCheckSubtask();
+	}
+
+	if (ops1 == false)
+	{
+		VECTOR3 R_EI;
+
+		DT = OrbMech::time_theta(RP, VD, this->THETA, EARTH_MU, true);
+		OrbMech::rv_from_r0v0(RP, VD, DT, R_EI, V_EI, EARTH_MU);
 	}
 
 	VECTOR3 RJ2, VJ2, RC3, VC3;
@@ -74,10 +113,11 @@ bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_T
 	RP = RP + RJ2;
 	VD = VD + VJ2;
 	MBO = M - FT / VEX * TGO;
+
 	return false;
 }
 
-void PEG4::GetOutput(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO)
+void PEG4::GetOutputA(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO)
 {
 	RP = this->RP;
 	VD = this->VD;
@@ -86,7 +126,23 @@ void PEG4::GetOutput(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double
 	MBO = this->MBO;
 }
 
-VECTOR3 PEG4::HTHETA_M50_TGT_TSK()
+void PEG4::GetOutputD(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO, double &DT, VECTOR3 &REI, VECTOR3 &VEI, double &FWYAW, VECTOR3 &VMISS)
+{
+	RP = this->RP;
+	VD = this->VD;
+	VGO = this->VGO;
+	TGO = this->TGO;
+	MBO = this->MBO;
+	DT = this->DT;
+	REI = this->RT;
+	VEI = this->V_EI;
+	VMISS = this->VMISS;
+
+	double TEMP = length(VGIP) / length(VGO);
+	FWYAW = acos(TEMP);
+}
+
+VECTOR3 PEG4::HTHETA_M50_TGT_TSK(VECTOR3 RLS_TEG)
 {
 	VECTOR3 IDR, IR, IRT, RT;
 	double THETA_LS, DTHETA, RTMAG;
@@ -117,6 +173,30 @@ bool PEG4::VelocityToBeGainedSubtask()
 	VMISS = VP - VD;
 	VGO = VGO - VMISS * RHOMAG;
 	return false;
+}
+
+void PEG4::VelocityToBeGainedFuelDepletionSubtask()
+{
+	double VGOD, VGOYS;
+
+	VGIP = VGO - IY * dotp(VGO, IY);
+	VGO = VGIP;
+	if (SFUELD)
+	{
+		if (M <= MBO)
+		{
+			VGOD = 0.0;
+		}
+		else
+		{
+			VGOD = VEX * log(M / MBO);
+		}
+		VGOYS = VGOD * VGOD - dotp(VGIP, VGIP);
+		if (VGOYS > 0.0)
+		{
+			VGO = VGIP - IY * SFUELD*sqrt(VGOYS);
+		}
+	}
 }
 
 void PEG4::TimeToGoSubtask()

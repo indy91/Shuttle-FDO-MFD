@@ -35,6 +35,10 @@ namespace OrbMech
 	const double J4_Earth = -1.60e-6;
 	const double w_Earth = PI2 / 86164.10132;
 
+	const double LBM2KG = 0.45359237;
+	const double FPS2MPS = 0.3048;		//Feet to meters
+	const double NM2M = 1852.0;			//Nautical miles to meters
+
 	struct SV
 	{
 		VECTOR3 R = _V(0, 0, 0);

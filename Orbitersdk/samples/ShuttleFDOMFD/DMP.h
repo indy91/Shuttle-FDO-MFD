@@ -21,6 +21,16 @@
 #pragma once
 
 #include "Orbitersdk.h"
+#include "OrbMech.h"
+
+struct DMPSite //Runway threshold
+{
+	std::string name;
+	double Lat = 0.0;
+	double Lng = 0.0;
+	double Alt = 0.0;
+	double Azi = 0.0;
+};
 
 struct DMPOptions
 {
@@ -79,17 +89,50 @@ struct DMPOptions
 	double XMDRCS = 13.623*0.45359237;
 };
 
+struct DMPResults
+{
+	int ErrorCode = 0;
+	std::string ErrorMessage;
+
+	std::string Site;
+
+	//PEG4 targets
+	double TIG = 0.0;
+	double C1 = 0.0;
+	double C2 = 0.0;
+	double THETEI = 0.0;
+	double EIALT = 0.0;
+	double WCG = 0.0;
+
+	double DVPR = 0.0;
+
+	double VEI = 0.0;
+	double cEI = 0.0;
+	double REI = 0.0;
+	std::string XR = "L0";
+
+	double OOP = 0.0;
+	double TFF = 0.0;
+	double HP = 0.0;
+
+	VECTOR3 VGO = _V(0, 0, 0); //LVLH components of velocity to be gained vector at ignition time
+	double DW = 0.0; //Propellant expended, lbs
+	VECTOR3 EIminus5Att = _V(0, 0, 0);
+
+	OrbMech::SV sv_EI;
+};
+
 class DMP
 {
 public:
 	DMP();
 
-	void Executive(const DMPOptions &opt);
+	void Executive(const DMPOptions &opt, DMPResults &res);
 protected:
 	//DTM2 executive routine (TIG free)
-	void DTM2();
+	void DTM2(DMPResults &res);
 	//DTM4 executive routine (TIG fixed)
-	void DTM3();
+	void DTM3(DMPResults &res);
 	//DTM4 executive routine (impulsive minimum DV solution)
 	void DTM4();
 	//DTM5 executive routine (basic targeting)
@@ -100,6 +143,9 @@ protected:
 	void DTM7();
 	//DTM8 executive routine (equal OMS)
 	void DTM8();
+	//DTM9 executive routine (increase backup system freefall time)
+	void DTM9();
+
 	//DTM14 executive routine (offset targeting)
 	void DTM14();
 
@@ -123,7 +169,7 @@ protected:
 
 	//Segment 6
 	//Error messages
-	void DTMER();
+	void DTMER(DMPResults &res);
 
 	//Segment 7
 	//Propagate state vector to ignition time or to entry interface
@@ -146,15 +192,15 @@ protected:
 
 	//PEG
 	void DTT12();
-	void PGSUP();
-	void H2M50(double THETA, double &DTHETA, VECTOR3 &RT);
-	void PGOP3();
-	void INI1();
-	void PRDT6();
-	void CORT7();
-	void LTVCN2(double C1, double C2, VECTOR3 R0, VECTOR3 R1, VECTOR3 XNUNIT, double &THETA, int &KFLAG, VECTOR3 &V0);
-	double HELIP(VECTOR3 R);
-	void SUPRG(double DT, VECTOR3 DVS, double J2FLAG, VECTOR3 &RF, double TF, double TI, VECTOR3 &VF);
+	//void PGSUP();
+	//void H2M50(double THETA, double &DTHETA, VECTOR3 &RT);
+	//void PGOP3();
+	//void INI1();
+	//void PRDT6();
+	//void CORT7();
+	//void LTVCN2(double C1, double C2, VECTOR3 R0, VECTOR3 R1, VECTOR3 XNUNIT, double &THETA, int &KFLAG, VECTOR3 &V0);
+	//double HELIP(VECTOR3 R);
+	//void SUPRG(double DT, VECTOR3 DVS, double J2FLAG, VECTOR3 &RF, double TF, double TI, VECTOR3 &VF);
 
 	//Segment 13
 	//Entry range
@@ -171,7 +217,7 @@ protected:
 	MATRIX3 EF2MF(double TIME);
 	//Earth-fixed to geodetic
 	void EF2GD(VECTOR3 R, double &GLAT, double &XLON, double &XALT);
-	void EGTR();
+	void EGRT();
 
 	//Segment 14
 	//Entry range
@@ -185,6 +231,8 @@ protected:
 	void DTT16();
 	//End task for DTM5
 	void DTT17();
+	//Free-fall time constraint iteration
+	void DTT18();
 	//Advance TIG by one period
 	void DTT21();
 	//Initialization routine offset targeting
@@ -192,22 +240,23 @@ protected:
 	//Correction factor offset target
 	void DTT23();
 	//State extrapolation with J2
-	void SUPRJ();
+	//void SUPRJ();
 	//Gravity routine
 	VECTOR3 GRAVJ(VECTOR3 RF, double J2);
 	//Crossrange
 	void DTT24();
 	//Output
-	void DTMOT();
+	void DTMOT(DMPResults &res);
 	//User display
-	void DTMPR();
+	void DTMPR(DMPResults &res);
 
 	DMPOptions opt;
+	char DebugBuffer[256];
 
 	//Flags
 
 	//Abort selection flag, always 0
-	bool IAME;
+	int IAME;
 	//Range adjustment pass flag (false = not first pass, true = first pass)
 	bool IBTR;
 	//ETG call select flag (false = no ETG call, true = call ETG)
@@ -363,8 +412,6 @@ protected:
 	double TIG1;
 	//Primary and backup systems weight of propellant expended
 	double DWPR, DWBU;
-	//Backup system free fall time
-	double TFFBV;
 	//Burnout weight
 	double WBO;
 	//Required entry flight path angle
@@ -380,7 +427,7 @@ protected:
 	//Burn DT
 	double TGO;
 	//Step size for gravity prediction
-	double DTAVG;
+	//double DTAVG;
 	//Geocentric latitude
 	double TLATC;
 	//Time of closest approach
@@ -402,7 +449,7 @@ protected:
 	//Engine configuration flag in PEG (1 = RCS, 14 = one OMS, 16 = two OMS)
 	int KDTHR;
 	//PEG TIG state initialization flag ICOM(794)
-	bool KITER = true;
+	//bool KITER = true;
 
 	//Backup system deorbit Delta-V. COM(111)
 	double DVBU;
@@ -428,7 +475,10 @@ protected:
 	double VGIMP;
 	//Magnitude of VG from PEG COM(557)
 	double VGMAG;
+	//LVLH DV component COM(561-563)
+	VECTOR3 VGO;
 
+	/*
 	//PEG COMMON
 
 	//Estimated thrust acceleration. PEGCOM(4)
@@ -458,7 +508,7 @@ protected:
 	//Saved value of total effective exhaust velocity PEGCOM(33)
 	double VEXS;
 	//Inertial velocity to be gained PEGCOM(37)
-	VECTOR3 VGDP;
+	VECTOR3 VGOP;
 	//Predicted thrust cutoff velocity PEGCOM(40)
 	VECTOR3 VP;
 	//Previous pass sensed velocity PEGCOM(43)
@@ -519,6 +569,7 @@ protected:
 	double TPREV;
 	//Predicted cutoff velocity from precise predict. PO3COM(21)
 	VECTOR3 VC2;
+	*/
 
 	//Constants
 	//Distance from runway to TAEM alinement circle
@@ -528,7 +579,8 @@ protected:
 
 	//Range convergence tolerance (0.0167°)
 	const double RNGTOL = 0.00029147;
-
+	//Tolerance used for increasing free fall time
+	const double TFFTOL = 10.0;
 	//Initial value of TIG adjustment
 	const double DTIGO = 100.0;
 	//Maximum value of TIG adjustment
@@ -536,7 +588,8 @@ protected:
 
 	//Weight tolerance on equal OMS check
 	const double DWTOL = 25.0*0.45359237;
-
+	//Tolerance on equal yaw angle check (1°)
+	const double DSITOL = 0.01745329;
 	//Tolerance on gamma convergence (0.01°)
 	const double GAMTOL = 0.0001745329;
 
@@ -562,6 +615,8 @@ protected:
 	const double DTMINN = 2.0;
 	//GOLPAR constant
 	const double GGOL = 0.381966;
+	//OMS propellant tolerance
+	const double WBIAS = 192.38*0.45359237;
 	//Initial theta EI for TIG fixed mode (73°)
 	const double THEIIP = 1.27409;
 
@@ -573,7 +628,8 @@ protected:
 	const double DTCR0 = 10.0;
 	//Minimum denominator in equal OMS logic
 	const double TGDOMS = 1.0;
-
+	//Minimum denominator in equal out-of-plane angle logic (0.1 deg)
+	const double TGDSI = 0.001745329;
 	//Bias time for minimum DV TIG free solution
 	const double TTHRB = 60.0;
 	//Initial slope for equal OMS prediction
@@ -586,16 +642,23 @@ protected:
 	const VECTOR3 POLE = _V(0, 0, 1);
 	const MATRIX3 TM502I = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
-	const double FVECON_VEL[5] = { 25600.0*0.3048, 25700.0*0.3048, 25727.87*0.3048, 25800.0*0.3048, 25900.0*0.3048 };
-	const double FVECON_FPA[5] = { -0.01782556, -0.02034792, -0.02096274, -0.02253098, -0.02447867 };
-	const double FVECON_RNGG[5] = { 24926650.0*0.3048, 24847060.0*0.3048, 24864070.0*0.3048, 24873190.0*0.3048, 24984800.0*0.3048 };
+	//From FDS document
+	//const double FVECON_VEL[5] = { 25600.0*0.3048, 25700.0*0.3048, 25727.87*0.3048, 25800.0*0.3048, 25900.0*0.3048 };
+	//const double FVECON_FPA[5] = { -0.01782556, -0.02034792, -0.02096274, -0.02253098, -0.02447867 };
+	//const double FVECON_RNGG[5] = { 24926650.0*0.3048, 24847060.0*0.3048, 24864070.0*0.3048, 24873190.0*0.3048, 24984800.0*0.3048 }; //FDS
+	//const int FVECON_LENGTH = 5;
+
+	const double FVECON_VEL[3] = { 25200.0*0.3048, 25729.0*0.3048, 26415.0*0.3048 }; //Simple curve fit for steep target line 
+	const double FVECON_FPA[3] = { -0.4*RAD, -1.19*RAD, -2.05*RAD }; //Simple curve fit for steep target line 
+	const double FVECON_RNGG[3] = { 4400.0*1852.0, 26479710.0*0.3048, 4400.0*1852.0 }; //Based on STS-1 figure
+	const int FVECON_LENGTH = 3;
 
 	//Global constants
 	const double POLRAD = 6.37101e6;
 	const double EQRAD = 6.37101e6;
 	const double EIALT = 400000.0*0.3048;
 	const double XMU = 398600439968871.2;
-	const double ELLIPT = 1.0;
+	const double ELLIPT = 0.0;
 	const double EARTHR = PI2 / 86164.10132;
 	const double XJ2 = 1082.6269e-6;
 	const double AMILE = 1852.0;

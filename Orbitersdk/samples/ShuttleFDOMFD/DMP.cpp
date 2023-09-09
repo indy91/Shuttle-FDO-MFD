@@ -19,14 +19,14 @@
   **************************************************************************/
 
 #include "DMP.h"
-#include "OrbMech.h"
+#include "PEG4.h"
 
 DMP::DMP()
 {
 
 }
 
-void DMP::Executive(const DMPOptions &opt)
+void DMP::Executive(const DMPOptions &opt, DMPResults &res)
 {
 	this->opt = opt;
 
@@ -39,6 +39,7 @@ DMP_DTM_1:
 		this->opt.ITIGFR = 0;
 	}
 	//Initialization and units conversion task
+	res.ErrorMessage = "";
 	DTT1();
 	if (IMSG > 0)
 	{
@@ -47,12 +48,12 @@ DMP_DTM_1:
 	if (this->opt.ITIGFR == 1)
 	{
 		//Compute a TIG free solution
-		DTM2();
+		DTM2(res);
 	}
 	else
 	{
 		//Compute a TIG fixed solution
-		DTM3();
+		DTM3(res);
 	}
 	if (IMSG > 0) goto DMP_DTM_4;
 DMP_DTM_2:
@@ -76,10 +77,11 @@ DMP_DTM_2:
 		this->opt.ITIGFR = 1;
 	}
 	//Compute LVLH components of primary system DV
+	VGO = mul(OrbMech::LVLH_Matrix(RAAA, VA), VG);
 	//Build position/velocity phase tables and summary table
-	DTMOT();
+	DTMOT(res);
 	//Print primary solution output display
-	DTMPR();
+	DTMPR(res);
 	//PEG guidance used to compute backup solution
 	DTT12();
 	if (IMSG > 6)
@@ -88,7 +90,7 @@ DMP_DTM_2:
 		goto DMP_DTM_4;
 	}
 	//Add J2 effects to the R and V vector
-	SUPRJ();
+	//SUPRJ();
 	//Integrate precise burnout state to EI
 	DTT7();
 	//Compute crossrange
@@ -97,7 +99,7 @@ DMP_DTM_2:
 	DTT13();
 DMP_DTM_4:
 	//Write error message condition detected
-	DTMER();
+	DTMER(res);
 	if (IMSG == 0 || IMSG == 4 || IMSG == 5)
 	{
 		//No fatal error
@@ -109,12 +111,12 @@ DMP_DTM_4:
 	}
 }
 
-void DMP::DTM2()
+void DMP::DTM2(DMPResults &res)
 {
 	//Compute an in-plane minimum DV solution
 	DTM4();
 	//Check for errors and print user message
-	DTMER();
+	DTMER(res);
 	if (IMSG != 0) return;
 	//Compute crossrange and time of closest approach
 	DTT24();
@@ -123,8 +125,8 @@ void DMP::DTM2()
 DMP_DTM2_1:
 	//Increment TIG by orbit period
 	DTT21();
-	//CHeck for error condition and print user message
-	DTMER();
+	//Check for error condition and print user message
+	DTMER(res);
 	//Search next rev if minimum DV TIG is within small bias of TTHRSH
 	if (opt.TIG < opt.TTHRSH + TTHRB)
 	{
@@ -137,7 +139,7 @@ DMP_DTM2_1:
 		//Compute equal yaw solution for input C1, C2 and range
 		DTM6();
 		//Check for error conditions and print user messages
-		DTMER();
+		DTMER(res);
 		if (IMSG == 1) return;
 		//Compute time of closest approach to landing site
 		DTT24();
@@ -148,16 +150,39 @@ DMP_DTM2_1:
 		//Compute equal yaw angle solution using approx. ETG mode
 		DTM6();
 		//Check for error conditions and print user messages
-		DTMER();
+		DTMER(res);
 		if (IMSG == 1) return;
-		//TBD
+		if (abs(DWBU - DWPR) < DWTOL)
+		{
+			if (DTCOST < opt.TFFMIN)
+			{
+				//Backup free-fall time violation
+
+				//Compute solution with new TIG to increase TFF in backup solution
+				DTM9();
+				//Check for error conditions and print user message
+				DTMER(res);
+				if (IMSG == 1 || IMSG == 6) return;
+			}
+		}
+		else
+		{
+			//Use input targets
+			SBD = 0.0;
+			IPRNG = true;
+			//Compute inplane equal OMS solution with input C1,C2 and range
+			DTM8();
+			//Check for error conditions and print user message
+			DTMER(res);
+			if (IMSG == 1)return;
+		}
 	}
 	else
 	{
 		//Compute in-plane equal OMS solution for input C1, C2, range
 		DTM8();
 		//Check for error conditions and print user messages
-		DTMER();
+		DTMER(res);
 		if (IMSG == 1) return;
 	}
 	//Use ETG compute targets
@@ -165,19 +190,54 @@ DMP_DTM2_1:
 	//Compute in-plane equal OMS solution using approx ETG mode
 	DTM8();
 	//Check for error conditions and print user messages
-	DTMER();
+	DTMER(res);
 	if (IMSG == 1) return;
-	if (TFFBV < opt.TFFMIN)
+	if (TFFBU < opt.TFFMIN)
 	{
 		ITFF = 4;
 		IMSG = 5;
 	}
 	if (opt.TIG < opt.TTHRSH) goto DMP_DTM2_1;
+	//Call ETG in precise mode
+	IFINAL = true;
+	ICALL = true;
+	//Prime and backup solutions with precise ETG
+	DTM7();
 }
 
-void DMP::DTM3()
+void DMP::DTM3(DMPResults &res)
 {
-
+	//Compute transfer angle to satisfy input range with impulsive data
+	DTM5();
+	//Check for error conditions and print user message
+	DTMER(res);
+	if (IMSG != 0.0) return;
+	//Compute crossrange and time of closest approach
+	DTT24();
+	//Finite burn with ETG computed range
+	IMPULS = false;
+	IPRNG = false;
+	if (opt.IFUEL == 1)
+	{
+		//Compute out of plane burn direction
+		DTT4();
+	}
+	//Compute prime and backup solutions using approx. ETG mode
+	DTM7();
+	if (TFFBU < opt.TFFMIN)
+	{
+		//Free fall constraint violation
+		ITFF = 4;
+		IMSG = 5;
+	}
+	//Call ETG in precise mode
+	IFINAL = true;
+	ICALL = true;
+	if (IAME != 2)
+	{
+		//Compute prime and backup solutions using precise ETG mode
+		DTM7();
+	}
 }
 
 void DMP::DTM4()
@@ -223,7 +283,7 @@ DTM_DTM5_1:
 	//Compute LVLH coordinates at TIG
 	DTT8();
 DTM_DTM5_2:
-	if (opt.ITIGFR == 0)
+	if (opt.ITIGFR != 1)
 	{
 		NCNT2++;
 		//Compute theta_EI to null the range error
@@ -245,6 +305,13 @@ DTM_DTM5_2:
 	DTT13();
 	//Compute C1, C2, range
 	DTT14();
+
+	if (opt.IPOUT == 2)
+	{
+		sprintf_s(DebugBuffer, "DTM5: NCNT2 %d THETLS %lf THELSD %lf RNGTOL %lf", NCNT2, THETLS, THELSD, RNGTOL);
+		oapiWriteLog(DebugBuffer);
+	}
+
 	if (!(abs(THETLS - THELSD) < RNGTOL || NCNT2 >= NCMAX))
 	{
 		if (opt.ITIGFR == 1)
@@ -270,7 +337,26 @@ DTM_DTM5_2:
 
 void DMP::DTM6()
 {
-
+	IMPULS = false; //Not in the document
+	ITIGG = 0;
+	NCNT = 0;
+	TGSLPP = TGSLPY;
+	TGDMN = TGDSI;
+	do
+	{
+		//Compute TIG for equal yaw angles
+		DTT5();
+		NCNT++;
+		//Compute the prime and backup system solutions
+		DTM7();
+		//Compute yaw angle delta
+		DY2 = PSIBU - PSIPR;
+	} while (abs(DY2) >= DSITOL);
+	if (NCNT >= NCMAX)
+	{
+		MITER = 4;
+		IMSG = 1;
+	}
 }
 
 void DMP::DTM7()
@@ -312,6 +398,33 @@ void DMP::DTM8()
 	}
 }
 
+void DMP::DTM9()
+{
+	NCNT = 0;
+	ITFF = 2;
+	IMSG = 4;
+	while ((TFFBU < opt.TFFMIN || TFFBU > opt.TFFMIN + TFFTOL) && NCNT < NCMAX)
+	{
+		//Compute TIG and THETEI to increase TFF
+		DTT18();
+		NCNT++;
+		//Compute prime and backup solutions
+		DTM7();
+	}
+	if (DWPR > opt.WCGOMS + WBIAS || DWBU > opt.WCGOMS + WBIAS)
+	{
+		//Set free fall constraint flag
+		IMSG = 6;
+		ITFF = 3;
+	}
+	if (NCNT >= NCMAX)
+	{
+		//Set error flags
+		MITER = 6;
+		IMSG = 1;
+	}
+}
+
 void DMP::DTM14()
 {
 	IFFPTM = false;
@@ -331,7 +444,7 @@ void DMP::DTM14()
 		//Burnout state using offset targets
 		DTT12();
 		//Precise burnout state prediction with J2
-		SUPRJ();
+		//SUPRJ();
 		//Integrate the burnout state to entry interface and save the state
 		DTT7();
 		//Compute the vertical velocity offset
@@ -376,7 +489,31 @@ void DMP::DTT3()
 
 void DMP::DTT4()
 {
+	VECTOR3 ULS;
+	double TBURN, THHAFB, LAMDAI, ULSUY, ULSUX;
 
+	//Compute downrange vector at TIG plus the time of one half the burn arc
+	TBURN = opt.WT / WDPR * (1.0 - exp(-DVOBPR * WDPR / (FPR)));
+	THHAFB = TBURN / 2.0*THETD;
+	UXDTM = UXDTM * cos(THHAFB) + UXDTM * sin(THHAFB);
+	//Compute landing site longitude at time of closest approach
+	LAMDAI = opt.TLONG + OrbMech::w_Earth*TC + ERAI;
+	//Compute landing site unit vector at time of closest approach
+	ULS = _V(cos(TLATC)*cos(LAMDAI), cos(TLATC)*sin(LAMDAI), sin(TLATC));
+	//Compute burn direction parameter
+	ULSUY = dotp(ULS, UYDTM);
+	ULSUX = dotp(ULS, UXDTM);
+	SBD = ULSUY * ULSUX;
+	if (abs(SBD) <= 1.0e-7)
+	{
+		SBD = -1.0;
+	}
+	SBD = -OrbMech::sign(SBD);
+	if (opt.IPOUT == 2)
+	{
+		sprintf_s(DebugBuffer, "DTT5: SBD %lf UX %lf %lf %lf ULS %lf %lf %lf TBURN %lf THHAFB %lf", SBD, UXDTM.x, UXDTM.y, UXDTM.z, ULS.x, ULS.y, ULS.z, TBURN, THHAFB);
+		oapiWriteLog(DebugBuffer);
+	}
 }
 
 void DMP::DTT5()
@@ -420,7 +557,7 @@ void DMP::DTT5()
 
 void DMP::DTT1()
 {
-	IAME = false;
+	IAME = 0;
 	IBTR = true;
 	ICALL = true;
 	IFFPTM = true;
@@ -429,14 +566,7 @@ void DMP::DTT1()
 	INCR = false;
 	IMSG = 0;
 	NCNT1 = 0;
-	if (opt.RNGIP == 0.0)
-	{
-		IPRNG = false;
-	}
-	else
-	{
-		IPRNG = true;
-	}
+	IPRNG = true;
 	SBD = 0.0;
 	KDSTER = false;
 	CA[0] = opt.C1IP;
@@ -455,11 +585,11 @@ void DMP::DTT1()
 	{
 		opt.TIG = opt.TTHRSH;
 	}
-	if (opt.KDGUID == 6)
-	{
-		KDSTER = true;
-		opt.KDGUID = 3;
-	}
+	//if (opt.KDGUID == 6)
+	//{
+	//	KDSTER = true;
+	//	opt.KDGUID = 3;
+	//}
 
 	double F, WD;
 	int KOMS, KRCS;
@@ -518,16 +648,27 @@ void DMP::DTT1()
 	//Compute the geocentric landing site location
 	GEOD(opt.TALTD, opt.TLATD, RCHMAG, TLATC);
 
-	//Check if C2 is zero
+	//Check if input C2 is zero
 	if (CA[1] == 0.0)
 	{
 		IC2FLG = true;
-		UpdateC1C2(25727.87*0.3048, CA[0], CA[1]);
+		UpdateC1C2(25601.0*0.3048, CA[0], CA[1]);
+		//Also set as input
+		opt.C1IP = CA[0];
+		opt.C2IP = CA[1];
 	}
 	else
 	{
 		IC2FLG = false;
 	}
+	//Check if input range is zero
+	if (opt.RNGIP == 0.0)
+	{
+		FVE(25601.0*0.3048, THELSD, GAMETG);
+		opt.RNGIP = THELSD * RCHMAG;
+	}
+
+	//TBD: Dump all variables in COM and ICOM
 }
 
 void DMP::GEOD(double GHD, double GPHID, double &GR, double &GPHIC)
@@ -558,6 +699,10 @@ void DMP::DTT2()
 	if (opt.IPOUT == 2)
 	{
 		//Print TIG, THETEI, AAA, JJ
+		sprintf_s(DebugBuffer, "DTT2: TIG %lf THETEI %lf AAA %lf %lf %lf %lf %lf", opt.TIG, THETEI, AAA[0], AAA[1], AAA[2], AAA[3], AAA[4]);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "DTT2: AAA %lf %lf %lf %lf %lf JJ %d", AAA[5], AAA[6], AAA[7], AAA[8], AAA[9], JJ);
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
@@ -641,11 +786,35 @@ void DMP::GLPRP()
 	JJ = 0;
 }
 
-void DMP::DTMER()
+void DMP::DTMER(DMPResults &res)
 {
+	char Buffer[128];
+
+	res.ErrorCode = IMSG;
+
 	switch (IMSG)
 	{
 	case 1:
+		sprintf(Buffer, "DTM: Max iterations exceeded - MITER = %d (Error)", MITER);
+		res.ErrorMessage.assign(Buffer);
+		break;
+	case 4:
+		res.ErrorMessage = "DTM9: Free fall time force to TFFMIN constraint (Warning)";
+		break;
+	case 5:
+		res.ErrorMessage = "DTM9: Free fall time constraint violated (Warning)";
+		break;
+	case 6:
+		res.ErrorMessage = "DTM9: Free fall time forced to TFFMIN constraint - solution unacceptable in DV (Error)";
+		break;
+	case 7:
+		res.ErrorMessage = "PEG: No physical solution found (Error)";
+		break;
+	case 8:
+		res.ErrorMessage = "PEG: VGO equal zero (Error)";
+		break;
+	case 9:
+		res.ErrorMessage = "PEG: No convergence - max iterations exceed (Error)";
 		break;
 	}
 }
@@ -741,6 +910,10 @@ void DMP::DTT10()
 	if (opt.IPOUT == 2)
 	{
 		//TBD: Print UXDTM, UZDTM, THETEI, RTA, UEI, REIMAG
+		sprintf_s(DebugBuffer, "DTT10: UXDTM %lf %lf %lf UZDTM %lf %lf %lf THETEI %lf", UXDTM.x, UXDTM.y, UXDTM.z, UZDTM.x, UZDTM.y, UZDTM.z, THETEI);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "DTT10: RTA %lf %lf %lf UEI %lf %lf %lf REIMAG %lf", RTA.x, RTA.y, RTA.z, UEI.x, UEI.y, UEI.z, REIMAG);
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
@@ -751,21 +924,26 @@ double DMP::HLIP(VECTOR3 U)
 
 void DMP::DTT11()
 {
-	VECTOR3 UIN, VGOIMP;
+	VECTOR3 UIN, VGOIMP, VTGIMP;
 	int KFLAG;
 
 	//Define plane of conic transfer
 	UIN = unit(crossp(RAAA, VA));
 	//Compute a conic DV to achieve a target position at entry interface
-	LTVCN(CA[0], CA[1], RAAA, RTA, UIN, DTCOST, KFLAG, VDA, VTAA);
+	LTVCN(CA[0], CA[1], RAAA, RTA, UIN, DTCOST, KFLAG, VTGIMP, VTAA);
 	if (opt.IPOUT == 2)
 	{
 		//TBD: Print RAAA, RTA, UIN, CA, VTGIMP, VTAA, DTCOST
+		sprintf_s(DebugBuffer, "DTT11: RAAA %lf %lf %lf UIN %lf %lf %lf C1 %lf C2 %lf", RAAA.x, RAAA.y, RAAA.z, UIN.x, UIN.y, UIN.z, CA[0], CA[1]);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "DTT11: VTGIMP %lf %lf %lf VTAA %lf %lf %lf DTCOST %lf", VTGIMP.x, VTGIMP.y, VTGIMP.z, VTAA.x, VTAA.y, VTAA.z, DTCOST);
+		oapiWriteLog(DebugBuffer);
 	}
 	//Compute impulsive data quantities
 	double RBODEI, RBOM, REIM;
 
-	VGOIMP = VDA - VA;
+	VGOIMP = VTGIMP - VA;
+	VDA = VTGIMP;
 	RDA = RAAA;
 	DVIMP = length(VGOIMP);
 	UFIMP = unit(VGOIMP);
@@ -776,6 +954,14 @@ void DMP::DTT11()
 	THEBO = acos(RBODEI / (RBOM*REIM));
 
 	DWPR = opt.WT*(1.0 - exp((-DVIMP * WDPR) / FPR));
+
+	if (opt.IPOUT == 2)
+	{
+		sprintf_s(DebugBuffer, "DTT11: DWPR %lf THEBO %lf TT %lf DVIMP %lf VGOIMP %lf %lf %lf", DWPR, THEBO, TT, DVIMP, VGOIMP.x, VGOIMP.y, VGOIMP.z);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "DTT11: VDA %lf %lf %lf RDA %lf %lf %lf", VDA.x, VDA.y, VDA.z, RDA.x, RDA.y, RDA.z);
+		oapiWriteLog(DebugBuffer);
+	}
 }
 
 double DMP_QM(double W, double WW)
@@ -875,14 +1061,62 @@ void DMP::LTVCN(double C1, double C2, VECTOR3 R0, VECTOR3 R1, VECTOR3 XNUNIT, do
 	DELTAT = (RCIRCL / VCIRCL)*(4.0*DX*XLAMBDA + pow(DX / WX, 3)*QM);
 
 	//Test
-	VECTOR3 R1test, V1test;
-	OrbMech::rv_from_r0v0(R0, V0, DELTAT, R1test, V1test, XMU);
-	double teest = 1.0;
+	//VECTOR3 R1test, V1test;
+	//OrbMech::rv_from_r0v0(R0, V0, DELTAT, R1test, V1test, XMU);
+	//double teest = 1.0;
 }
 
 void DMP::DTT12()
 {
-	double WD, DW;
+	PEG4 peg4;
+
+	VECTOR3 REI, VEI, VMISS;
+	double WD, VEX, DW, MBO;
+
+	if (opt.IPOUT == 2)
+	{
+		sprintf_s(DebugBuffer, "PEG Inputs: RTIG %lf %lf %lf VTIG %lf %lf %lf WT %lf", RAAA.x, RAAA.y, RAAA.z, VA.x, VA.y, VA.z, opt.WT);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "PEG Inputs: C1 %lf C2 %lf THETAT %lf TIG %lf POLE %lf %lf %lf WCG %lf", CA[0], CA[1], THETEI, opt.TIG, POLE.x, POLE.y, POLE.z, opt.WCGOMS * SBD);
+		oapiWriteLog(DebugBuffer);
+	}
+
+	if (NSYS == 1)
+	{
+		FT = FPR;
+		WD = WDPR;
+	}
+	else
+	{
+		FT = FBU;
+		WD = WDBU;
+	}
+
+	VEX = FT / WD;
+
+	if (peg4.OMSBurnPrediction(RAAA, VA, opt.TIG, _V(opt.WCGOMS * SBD, 0, 0), CA[0], CA[1], EIALT, THETEI, FT, VEX, opt.WT, false))
+	{
+		//No PEG 4 solution
+		//KFLAG = 4;
+		IMSG = 9;
+		return;
+	}
+	peg4.GetOutputD(RDA, VDA, VG, TGO, MBO, DTCOST, REI, VEI, FWYAW, VMISS);
+
+	VGMAG = length(VG);
+
+	if (VGMAG <= 0)
+	{
+		//KFLAG = 3;
+		IMSG = 8;
+		return;
+	}
+
+	ATP = unit(VG);
+	DW = opt.WT - MBO;
+	TP = opt.TIG + TGO;
+
+	/*double WD, DW;
 
 	if (NSYS == 1)
 	{
@@ -906,7 +1140,7 @@ void DMP::DTT12()
 
 	//OMS fuel weight expended
 	VGMAG = length(VG);
-	DW = opt.WT*(1.0 - exp(-VGMAG * WD / FT));
+	DW = opt.WT*(1.0 - exp(-VGMAG * WD / FT));*/
 
 	if (NSYS == 1)
 	{
@@ -931,13 +1165,31 @@ void DMP::DTT12()
 
 	if (opt.IPOUT == 2)
 	{
-		//TBD
+		sprintf_s(DebugBuffer, "PEG Outputs: TBO %lf RBO %lf %lf %lf VBO %lf %lf %lf", TP, RDA.x, RDA.y, RDA.z, VDA.x, VDA.y, VDA.z);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "PEG Outputs: TEI %lf REI %lf %lf %lf VEI %lf %lf %lf", TT, REI.x, REI.y, REI.z, VEI.x, VEI.y, VEI.z);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "PEG Outputs: WCG %lf VGO %lf %lf %lf TGO %lf FWYAW %lf DTCOST %lf", DW, VG.x, VG.y, VG.z, TGO, FWYAW, DTCOST); //DTAVG?
+		oapiWriteLog(DebugBuffer);
+		if (NSYS == 1)
+		{
+			sprintf_s(DebugBuffer, "PEG Outputs: DVPR %lf DWPR %lf PSIPR %lf TFFPR %lf", DVPR, DWPR, PSIPR, TFFPR);
+		}
+		else
+		{
+			sprintf_s(DebugBuffer, "PEG Outputs: DVBU %lf DWBU %lf PSIBU %lf TFFBU %lf", DVBU, DWBU, PSIBU, TFFBU);
+		}
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "PEG Outputs: THETEI %lf TIG %lf VMISS %lf %lf %lf VGOMAG %lf", THETEI, opt.TIG, VMISS.x, VMISS.y, VMISS.z, VGMAG);
+		oapiWriteLog(DebugBuffer);
+		sprintf_s(DebugBuffer, "PEG Outputs: IMSG %d", IMSG);// "IYAW %d NCYC %d NMAX %d KDGUID %d KFLAG %d KCONV %d" IYAW, NCYC, NMAX, KDGUID, KFLAG, KCONV
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
-void DMP::PGSUP()
+/*void DMP::PGSUP()
 {
-	VECTOR3 VS, VGOP;
+	VECTOR3 VS;
 	double TGOP, DVTEMP, DTHETA;
 	int NMAX;
 	bool IPS;
@@ -947,7 +1199,7 @@ void DMP::PGSUP()
 
 	if (KINIT)
 	{
-		VGDP = VG;
+		VGOP = VG;
 		VSP = VS;
 		TGOP = TGO;
 		KCUTOF = false;
@@ -1350,6 +1602,7 @@ void DMP::LTVCN2(double C1, double C2, VECTOR3 R0, VECTOR3 R1, VECTOR3 XNUNIT, d
 	V0 = R0 * (K*W*VH1 - VR1) + crossp(R0, XNUNIT)*(1.0 + K)*VH1 / R0MAG;
 	KFLAG = 0;
 }
+*/
 
 void DMP::DTT13()
 {
@@ -1385,7 +1638,7 @@ void DMP::DTT13()
 	//Convert Earth relative velocity vector to topodetic
 	VRHOTD = mul(TEMPMX, TEMPVC);
 	//Compute entry range
-	EGTR();
+	EGRT();
 	//Range in radians
 	THETLS = TRANG * AMILE / RCHMAG;
 	if (DELAZ < -PI05 || DELAZ > PI05)
@@ -1394,7 +1647,8 @@ void DMP::DTT13()
 	}
 	if (opt.IPOUT == 2)
 	{
-		//TBD: Print TRANG, THETLS, ERAEI, DELAZ, RCHMAG
+		sprintf_s(DebugBuffer, "DTT13: TRANG %lf THETLS %lf ERAEI %lf DELAZ %lf RCHMAG %lf", TRANG, THETLS, ERAEI, DELAZ, RCHMAG);
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
@@ -1483,7 +1737,7 @@ void DMP::EF2GD(VECTOR3 R, double &GLAT, double &XLON, double &XALT)
 	XALT = (r - RAD_P) / (1.0 - 0.5*DEL*DEL_LAT);
 }
 
-void DMP::EGTR()
+void DMP::EGRT()
 {
 	VECTOR3 RC, XYZEA, RGEF, RG, HACEF, RCCEF, VNORM;
 	double XWP2, XNEP, RVEHMG, T3, T4, BARVEH, SINB, T5, T6, BARCC, T7, CTHVC, STHVC, CTVWP1, SBARCR, A2, DVEWP1, T8, BARWP1, A3, DARC, RNGWP1, RNGWP2;
@@ -1559,7 +1813,8 @@ void DMP::EGTR()
 	}
 	if (opt.IPOUT == 2)
 	{
-		//TBD: Print TRANG, DELAZ
+		sprintf_s(DebugBuffer, "EGRT: TRANG %lf DELAZ %lf", TRANG, DELAZ);
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
@@ -1612,10 +1867,11 @@ void DMP::DTT14()
 		}
 		if (opt.IPOUT == 2)
 		{
-			//TBD: Print VEIM, GAMETG, THELSD, C1, C2, TEIFIVE
+			sprintf_s(DebugBuffer, "DTT14: VEIM %lf GAMETG %lf THELSD %lf C1 %lf C2 %lf", VEIM, GAMETG, THELSD, CA[0], CA[1]); //TEIFVE?
+			oapiWriteLog(DebugBuffer);
 		}
 	}
-	ICALL = 0;
+	//ICALL = false; //Don't do this for now
 	THELSD = ETGRNG / RCHMAG;
 }
 
@@ -1649,23 +1905,23 @@ void DMP::FVE(double VE, double &DTAE, double &FPAE)
 	FPAE = 0.0;
 	RAN = 0.0;
 
-	if (VE < FVECON_VEL[0] || VE > FVECON_VEL[4])
+	if (VE < FVECON_VEL[0] || VE > FVECON_VEL[FVECON_LENGTH - 1])
 	{
 		//TBD: Error message "Entry velocity out of range in FVE"
 	}
-	if (VE < FVECON_VEL[0])
+	/*if (VE < FVECON_VEL[0])
 	{
 		VE = FVECON_VEL[0];
 	}
-	else if (VE > FVECON_VEL[4])
+	else if (VE > FVECON_VEL[FVECON_LENGTH - 1])
 	{
-		VE = FVECON_VEL[4];
-	}
+		VE = FVECON_VEL[FVECON_LENGTH - 1];
+	}*/
 
-	for (j = 0;j < 5;j++)
+	for (j = 0;j < FVECON_LENGTH;j++)
 	{
 		X = 1.0;
-		for (i = 0;i < 5;i++)
+		for (i = 0;i < FVECON_LENGTH;i++)
 		{
 			if (i != j)
 			{
@@ -1714,6 +1970,17 @@ void DMP::DTT17()
 	NSYS = 2;
 }
 
+void DMP::DTT18()
+{
+	double DTIG;
+
+	//Increase TIG to increase free fall time
+	DTIG = DTCOST - opt.TFFMIN - TFFTOL / 2.0;
+	opt.TIG = opt.TIG + DTIG;
+	//Compute THETEI for new TIG
+	THETEI = THETEI - DTIG * THETD;
+}
+
 void DMP::DTT21()
 {
 	if (NCNT1 != 0)
@@ -1760,22 +2027,23 @@ void DMP::DTT23()
 	VVENK = VENKM * sin(GAMENK);
 	VHENK = VENKM * cos(GAMENK);
 	//Compute required gamma to lie on the VV-VH target line described by C1 and C2
-	VVCOR = VHS + CA[1] * (VHENK - VHS);
+	VVCOR = VVS + CA[1] * (VHENK - VHS);
 	GAMCOR = asin(VVCOR / VENKM);
 	//Compute gamma error and C1 correction
 	DGAM = abs(GAMENK - GAMCOR);
 	DC11 = VVCOR - VVENK;
 }
 
-void DMP::SUPRJ()
+/*void DMP::SUPRJ(VECTOR3 &RC2, VECTOR3 &VC2, double TGO)
 {
 	VECTOR3 DVS, GPREV, GFINAL;
-	double TI, J2, DTSTEP;
+	double TI, J2, DTSTEP, DTAVG;
 	int NSTEPS;
 
 	DVS = _V(0, 0, 0);
 	TI = 0.0;
 	J2 = 1.0;
+	DTAVG = 2.0;
 	NSTEPS = (int)(abs(TGO - TI) / DTAVG) + 1;
 	DTSTEP = (TGO - TI) / (double)NSTEPS;
 
@@ -1793,7 +2061,7 @@ void DMP::SUPRJ()
 	{
 		//TBD: Print RC2, VC2, TGO, DTAVG
 	}
-}
+}*/
 
 VECTOR3 DMP::GRAVJ(VECTOR3 RF, double J2)
 {
@@ -1866,7 +2134,7 @@ void DMP::DTT24()
 		}
 		//Save data for next pass
 		TPAST = T;
-		ESPAST = -ES;
+		ESPAST = ES; //Document has -ES
 		T = T + DELTAT;
 		NCNT++;
 		//Predict time of closest approach
@@ -1888,16 +2156,59 @@ void DMP::DTT24()
 	DNRNG = acos(dotp(UR, UREI))*RCHMAG / AMILE;
 	if (opt.IPOUT == 2)
 	{
-		//TBD: Debug print
+		sprintf_s(DebugBuffer, "DTT24: TC %lf THETLS %lf THETDT %lf DELTAT %lf DTCR0 %lf T %lf CRSRNG %lf", TC, THETLS, THETDT, DELTAT, DTCR0, T, CRSRNG);
+		oapiWriteLog(DebugBuffer);
 	}
 }
 
-void DMP::DTMOT()
+void DMP::DTMOT(DMPResults &res)
 {
-
+	//EI state vector
+	res.sv_EI.R = RTA;
+	res.sv_EI.V = VTAA;
+	res.sv_EI.GMT = TT;
+	res.sv_EI.mass = opt.WT;
 }
 
-void DMP::DTMPR()
+void DMP::DTMPR(DMPResults &res)
 {
+	res.TIG = opt.TIG;
+	res.C1 = CA[0] / 0.3048;
+	res.C2 = CA[1];
+	res.THETEI = THETEI * DEG;
+	res.EIALT = EIALT / 1852.0;
 
+	res.DVPR = DVPR / 0.3048;
+
+	res.VEI = length(VTAA) / 0.3048;
+	res.cEI = GAMETG * DEG; //Correct one?
+	res.REI = ETGRNG / 1852.0;
+
+	char Left;
+
+	if (CRSRNG < 0)
+	{
+		Left = 'L';
+	}
+	else
+	{
+		Left = 'R';
+	}
+
+	char Buffer[128];
+
+	sprintf(Buffer, "%c%.0lf", Left, abs(CRSRNG));
+	res.XR.assign(Buffer);
+
+	res.OOP = PSIPR*DEG;
+	res.TFF = TFFPR;
+
+	double r_apo, r_peri;
+	OrbMech::periapo(RTA, VTAA, XMU, r_apo, r_peri);
+	res.HP = (r_peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
+
+	res.VGO = VGO / 0.3048;
+	res.DW = DWPR / OrbMech::LBM2KG;
+
+	res.WCG = opt.WCGOMS*SBD / OrbMech::LBM2KG;
 }

@@ -388,12 +388,12 @@ void LaunchWindowProcessor::OMS2()
 		UPDAT(RP, VP, TP, TF);
 
 		//Simulate OMS-1 burn
-		if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS1.C1, inp.OMS1.C2, inp.OMS1.HTGT, inp.OMS1.THETA, FT, VEX, inp.CWHT))
+		if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS1.C1, inp.OMS1.C2, inp.OMS1.HTGT, inp.OMS1.THETA, FT, VEX, inp.CWHT, true))
 		{
 			error = 9;
 			return;
 		}
-		peg4.GetOutput(RP, VP, VGO, TGO, LWPSV.sv_P_MPS_Dump.mass);
+		peg4.GetOutputA(RP, VP, VGO, TGO, LWPSV.sv_P_MPS_Dump.mass);
 		TP = TP + TGO;
 
 		//Save MPS dump state vector
@@ -414,12 +414,12 @@ void LaunchWindowProcessor::OMS2()
 	LWPSV.sv_P_OMS2_before.mass = inp.CWHT;
 
 	//Simulate OMS-2 burn
-	if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS2.C1, inp.OMS2.C2, inp.OMS2.HTGT, inp.OMS2.THETA, FT, VEX, inp.CWHT))
+	if (peg4.OMSBurnPrediction(RP, VP, TP, URLS, inp.OMS2.C1, inp.OMS2.C2, inp.OMS2.HTGT, inp.OMS2.THETA, FT, VEX, inp.CWHT, true))
 	{
 		error = 9;
 		return;
 	}
-	peg4.GetOutput(LWPSV.sv_P_OMS2_after.R, LWPSV.sv_P_OMS2_after.V, VGO_OMS2, TGO, LWPSV.sv_P_OMS2_after.mass);
+	peg4.GetOutputA(LWPSV.sv_P_OMS2_after.R, LWPSV.sv_P_OMS2_after.V, VGO_OMS2, TGO, LWPSV.sv_P_OMS2_after.mass);
 	LWPSV.sv_P_OMS2_after.GMT = TP + TGO;
 
 	RP = LWPSV.sv_P_OMS2_after.R;

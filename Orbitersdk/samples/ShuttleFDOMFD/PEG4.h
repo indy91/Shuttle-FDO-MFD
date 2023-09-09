@@ -26,11 +26,13 @@ class PEG4
 {
 public:
 	PEG4();
-	bool OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_TEG, double C1, double C2, double HTGT, double THETA, double FT, double VEX, double M);
-	void GetOutput(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO);
+	bool OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_TEG, double C1, double C2, double HTGT, double THETA, double FT, double VEX, double M, bool ops1);
+	void GetOutputA(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO);
+	void GetOutputD(VECTOR3 &RP, VECTOR3 &VD, VECTOR3 &VGO, double &TGO, double &MBO, double &DT, VECTOR3 &REI, VECTOR3 &VEI, double &FWYAW, VECTOR3 &VMISS);
 protected:
-	VECTOR3 HTHETA_M50_TGT_TSK();
+	VECTOR3 HTHETA_M50_TGT_TSK(VECTOR3 RLS_TEG);
 	bool VelocityToBeGainedSubtask();
+	void VelocityToBeGainedFuelDepletionSubtask();
 	void TimeToGoSubtask();
 	void ThrustIntegralSubtask();
 	void ReferenceThrustVectorsSubtask();
@@ -46,8 +48,6 @@ protected:
 	//Ignition state vector
 	VECTOR3 RGD, VGD;
 	double TGD;
-	//Launch site position vector in TEG coordinates
-	VECTOR3 RLS_TEG;
 	//PEG target
 	double C1, C2, HTGT, THETA;
 	double FT, VEX, M;
@@ -55,6 +55,8 @@ protected:
 	//OUTPUT
 	VECTOR3 VD;
 	double MBO;
+	double DT; //Time from burnout to EI
+	VECTOR3 V_EI; //Velocity vector at EI
 
 	//LOCAL
 	//Target position vector
@@ -74,6 +76,8 @@ protected:
 	double JOL, S, QPRIME;
 	VECTOR3 LAM, LAMD;
 	VECTOR3 RC1, VC1, RC2, VC2;
+	double SFUELD;
+	VECTOR3 VGIP;
 
 	const double K_LAMDXZ = 0.0;
 	const double EARTH_MU = 398600439968871.2;

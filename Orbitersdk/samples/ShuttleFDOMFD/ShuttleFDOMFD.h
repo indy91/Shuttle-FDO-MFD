@@ -113,6 +113,7 @@ public:
 	void menuCalcDMP();
 	void menuDMPCycleTIGOption();
 	void menuDMPInputTIG();
+	void menuDMPInputPropellantWaste();
 	void menuDMPCyclePrimaryThruster();
 	void menuDMPCycleBackupThruster();
 	void menuDMPLandingSite();
@@ -130,6 +131,7 @@ public:
 	void menuSetDMPPage();
 	void menuSetLTPPage();
 	void menuLWPOMSTargetSetsPage();
+	void menuSetDMPSolutionPage();
 	void SetScreen(int s);
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);

@@ -140,7 +140,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
 		skp->Text(15 * W / 16, 2 * H / 14, "Deorbit Opportunities", 21);
-		//skp->Text(15 * W / 16, 4 * H / 14, "Deorbit Planning", 16);
+		skp->Text(15 * W / 16, 4 * H / 14, "Deorbit Planning", 16);
 	}
 	else if (screen == 1)
 	{
@@ -879,6 +879,16 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		}
 		skp->Text(1 * W / 8, 4 * H / 14, Buffer, strlen(Buffer));
 
+		if (G->DMPOpt.WCGOMS != 0.0)
+		{
+			sprintf(Buffer, "Propellant Wasting: %.0lf lbs", G->DMPOpt.WCGOMS / LBM2KG);
+		}
+		else
+		{
+			sprintf(Buffer, "In-Plane");
+		}
+		skp->Text(1 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
+
 		if (G->DMPOpt.INGPR == 12)
 		{
 			sprintf(Buffer, "RCS");
@@ -891,7 +901,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		{
 			sprintf(Buffer, "2OMS");
 		}
-		skp->Text(1 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
+		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
 
 		if (G->DMPOpt.INGBU == 12)
 		{
@@ -905,10 +915,10 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		{
 			sprintf(Buffer, "2OMS");
 		}
-		skp->Text(1 * W / 8, 8 * H / 14, Buffer, strlen(Buffer));
+		skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
 
 		sprintf(Buffer, "%s", G->DMPLandingSite.c_str());
-		skp->Text(1 * W / 8, 10 * H / 14, Buffer, strlen(Buffer));
+		skp->Text(1 * W / 8, 12 * H / 14, Buffer, strlen(Buffer));
 	}
 	else if (screen == 11)
 	{
@@ -1081,6 +1091,106 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf(Buffer, "%.1lf", G->LWP_Settings.OMS2.THETA*DEG);
 		skp->Text(9 * W / 16, 10 * H / 14, Buffer, strlen(Buffer));
 	}
+	else if (screen == 13)
+	{
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
+		skp->Text(1 * W / 2, 2 * H / 36, "DEORBIT TARGETING SOLUTION", 26);
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+		skp->SetFont(font2);
+
+		skp->Text(1 * W / 16, 7 * H / 32, "SITE", 4);
+		skp->Text(1 * W / 16, 8 * H / 32, "TIGMET", 6);
+		skp->Text(1 * W / 16, 9 * H / 32, "C1", 2);
+		skp->Text(1 * W / 16, 10 * H / 32, "C2", 2);
+		skp->Text(1 * W / 16, 11 * H / 32, "HT", 2);
+		skp->Text(1 * W / 16, 12 * H / 32, "THETAT", 6);
+		skp->Text(1 * W / 16, 13 * H / 32, "PL", 2);
+
+		skp->Text(10 * W / 16, 9 * H / 32, "DVX", 3);
+		skp->Text(10 * W / 16, 10 * H / 32, "DVY", 3);
+		skp->Text(10 * W / 16, 11 * H / 32, "DVZ", 3);
+
+		skp->Text(3 * W / 16, 7 * H / 32, G->DMPRes.Site.c_str(), G->DMPRes.Site.size());
+
+		DMTMET2String(Buffer, G->DMPRes.TIG);
+		skp->Text(3 * W / 16, 8 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.0f", G->DMPRes.C1);
+		skp->Text(3 * W / 16, 9 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%+.4f", G->DMPRes.C2);
+		skp->Text(3 * W / 16, 10 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.3f", G->DMPRes.EIALT);
+		skp->Text(3 * W / 16, 11 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.3f", G->DMPRes.THETEI);
+		skp->Text(3 * W / 16, 12 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.0f", G->DMPRes.WCG);
+		skp->Text(3 * W / 16, 13 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%+.1f", G->DMPRes.VGO.x);
+		skp->Text(12 * W / 16, 9 * H / 32, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%+.1f", G->DMPRes.VGO.y);
+		skp->Text(12 * W / 16, 10 * H / 32, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%+.1f", G->DMPRes.VGO.z);
+		skp->Text(12 * W / 16, 11 * H / 32, Buffer, strlen(Buffer));
+
+		skp->Text(1 * W / 16, 15 * H / 32, "DVPR", 4);
+		skp->Text(1 * W / 16, 16 * H / 32, "VEI", 3);
+		skp->Text(1 * W / 16, 17 * H / 32, "cEI", 3);
+		skp->Text(1 * W / 16, 18 * H / 32, "REI", 3);
+		skp->Text(1 * W / 16, 19 * H / 32, "XR", 2);
+		skp->Text(1 * W / 16, 20 * H / 32, "OOP", 3);
+		skp->Text(1 * W / 16, 21 * H / 32, "TFF", 3);
+		skp->Text(1 * W / 16, 22 * H / 32, "HP", 2);
+		skp->Text(1 * W / 16, 23 * H / 32, "DW", 2);
+
+		sprintf_s(Buffer, "%.1f", G->DMPRes.DVPR);
+		skp->Text(3 * W / 16, 15 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.0f", G->DMPRes.VEI);
+		skp->Text(3 * W / 16, 16 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.2f", G->DMPRes.cEI);
+		skp->Text(3 * W / 16, 17 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.0f", G->DMPRes.REI);
+		skp->Text(3 * W / 16, 18 * H / 32, Buffer, strlen(Buffer));
+
+		skp->Text(3 * W / 16, 19 * H / 32, G->DMPRes.XR.c_str(), G->DMPRes.XR.size());
+
+		sprintf_s(Buffer, "%.1f", G->DMPRes.OOP);
+		skp->Text(3 * W / 16, 20 * H / 32, Buffer, strlen(Buffer));
+
+		double mm, ss;
+		SS2MMSS(G->DMPRes.TFF, mm, ss);
+		sprintf_s(Buffer, "%02.0lf:%02.0lf", mm, ss);
+		skp->Text(3 * W / 16, 21 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.1f", G->DMPRes.HP);
+		skp->Text(3 * W / 16, 22 * H / 32, Buffer, strlen(Buffer));
+
+		sprintf_s(Buffer, "%.0f", G->DMPRes.DW);
+		skp->Text(3 * W / 16, 23 * H / 32, Buffer, strlen(Buffer));
+
+		skp->Text(10 * W / 16, 13 * H / 32, "EI - 5 MM303 INRTL ATT", 22);
+		skp->Text(10 * W / 16, 14 * H / 32, "R", 1);
+		skp->Text(10 * W / 16, 15 * H / 32, "P", 1);
+		skp->Text(10 * W / 16, 16 * H / 32, "Y", 1);
+
+		sprintf_s(Buffer, "%03.0f", G->DMPRes.EIminus5Att.x);
+		skp->Text(12 * W / 16, 14 * H / 32, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%03.0f", G->DMPRes.EIminus5Att.y);
+		skp->Text(12 * W / 16, 15 * H / 32, Buffer, strlen(Buffer));
+		sprintf_s(Buffer, "%03.0f", G->DMPRes.EIminus5Att.z);
+		skp->Text(12 * W / 16, 16 * H / 32, Buffer, strlen(Buffer));
+
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
+		skp->Text(1 * W / 2, 31 * H / 32, G->DMPRes.ErrorMessage.c_str(), G->DMPRes.ErrorMessage.length());
+	}
 	return true;
 }
 
@@ -1150,6 +1260,11 @@ void ShuttleFDOMFD::menuSetLTPPage()
 void ShuttleFDOMFD::menuLWPOMSTargetSetsPage()
 {
 	SetScreen(12);
+}
+
+void ShuttleFDOMFD::menuSetDMPSolutionPage()
+{
+	SetScreen(13);
 }
 
 void ShuttleFDOMFD::SetScreen(int s)
@@ -2793,6 +2908,11 @@ void ShuttleFDOMFD::menuDMPInputTIG()
 	{
 		GenericMETInput(&G->DMPOpt.TTHRSH, "Input threshold time in DD:HH:MM:SS");
 	}
+}
+
+void ShuttleFDOMFD::menuDMPInputPropellantWaste()
+{
+	GenericDoubleInput(&G->DMPOpt.WCGOMS, "Enter propellant to be wasted in pounds (0 for in-plane):", LBM2KG);
 }
 
 void ShuttleFDOMFD::menuDMPCyclePrimaryThruster()
