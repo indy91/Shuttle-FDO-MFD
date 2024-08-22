@@ -3099,7 +3099,7 @@ namespace OrbMech
 	{
 		double theta, dt;
 
-		theta = sign(dotp(crossp(R_W, R_C), crossp(R_W, V_W)))*acos(dotp(R_W / length(R_W), R_C / length(R_C)));
+		theta = sign(dotp(crossp(R_W, R_C), crossp(R_W, V_W)))*acos2(dotp(R_W / length(R_W), R_C / length(R_C)));
 		dt = time_theta(R_W, V_W, theta, mu);
 		rv_from_r0v0(R_W, V_W, dt, R_W1, V_W1, mu);
 	}

@@ -28,6 +28,13 @@ DMP::DMP()
 
 void DMP::Executive(const DMPOptions &opt, DMPResults &res)
 {
+	//Null some variables
+	for (int i = 0; i < 10; i++)
+	{
+		AAA[i] = 0.0;
+	}
+
+	//Save options
 	this->opt = opt;
 
 	IDTM = 0;
@@ -308,7 +315,7 @@ DTM_DTM5_2:
 
 	if (opt.IPOUT == 2)
 	{
-		sprintf_s(DebugBuffer, "DTM5: NCNT2 %d THETLS %lf THELSD %lf RNGTOL %lf", NCNT2, THETLS, THELSD, RNGTOL);
+		sprintf_s(DebugBuffer, "DTM5: NCNT2 %d THETLS %lf THELSD %lf RNGTOL %lf", NCNT2, THETLS*DEG, THELSD*DEG, RNGTOL);
 		oapiWriteLog(DebugBuffer);
 	}
 
@@ -1077,7 +1084,7 @@ void DMP::DTT12()
 	{
 		sprintf_s(DebugBuffer, "PEG Inputs: RTIG %lf %lf %lf VTIG %lf %lf %lf WT %lf", RAAA.x, RAAA.y, RAAA.z, VA.x, VA.y, VA.z, opt.WT);
 		oapiWriteLog(DebugBuffer);
-		sprintf_s(DebugBuffer, "PEG Inputs: C1 %lf C2 %lf THETAT %lf TIG %lf POLE %lf %lf %lf WCG %lf", CA[0], CA[1], THETEI, opt.TIG, POLE.x, POLE.y, POLE.z, opt.WCGOMS * SBD);
+		sprintf_s(DebugBuffer, "PEG Inputs: C1 %lf C2 %lf THETAT %lf TIG %lf POLE %lf %lf %lf WCG %lf", CA[0], CA[1], THETEI*DEG, opt.TIG, POLE.x, POLE.y, POLE.z, opt.WCGOMS * SBD);
 		oapiWriteLog(DebugBuffer);
 	}
 
@@ -1647,7 +1654,7 @@ void DMP::DTT13()
 	}
 	if (opt.IPOUT == 2)
 	{
-		sprintf_s(DebugBuffer, "DTT13: TRANG %lf THETLS %lf ERAEI %lf DELAZ %lf RCHMAG %lf", TRANG, THETLS, ERAEI, DELAZ, RCHMAG);
+		sprintf_s(DebugBuffer, "DTT13: TRANG %lf THETLS %lf ERAEI %lf DELAZ %lf RCHMAG %lf", TRANG, THETLS*DEG, ERAEI, DELAZ, RCHMAG);
 		oapiWriteLog(DebugBuffer);
 	}
 }
@@ -2156,7 +2163,7 @@ void DMP::DTT24()
 	DNRNG = acos(dotp(UR, UREI))*RCHMAG / AMILE;
 	if (opt.IPOUT == 2)
 	{
-		sprintf_s(DebugBuffer, "DTT24: TC %lf THETLS %lf THETDT %lf DELTAT %lf DTCR0 %lf T %lf CRSRNG %lf", TC, THETLS, THETDT, DELTAT, DTCR0, T, CRSRNG);
+		sprintf_s(DebugBuffer, "DTT24: TC %lf THETLS %lf THETDT %lf DELTAT %lf DTCR0 %lf T %lf CRSRNG %lf", TC, THETLS*DEG, THETDT, DELTAT, DTCR0, T, CRSRNG);
 		oapiWriteLog(DebugBuffer);
 	}
 }
