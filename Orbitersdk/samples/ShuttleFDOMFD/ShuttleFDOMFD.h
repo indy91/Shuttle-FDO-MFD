@@ -109,6 +109,8 @@ public:
 	void menuDOPSSetGETF();
 	void menuDOPSSetRev();
 	void menuDOPSSetMaxXRNG();
+	void menuCycleDOPSSites();
+	void menuCycleDOPSPage();
 
 	void menuCalcDMP();
 	void menuDMPCycleTIGOption();

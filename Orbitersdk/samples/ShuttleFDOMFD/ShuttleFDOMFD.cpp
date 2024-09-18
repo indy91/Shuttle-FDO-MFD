@@ -128,6 +128,13 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	// Add MFD display routines here.
 	// Use the device context (hDC) for Windows GDI paint functions.
 
+	switch (G->ErrorCode)
+	{
+	case 1:
+		skp->Text(3 * W / 16, 13 * H / 14, "Launch day not initialized!", 27);
+		break;
+	}
+
 	if (screen == 0)
 	{
 		skp->Text(1 * W / 16, 2 * H / 14, "Config", 6);
@@ -798,62 +805,81 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->SetFont(font2);
 		skp->SetTextAlign(oapi::Sketchpad::CENTER);
 		skp->Text(1 * W / 2, 2 * H / 36, "DEORBIT OPPORTUNITIES TABLE (DOT)", 33);
-
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
 		skp->Text(1 * W / 16, 4 * H / 36, "REV", 3);
 		sprintf(Buffer, "%d", G->DOPS_InitialRev);
 		skp->Text(2 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
 
 		skp->Text(7 * W / 32, 4 * H / 36, "GETS", 4);
 		DMTMET2String(Buffer, G->DOPS_GETS);
-		skp->Text(6 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
+		skp->Text(5 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
 
 		skp->Text(17 * W / 32, 4 * H / 36, "GETF", 4);
 		DMTMET2String(Buffer, G->DOPS_GETF);
-		skp->Text(22 * W / 32, 4 * H / 36, Buffer, strlen(Buffer));
+		skp->Text(20 * W / 32, 4 * H / 36, Buffer, strlen(Buffer));
 
 		skp->Text(27 * W / 32, 4 * H / 36, "XRNG", 4);
 		sprintf_s(Buffer, "%.0f", G->DOPS_MaxXRNG);
 		skp->Text(15 * W / 16, 4 * H / 36, Buffer, strlen(Buffer));
 
-		skp->Text(1 * W / 16, 6 * H / 36, "TIG", 3);
-		skp->Text(1 * W / 16, 7 * H / 36, "ORB", 3);
-
-		skp->Text(3 * W / 16, 6 * H / 36, "SITE", 4);
-
-		skp->Text(5 * W / 16, 6 * H / 36, "TIG", 3);
-		skp->Text(5 * W / 16, 7 * H / 36, "MET", 3);
-
-		skp->Text(17 * W / 32, 6 * H / 36, "LANDING", 7);
-		skp->Text(15 * W / 32, 7 * H / 36, "MET", 3);
-		skp->Text(19 * W / 32, 7 * H / 36, "GMT", 3);
-		skp->Text(23 * W / 32, 7 * H / 36, "LIGHT", 5);
-
-		skp->Text(14 * W / 16, 6 * H / 36, "XRNG", 4);
-
-		for (unsigned i = 0; i < G->DODS_Output.data.size();i++)
+		skp->Text(1 * W / 16, 5 * H / 36, "SITES", 5);
+		if (G->DOPS_ConUS)
 		{
-			sprintf(Buffer, "%d", G->DODS_Output.data[i].Rev);
-			skp->Text(1 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+			sprintf_s(Buffer, "Continental US");
+		}
+		else
+		{
+			sprintf_s(Buffer, "All Sites");
+		}
+		skp->Text(3 * W / 16, 5 * H / 36, Buffer, strlen(Buffer));
 
-			sprintf(Buffer, G->DODS_Output.data[i].Site.c_str());
-			skp->Text(3 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->Text(12 * W / 16, 5 * H / 36, "PAGE", 4);
+		sprintf_s(Buffer, "%d/%d", G->DOPS_Page + 1, G->DOPS_MaxPage + 1);
+		skp->Text(14 * W / 16, 5 * H / 36, Buffer, strlen(Buffer));
 
-			MET2String2(Buffer, G->DODS_Output.data[i].TIG_MET);
-			skp->Text(5 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->SetTextAlign(oapi::Sketchpad::CENTER);
 
-			MET2String2(Buffer, G->DODS_Output.data[i].Landing_MET);
-			skp->Text(15 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->Text(1 * W / 16, 7 * H / 36, "TIG", 3);
+		skp->Text(1 * W / 16, 8 * H / 36, "ORB", 3);
 
-			GMT2String2(Buffer, G->DODS_Output.data[i].Landing_GMT);
-			skp->Text(19 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->Text(3 * W / 16, 7 * H / 36, "SITE", 4);
 
-			sprintf(Buffer, G->DODS_Output.data[i].T_Light.c_str());
-			skp->Text(23 * W / 32, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->Text(5 * W / 16, 7 * H / 36, "TIG", 3);
+		skp->Text(5 * W / 16, 8 * H / 36, "MET", 3);
 
-			sprintf(Buffer, G->DODS_Output.data[i].XRNG.c_str());
-			skp->Text(14 * W / 16, (8 + i) * H / 36, Buffer, strlen(Buffer));
+		skp->Text(17 * W / 32, 7 * H / 36, "LANDING", 7);
+		skp->Text(15 * W / 32, 8 * H / 36, "MET", 3);
+		skp->Text(19 * W / 32, 8 * H / 36, "GMT", 3);
+		skp->Text(23 * W / 32, 8 * H / 36, "LIGHT", 5);
 
-			if (i == 26) break;
+		skp->Text(14 * W / 16, 7 * H / 36, "XRNG", 4);
+
+		unsigned j;
+		for (unsigned i = 0; i < 25; i++)
+		{
+			j = i + 25U * (unsigned)G->DOPS_Page;
+			if (j >= G->DODS_Output.data.size()) break;
+
+			sprintf(Buffer, "%d", G->DODS_Output.data[j].Rev);
+			skp->Text(1 * W / 16, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[j].Site.c_str());
+			skp->Text(3 * W / 16, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			MET2String2(Buffer, G->DODS_Output.data[j].TIG_MET);
+			skp->Text(5 * W / 16, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			MET2String2(Buffer, G->DODS_Output.data[j].Landing_MET);
+			skp->Text(15 * W / 32, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			GMT2String2(Buffer, G->DODS_Output.data[j].Landing_GMT);
+			skp->Text(19 * W / 32, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[j].T_Light.c_str());
+			skp->Text(23 * W / 32, (9 + i) * H / 36, Buffer, strlen(Buffer));
+
+			sprintf(Buffer, G->DODS_Output.data[j].XRNG.c_str());
+			skp->Text(14 * W / 16, (9 + i) * H / 36, Buffer, strlen(Buffer));
 		}
 	}
 	else if (screen == 10)
@@ -2884,6 +2910,23 @@ void ShuttleFDOMFD::menuDOPSSetRev()
 void ShuttleFDOMFD::menuDOPSSetMaxXRNG()
 {
 	GenericDoubleInput(&G->DOPS_MaxXRNG, "Maximum crossrange in nautical miles:");
+}
+
+void ShuttleFDOMFD::menuCycleDOPSSites()
+{
+	G->DOPS_ConUS = !G->DOPS_ConUS;
+}
+
+void ShuttleFDOMFD::menuCycleDOPSPage()
+{
+	if (G->DOPS_Page < G->DOPS_MaxPage)
+	{
+		G->DOPS_Page++;
+	}
+	else
+	{
+		G->DOPS_Page = 0;
+	}
 }
 
 void ShuttleFDOMFD::menuDMPCycleTIGOption()

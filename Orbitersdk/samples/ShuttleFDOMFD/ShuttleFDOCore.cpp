@@ -221,8 +221,12 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 	DOPS_GETS = DOPS_GETF = 0.0;
 	DOPS_InitialRev = 1;
 	DOPS_MaxXRNG = 800.0;
+	DOPS_ConUS = true;
+	DOPS_Page = DOPS_MaxPage = 0;
 
 	DMPLandingSite = "EDW22";
+
+	ErrorCode = 0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -1719,9 +1723,12 @@ void ShuttleFDOCore::ExportLTP()
 
 int ShuttleFDOCore::subThread()
 {
+	ErrorCode = 0;
+
 	//Do nothing if mission not initialized
 	if (BaseMJD == 0.0)
 	{
+		ErrorCode = 1;
 		subThreadStatus = 0;
 		if (hThread != NULL) { CloseHandle(hThread); }
 		return(0);
@@ -1776,7 +1783,7 @@ int ShuttleFDOCore::subThread()
 		LandingOpportunitiesProcessor lop;
 		LOPTInput opt;
 
-		ReadDOPSLandingSiteData(opt.sites);
+		ReadDOPSLandingSiteData(opt.sites, DOPS_ConUS);
 
 		if (opt.sites.size() > 0)
 		{
@@ -1791,6 +1798,12 @@ int ShuttleFDOCore::subThread()
 			opt.RM = M_EFTOECL_AT_EPOCH;
 
 			lop.LOPT(opt, DODS_Output);
+
+			DOPS_Page = DOPS_MaxPage = 0;
+			if (DODS_Output.data.size() > 0)
+			{
+				DOPS_MaxPage = (DODS_Output.data.size() - 1) / 25;
+			}
 		}
 	}
 	break;
@@ -1969,7 +1982,7 @@ int ShuttleFDOCore::startSubthread(int fcn) {
 	return(0);
 }
 
-void ShuttleFDOCore::ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites) const
+void ShuttleFDOCore::ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites, bool FirstThreeSites) const
 {
 	sites.clear();
 
@@ -1989,6 +2002,7 @@ void ShuttleFDOCore::ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites) const
 				temp.lat *= RAD;
 				temp.lng *= RAD;
 				sites.push_back(temp);
+				if (FirstThreeSites && sites.size() >= 3) break;
 			}
 		}
 	}
@@ -2477,6 +2491,7 @@ void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 	MATRIX3 M_M50TOECL = OrbMech::GetObliquityMatrix(33281.923357);
 	M_TEGTOECL = OrbMech::MatrixRH_LH(mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH));
 	//sprintf(oapiDebugString(), "%f", BaseMJD);
+	ErrorCode = 0;
 }
 
 void ShuttleFDOCore::SetLaunchTime(int H, int M, double S)

@@ -32,7 +32,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 	VECTOR3 SVEC, H, N, CVEC, R_SUN;
 	double lat_S, lng_S, EN, GN, T, TN, SNANG, HC, UCPA, DTN, DT, GCPA, TAC, EAC, T_OLD, XRNG, SLAT, SLON, DM;
 	double DELR, DELC, DTSS, DTSR, DANG;
-	int i, numrevs, IFL;
+	int i, numrevs, IFL, iter;
 	LOPTOutputDataSet temp;
 
 	opt = in;
@@ -99,6 +99,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 					EN = OrbMech::normalize_angle(EN, 0.0, PI2);
 
 					//Calculate time of closest approach
+					iter = 0;
 					do
 					{
 						SNANG = lng_S + OrbMech::w_Earth*T;
@@ -124,6 +125,10 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 						TAC = UCPA - GCPA;
 						//Eccentric anomaly at closest approach
 						EAC = 2.0*atan((1.0 - elem_cur.e) / (1.0 + elem_cur.e)*tan(TAC / 2.0));
+						if (EAC < 0.0)
+						{
+							EAC += PI2;
+						}
 						//Calculate the difference in mean anomalies at ascending node and at closest approach
 						DM = ((EAC - elem_cur.e*sin(EAC)) - (EN - elem_cur.e*sin(EN)));
 						//Force positive angle from ascending node
@@ -136,7 +141,8 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 						//Update times
 						T_OLD = T;
 						T = table[j][0] + DT;
-					} while (abs(T - T_OLD) > opt.RTOL);
+						iter++;
+					} while (abs(T - T_OLD) > opt.RTOL && iter < 20);
 
 					//Save time of closest approach
 					T_CA = T;
@@ -271,6 +277,7 @@ double LandingOpportunitiesProcessor::ADVU(double TIME)
 void LandingOpportunitiesProcessor::TAU(double TIMC, double UC, double UT, double &RORB, double &TARB)
 {
 	double dt, g_p, F, E, M_p, DM, ddt, dt_new, M_c, g_c, DU;
+	int iter;
 
 	dt = TIMC - elem_cur.TIMV;
 	M_c = elem_cur.l + elem_cur.l_dot*dt;
@@ -282,7 +289,8 @@ void LandingOpportunitiesProcessor::TAU(double TIMC, double UC, double UT, doubl
 	ddt = 100.0;
 	DU = UT - UC;
 	dt = DU / (elem_cur.l_dot + elem_cur.g_dot);
-	while (abs(ddt) > 0.1)
+	iter = 0;
+	while (abs(ddt) > 0.1 && iter < 20)
 	{
 		//Compute new argument of perigee
 		g_p = g_c + elem_cur.g_dot*dt;
@@ -311,6 +319,8 @@ void LandingOpportunitiesProcessor::TAU(double TIMC, double UC, double UT, doubl
 		dt_new = DM / elem_cur.l_dot;
 		ddt = dt_new - dt;
 		dt = dt_new;
+
+		iter++;
 	}
 	RORB = elem_cur.a*(1.0 - elem_cur.e) / (1.0 + elem_cur.e*cos(F));
 	TARB = TIMC + dt;
@@ -318,6 +328,14 @@ void LandingOpportunitiesProcessor::TAU(double TIMC, double UC, double UT, doubl
 
 void LandingOpportunitiesProcessor::CNODS(double lat_S, double lng_S, double ANG, double ABIAS, double *AN, int &IFL)
 {
+	//Computes the range of acceptable ascending nodes which will satisfy a given crossrange constraint from a specified latitude and longitude
+	//INPUTS:
+	//lat_S: latitude
+	//lng_S: longitude
+	//ANG: Crossrange constraint angle
+	//ABIAS: Bias to be applied to the ascending nodes
+	//OUTPUTS:
+	//AN: min/max ascending node range 1/2
 	//IFL: -1 = no solution, 1 = one range, 2 = two ranges
 	double sin_dlng_p, sin_dlng_m, dlng_p, dlng_m, dlng_min[2], dlng_max[2], TEM[2], DT[2];
 

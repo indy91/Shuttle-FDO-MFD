@@ -277,16 +277,20 @@ public:
 	int LWP_LaunchSite;
 
 	//Deorbit Opportunities
-	LOPTOutput DODS_Output;
 	double DOPS_GETS;
 	double DOPS_GETF;
 	int DOPS_InitialRev;
 	double DOPS_MaxXRNG;
+	bool DOPS_ConUS; //True = only use three main landing sites on the continental US, false = use full list
+	LOPTOutput DODS_Output;
+	int DOPS_Page, DOPS_MaxPage;
 
 	//Deorbit Maneuver Planning
 	DMPOptions DMPOpt;
 	DMPResults DMPRes;
 	std::string DMPLandingSite;
+
+	int ErrorCode; //0 = no error, 1 = launch day not initialized
 
 	OBJHANDLE hEarth;
 	double mu;
@@ -294,7 +298,7 @@ protected:
 	int CalculateOMPPlan();
 	bool IsOMPConverged(ITERSTATE *iters, int size);
 	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
-	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites) const;
+	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites, bool FirstThreeSites) const;
 	void ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
