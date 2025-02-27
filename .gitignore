@@ -39,6 +39,7 @@
 /Config/*
 !/Doc
 /Doc/*
+/GravityModels
 /Html
 !/Meshes/
 /Meshes/*
@@ -52,6 +53,7 @@
 /Sound/*
 /Textures/
 !/Textures/ProjectApollo/
+/XRSound
 
 # Other stuff
 /Constell.bin
