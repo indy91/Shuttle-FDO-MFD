@@ -349,17 +349,14 @@ namespace OrbMech
 		V1 = R0 * fdot + V0 * gdot;
 	}
 
-	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2, OBJHANDLE gravref)
+	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2)
 	{
 		OELEMENTS coe, coe2;
-		double h, e, Omega_0, i, omega_0, theta0, a, T, n, E_0, t_0, t_f, n_p, t_n, M_n, E_n, theta_n, Omega_dot, omega_dot, Omega_n, omega_n, mu, JCoeff;
+		double h, e, Omega_0, i, omega_0, theta0, a, T, n, E_0, t_0, t_f, n_p, t_n, M_n, E_n, theta_n, Omega_dot, omega_dot, Omega_n, omega_n, mu, JCoeff, R_E;
 
-		mu = GGRAV * oapiGetMass(gravref);
-
-		if (oapiGetPlanetJCoeffCount(gravref) > 0)
-		{
-			JCoeff = oapiGetPlanetJCoeff(gravref, 0);
-		}
+		R_E = EARTH_RADIUS_GRAV;
+		mu = mu_Earth;
+		JCoeff = J2_Earth;
 
 		coe = coe_from_sv(R1, V1, mu);
 		h = coe.h;
@@ -385,8 +382,8 @@ namespace OrbMech
 			theta_n += 2 * PI;
 		}
 
-		Omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(oapiGetSize(gravref), 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*cos(i);
-		omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(oapiGetSize(gravref), 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*(5.0 / 2.0 * sin(i)*sin(i) - 2.0);
+		Omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(R_E, 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*cos(i);
+		omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(R_E, 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*(5.0 / 2.0 * sin(i)*sin(i) - 2.0);
 
 		Omega_n = Omega_0 + Omega_dot * dt;
 		omega_n = omega_0 + omega_dot * dt;
@@ -767,9 +764,6 @@ namespace OrbMech
 		VECTOR3 V2l[3][4];
 		VECTOR3 T[3];
 		MATRIX3 T2;
-		OBJHANDLE hEarth;
-
-		hEarth = oapiGetObjectByName("Earth");
 
 		h = 10e-3;
 		rho = 0.5;
@@ -779,7 +773,7 @@ namespace OrbMech
 		nMax = 100;
 		nMax2 = 10;
 
-		mu = GGRAV * oapiGetMass(hEarth);
+		mu = mu_Earth;
 
 		double hvec[4] = { h / 2, -h / 2, rho*h / 2, -rho * h / 2 };
 
@@ -807,7 +801,7 @@ namespace OrbMech
 
 		if (dt > 0)
 		{
-			rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star, hEarth);
+			rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star);
 			dr2 = R2 - R2_star;
 
 			while (length(dr2) > error3 && nMax2 >= n)
@@ -823,7 +817,7 @@ namespace OrbMech
 				{
 					for (int j = 0; j < 4; j++)
 					{
-						rv_from_r0v0_obla(R1, v_l[i][j], dt, R2l[i][j], V2l[i][j], hEarth);
+						rv_from_r0v0_obla(R1, v_l[i][j], dt, R2l[i][j], V2l[i][j]);
 					}
 				}
 				for (int i = 0; i < 3; i++)
@@ -832,7 +826,7 @@ namespace OrbMech
 				}
 				T2 = _M(T[0].x, T[1].x, T[2].x, T[0].y, T[1].y, T[2].y, T[0].z, T[1].z, T[2].z);
 				V1_star = V1_star + mul(inverse(T2), dr2);
-				rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star, hEarth);
+				rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star);
 				dr2 = R2 - R2_star;
 			}
 			//return V1_star;
@@ -1306,31 +1300,26 @@ namespace OrbMech
 
 	VECTOR3 gravityroutine(VECTOR3 R, bool nonspherical)
 	{
-		OBJHANDLE hEarth;
 		VECTOR3 U_R, U_Z, g;
-		double rr, mu;
+		double rr;
 
-		hEarth = oapiGetObjectByName("Earth");
 		U_R = unit(R);
 		U_Z = _V(0, 0, 1);
 
 		rr = dotp(R, R);
-		mu = GGRAV * oapiGetMass(hEarth);
 
 		if (nonspherical)
 		{
-			double costheta, R_E, J2E;
+			double costheta;
 			VECTOR3 g_b;
 
 			costheta = dotp(U_R, U_Z);
-			R_E = oapiGetSize(hEarth);
-			J2E = oapiGetPlanetJCoeff(hEarth, 0);
-			g_b = -(U_R*(1.0 - 5.0*costheta*costheta) + U_Z * 2.0*costheta)*mu / rr * 3.0 / 2.0*J2E*power(R_E, 2.0) / rr;
-			g = -U_R * mu / rr + g_b;
+			g_b = -(U_R*(1.0 - 5.0*costheta*costheta) + U_Z * 2.0*costheta)*mu_Earth / rr * 3.0 / 2.0* J2_Earth *power(EARTH_RADIUS_GRAV, 2.0) / rr;
+			g = -U_R * mu_Earth / rr + g_b;
 		}
 		else
 		{
-			g = -U_R * mu / rr;
+			g = -U_R * mu_Earth / rr;
 		}
 
 		return g;
@@ -3356,18 +3345,14 @@ namespace OrbMech
 
 	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double deltat)
 	{
-		hEarth = oapiGetObjectByName("Earth");
-
 		K = 0.3;
 		dt_lim = 4000;
-		R_E = oapiGetSize(hEarth);
-		mu = oapiGetMass(hEarth)*GGRAV;
-		jcount = oapiGetPlanetJCoeffCount(hEarth);
-		JCoeff = new double[jcount];
-		for (int i = 0; i < jcount; i++)
-		{
-			JCoeff[i] = oapiGetPlanetJCoeff(hEarth, i);
-		}
+
+		R_E = OrbMech::EARTH_RADIUS_GRAV;
+		mu = OrbMech::mu_Earth;
+		JCoeff[0] = OrbMech::J2_Earth;
+		JCoeff[1] = OrbMech::J3_Earth;
+		JCoeff[2] = OrbMech::J4_Earth;
 
 		this->R00 = R00;
 		this->V00 = V00;
@@ -3386,11 +3371,12 @@ namespace OrbMech
 		rect2 = 0.75*OrbMech::power(2.0, 3.0);
 
 		U_Z = _V(0, 0, 1);
+		R2 = V2 = _V(0, 0, 0);
 	}
 
 	CoastIntegrator::~CoastIntegrator()
 	{
-		delete[] JCoeff;
+
 	}
 
 	bool CoastIntegrator::iteration()
@@ -3478,18 +3464,14 @@ namespace OrbMech
 		U_R = unit(R);
 		costheta = dotp(U_R, U_Z);
 		P2 = 3.0 * costheta;
-		P3 = 0.5*(15.0*costheta*costheta - 3.0);
-		a_dP += (U_R*P3 - U_Z * P2)*JCoeff[0] * OrbMech::power(R_E / r, 2.0);
-		if (jcount > 1)
-		{
-			P4 = 1.0 / 3.0*(7.0*costheta*P3 - 4.0*P2);
-			a_dP += (U_R*P4 - U_Z * P3)*JCoeff[1] * OrbMech::power(R_E / r, 3.0);
-			if (jcount > 2)
-			{
-				P5 = 0.25*(9.0*costheta*P4 - 5.0 * P3);
-				a_dP += (U_R*P5 - U_Z * P4)*JCoeff[2] * OrbMech::power(R_E / r, 4.0);
-			}
-		}
+		P3 = 0.5 * (15.0 * costheta * costheta - 3.0);
+		P4 = 1.0 / 3.0 * (7.0 * costheta * P3 - 4.0 * P2);
+		P5 = 0.25 * (9.0 * costheta * P4 - 5.0 * P3);
+
+		a_dP += (U_R * P3 - U_Z * P2) * JCoeff[0] * OrbMech::power(R_E / r, 2.0);
+		a_dP += (U_R * P4 - U_Z * P3) * JCoeff[1] * OrbMech::power(R_E / r, 3.0);
+		a_dP += (U_R * P5 - U_Z * P4) * JCoeff[2] * OrbMech::power(R_E / r, 4.0);
+
 		a_dP *= mu / OrbMech::power(r, 2.0);
 
 		a_d = a_dP;

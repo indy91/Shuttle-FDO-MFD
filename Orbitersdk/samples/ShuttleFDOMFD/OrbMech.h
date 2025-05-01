@@ -110,7 +110,7 @@ namespace OrbMech
 	//Trajectory computations
 	void oneclickcoast(VECTOR3 R0, VECTOR3 V0, double dt, VECTOR3 &R1, VECTOR3 &V1);
 	void rv_from_r0v0(VECTOR3 R0, VECTOR3 V0, double t, VECTOR3 &R1, VECTOR3 &V1, double mu, double x = 0.0);
-	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2, OBJHANDLE gravref);
+	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2);
 	double kepler_U(double dt, double ro, double vro, double a, double mu, double x0);
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu);
 	void fDot_and_gDot(double x, double r, double ro, double a, double &fdot, double &gdot, double mu);
@@ -235,12 +235,10 @@ namespace OrbMech
 
 		double R_E, mu;
 		double K, dt_lim;
-		int jcount;
-		double *JCoeff;
+		double JCoeff[3];
 		VECTOR3 R00, V00, R0, V0, R_CON, V_CON;
 		double t_0, t, tau, t_F, x;
 		VECTOR3 delta, nu;
-		OBJHANDLE hEarth;
 		double rect1, rect2;
 		VECTOR3 U_Z;
 	};
