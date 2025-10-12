@@ -24,6 +24,10 @@
 
 namespace OrbMech
 {
+	//Matrix converting J2000 to M50 (right-handed)
+	const MATRIX3 M_J2000_to_M50 = _M(9.999257079515327e-01, 1.218927600080109e-02, 1.132264483832182e-05, -1.117893818888212e-02,
+		9.174139277929019e-01, -3.977772195998275e-01, -4.859003868607689e-03, 3.977475413402031e-01, 9.174820343958939e-01);
+
 	const double LAUNCHSITE_LATITUDE[3] = { 28.60833333, 28.627, 34.580847 };
 	const double LAUNCHSITE_LONGITUDE[3] = { -80.60416667, -80.621, -120.62595 };
 
@@ -45,6 +49,33 @@ namespace OrbMech
 		VECTOR3 V = _V(0, 0, 0);
 		double GMT = 0.0;
 		double mass = 0.0;
+	};
+
+	struct SessionConstants
+	{
+		SessionConstants()
+		{
+			M_TEG_TO_M50 = M_TEG_TO_J2000 = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
+			GMTBASE = GMTLO = launchdateSec = 0.0;
+			Year = Month = Day = DayOfYear = Hours = Minutes = 0;
+		}
+		//MJD at midnight before launch, days
+		double GMTBASE;
+		//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, right handed
+		MATRIX3 M_TEG_TO_M50;
+		//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to J2000 ecliptic, right handed
+		MATRIX3 M_TEG_TO_J2000;
+		//GMT of liftoff on launch day, seconds
+		double GMTLO;
+		//Date
+		int Year;
+		int Month;
+		int Day;
+		int DayOfYear;
+		int Hours;
+		int Minutes;
+		//Seconds of liftoff
+		double launchdateSec;
 	};
 
 	struct InvariantElements
@@ -124,29 +155,21 @@ namespace OrbMech
 	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double GMT, VECTOR3 &R2, VECTOR3 &V2);
 	double timetoperi(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
 	double kepler_U_equation(double x, double ro, double vro, double a, double mu);
-	void REVUP(VECTOR3 R, VECTOR3 V, double n, double mu, VECTOR3 &R1, VECTOR3 &V1, double &t);
 	void RADUP(VECTOR3 R_W, VECTOR3 V_W, VECTOR3 R_C, double mu, VECTOR3 &R_W1, VECTOR3 &V_W1);
-	bool CSIToDH(VECTOR3 R_A1, VECTOR3 V_A1, VECTOR3 R_P2, VECTOR3 V_P2, double DH, double mu, double &dv);
 	void ITER(double &c, int &s, double e, double &p, double &x, double &eo, double &xo, double dx0 = 1.0);
 	VECTOR3 elegant_lambert(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double dt, int N, bool prog, double mu);
-	VECTOR3 Vinti(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double gmt0, double dt, int N, bool prog, VECTOR3 V_guess, double tol = 0.1);
 	void periapo(VECTOR3 R, VECTOR3 V, double mu, double &apo, double &peri);
-	void umbra(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool rise, double &v1);
-	double sunrise(VECTOR3 R, VECTOR3 V, double GMT, double BaseMJD, MATRIX3 Rot, OBJHANDLE planet, OBJHANDLE planet2, bool rise, bool midnight, bool future = false);
-	void orbitmidnight(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool night, double &v1);
+
 	//Analytical sun ephemeris
-	VECTOR3 SUN(double MJD, const MATRIX3 &RM);
+	VECTOR3 SUN(double MJD);
+	VECTOR3 SUN(double GMTBASE, double GMT, const MATRIX3& RM);
+
 	void BrouwerSecularRates(CELEMENTS coe_osc, CELEMENTS coe_mean, double &l_dot, double &g_dot, double &h_dot);
-	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime);
-	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double GMT, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &GMT_out);
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go);
 	VECTOR3 gravityroutine(VECTOR3 R, bool nonspherical);
 	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu);
 	double GetMeanMotion(VECTOR3 R, VECTOR3 V, double mu);
-	double findlatitude(VECTOR3 R, VECTOR3 V, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
-	double findlatitude_integ(VECTOR3 R, VECTOR3 V, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat);
 	bool impulsive(VECTOR3 R, VECTOR3 V, double GMT, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &GMT_cutoff, double &m_cutoff);
-	double COMELE(VECTOR3 RS_COM, VECTOR3 VS_COM, VECTOR3 RT_COM);
 	//Apogee and Perigee Radius Magnitude
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
 	//Apogee/Perigee Magnitude Determination
@@ -165,6 +188,7 @@ namespace OrbMech
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
 	void sv_from_coe(OELEMENTS el, double mu, VECTOR3 &R, VECTOR3 &V);
 	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu);
+	double ArgLat(VECTOR3 R, VECTOR3 V);
 	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V);
 	MATRIX3 GetRotationMatrix(double t, bool earth = true);
 	MATRIX3 GetObliquityMatrix(double t, bool earth = true);
@@ -216,9 +240,12 @@ namespace OrbMech
 	double fraction_xi(double x);
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle);
 	double normalize_angle(const double value, const double start, const double end);
-	MATRIX3 inverse(MATRIX3 a);
-	double determinant(MATRIX3 a);
 	MATRIX3 tmat(MATRIX3 a);
+
+	//Output formatting
+	void SS2HHMMSS(double val, double& hh, double& mm, double& ss);
+	void GMT2String(char* buf, double GMT, int Day);
+	void MET2String(char* buf, double MET);
 
 	class CoastIntegrator
 	{

@@ -192,7 +192,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 							temp.XRNG.assign(Buffer);
 
 							//Calculate local sun angle
-							R_SUN = OrbMech::SUN(opt.BaseMJD + T_LAND / 24.0 / 3600.0, opt.RM);
+							R_SUN = OrbMech::SUN(opt.BaseMJD, T_LAND, opt.RM);
 							OrbMech::latlong_from_r(R_SUN, SLAT, SLON);
 							SLON -= T_LAND * OrbMech::w_Earth;
 							SLON = OrbMech::normalize_angle(SLON, 0.0, PI2);

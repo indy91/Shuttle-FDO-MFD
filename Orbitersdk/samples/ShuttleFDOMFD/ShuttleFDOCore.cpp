@@ -29,13 +29,13 @@ static DWORD WINAPI OMPMFD_Trampoline(LPVOID ptr) {
 const double PITCH_BIAS = 15.82*RAD;
 const double YAW_BIAS = 6.5*RAD;
 
-ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
+ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
+	omp(sescnst)
 {
 	vessel = v;
 
 	hEarth = oapiGetObjectByName("Earth");
 	mu = GGRAV * oapiGetMass(hEarth);
-	w_E = PI2 / oapiGetPlanetPeriod(hEarth);
 	
 	shuttlenumber = -1;
 	shuttle = vessel;
@@ -69,97 +69,86 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v)
 
 	DMT_MNVR = 0;
 	useNonSphericalGravity = vessel->NonsphericalGravityEnabled();
-	OMPErrorCode = 0;
 	chaserSVOption = false;
 
 	subThreadMode = 0;
 	subThreadStatus = 0;
 
-	for (int i = 0;i < 4;i++)
-	{
-		launchdate[i] = 0;
-	}
-	launchdateSec = 0.0;
-	LaunchGMT = 0.0;
-	BaseMJD = 0.0;
-	M_EFTOECL_AT_EPOCH = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
-	M_TEGTOECL = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
 	MTTSlotData[0].SLOT = 1;
-	MTTSlotData[0].thrusters = OMPDefs::THRUSTERS::OBP;
-	MTTSlotData[0].guid = OMPDefs::GUID::P7;
+	MTTSlotData[0].thrusters = OMP::OMPDefs::THRUSTERS::OBP;
+	MTTSlotData[0].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[0].ITER = false;
 	MTTSlotData[0].IMP = true;
 	MTTSlotData[0].RREF = true;
 	MTTSlotData[0].ROLL = 0;
 
 	MTTSlotData[1].SLOT = 2;
-	MTTSlotData[1].thrusters = OMPDefs::THRUSTERS::OBP;
-	MTTSlotData[1].guid = OMPDefs::GUID::P7;
+	MTTSlotData[1].thrusters = OMP::OMPDefs::THRUSTERS::OBP;
+	MTTSlotData[1].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[1].ITER = false;
 	MTTSlotData[1].IMP = true;
 	MTTSlotData[1].RREF = true;
 	MTTSlotData[1].ROLL = PI;
 
 	MTTSlotData[2].SLOT = 3;
-	MTTSlotData[2].thrusters = OMPDefs::THRUSTERS::OL;
-	MTTSlotData[2].guid = OMPDefs::GUID::P7;
+	MTTSlotData[2].thrusters = OMP::OMPDefs::THRUSTERS::OL;
+	MTTSlotData[2].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[2].ITER = false;
 	MTTSlotData[2].IMP = true;
 	MTTSlotData[2].RREF = true;
 	MTTSlotData[2].ROLL = 0;
 
 	MTTSlotData[3].SLOT = 4;
-	MTTSlotData[3].thrusters = OMPDefs::THRUSTERS::OL;
-	MTTSlotData[3].guid = OMPDefs::GUID::P7;
+	MTTSlotData[3].thrusters = OMP::OMPDefs::THRUSTERS::OL;
+	MTTSlotData[3].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[3].ITER = false;
 	MTTSlotData[3].IMP = true;
 	MTTSlotData[3].RREF = true;
 	MTTSlotData[3].ROLL = PI;
 
 	MTTSlotData[4].SLOT = 5;
-	MTTSlotData[4].thrusters = OMPDefs::THRUSTERS::OR;
-	MTTSlotData[4].guid = OMPDefs::GUID::P7;
+	MTTSlotData[4].thrusters = OMP::OMPDefs::THRUSTERS::OR;
+	MTTSlotData[4].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[4].ITER = false;
 	MTTSlotData[4].IMP = true;
 	MTTSlotData[4].RREF = true;
 	MTTSlotData[4].ROLL = 0;
 
 	MTTSlotData[5].SLOT = 6;
-	MTTSlotData[5].thrusters = OMPDefs::THRUSTERS::OR;
-	MTTSlotData[5].guid = OMPDefs::GUID::P7;
+	MTTSlotData[5].thrusters = OMP::OMPDefs::THRUSTERS::OR;
+	MTTSlotData[5].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[5].ITER = false;
 	MTTSlotData[5].IMP = true;
 	MTTSlotData[5].RREF = true;
 	MTTSlotData[5].ROLL = PI;
 
 	MTTSlotData[6].SLOT = 7;
-	MTTSlotData[6].thrusters = OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[6].guid = OMPDefs::GUID::P7;
+	MTTSlotData[6].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
+	MTTSlotData[6].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[6].ITER = false;
 	MTTSlotData[6].IMP = true;
 	MTTSlotData[6].RREF = true;
 	MTTSlotData[6].ROLL = 0;
 
 	MTTSlotData[7].SLOT = 8;
-	MTTSlotData[7].thrusters = OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[7].guid = OMPDefs::GUID::P7;
+	MTTSlotData[7].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
+	MTTSlotData[7].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[7].ITER = false;
 	MTTSlotData[7].IMP = true;
 	MTTSlotData[7].RREF = true;
 	MTTSlotData[7].ROLL = PI;
 
 	MTTSlotData[8].SLOT = 9;
-	MTTSlotData[8].thrusters = OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[8].guid = OMPDefs::GUID::P7;
+	MTTSlotData[8].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
+	MTTSlotData[8].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[8].ITER = false;
 	MTTSlotData[8].IMP = false;
 	MTTSlotData[8].RREF = true;
 	MTTSlotData[8].ROLL = 0;
 
 	MTTSlotData[9].SLOT = 10;
-	MTTSlotData[9].thrusters = OMPDefs::THRUSTERS::OL;
-	MTTSlotData[9].guid = OMPDefs::GUID::P7;
+	MTTSlotData[9].thrusters = OMP::OMPDefs::THRUSTERS::OL;
+	MTTSlotData[9].guid = OMP::OMPDefs::GUID::P7;
 	MTTSlotData[9].ITER = false;
 	MTTSlotData[9].IMP = false;
 	MTTSlotData[9].RREF = true;
@@ -252,14 +241,14 @@ SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVGMT)
 
 	v->GetRelativePos(hEarth, R);
 	v->GetRelativeVel(hEarth, V);
-	sv.GMT = (oapiGetSimMJD() - BaseMJD)*24.0*3600.0;
+	sv.GMT = (oapiGetSimMJD() - sescnst.GMTBASE)*24.0*3600.0;
 
 	sv.R = _V(R.x, R.z, R.y);
 	sv.V = _V(V.x, V.z, V.y);
 
 	//Use TEG coordinate system
-	sv.R = rhtmul(M_EFTOECL_AT_EPOCH, sv.R);
-	sv.V = rhtmul(M_EFTOECL_AT_EPOCH, sv.V);
+	sv.R = tmul(sescnst.M_TEG_TO_J2000, sv.R);
+	sv.V = tmul(sescnst.M_TEG_TO_J2000, sv.V);
 
 	sv.mass = v->GetMass();
 
@@ -276,148 +265,40 @@ SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVGMT)
 	return sv1;
 }
 
-void ShuttleFDOCore::ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y)
+bool ShuttleFDOCore::AddManeuver(char* type, char* name, unsigned ins)
 {
-	OrbMech::OELEMENTS coe;
-	SV sv[3];
-	double u[3], r[3], gamma, u_0;
+	OMP::ManeuverConstraints man;
 
-	sv[0] = sv0;
-	sv[1] = coast(sv[0], 15.0*60.0);
-	sv[2] = coast(sv[1], 15.0*60.0);
+	//Check if maneuver type is valid
+	man.type = OMP::OrbitalManeuverProcessor::GetOPMManeuverType(type);
+	if (man.type == OMP::OMPDefs::MANTYPE::NOMAN) return false;
 
-	for (int i = 0;i < 3;i++)
-	{
-		coe = OrbMech::coe_from_sv(sv[i].R, sv[i].V, mu);
-		u[i] = fmod(coe.TA + coe.w, PI2);
-		r[i] = length(sv[i].R);
-	}
+	//Maneuver name/comment exceeds maximum?
+	man.name = name;
+	if (man.name.size() > OMP::MAXMANEUVERNAMELENGTH) return false;
 
-	gamma = (r[0] - r[1]) / (r[0] - r[2]);
-	u_0 = atan2(sin(u[0]) - sin(u[1]) - gamma * (sin(u[0]) - sin(u[2])), gamma*(cos(u[2]) - cos(u[0])) - cos(u[1]) + cos(u[0]));
-	if (u_0 < 0)
-	{
-		u_0 += PI2;
-	}
-
-	u_x = u_0 + PI05;
-	u_y = u_0 - PI05;
-
-	if (u_x < 0)
-	{
-		u_x += PI2;
-	}
-	if (u_y < 0)
-	{
-		u_y += PI2;
-	}
-
-}
-
-SV ShuttleFDOCore::PositionMatch(SV sv_A, SV sv_P)
-{
-	SV sv_A1, sv_P1;
-	VECTOR3 u, R_A1, U_L;
-	double phase, n, dt, ddt;
-
-	dt = 0.0;
-
-	u = unit(crossp(sv_P.R, sv_P.V));
-	U_L = unit(crossp(u, sv_P.R));
-	sv_A1 = GeneralTrajectoryPropagation(sv_A, 0, sv_P.GMT, 0.0, useNonSphericalGravity);
-
-	do
-	{
-		R_A1 = unit(sv_A1.R - u * dotp(sv_A1.R, u))*length(sv_A1.R);
-		phase = acos(dotp(unit(R_A1), unit(sv_P.R)));
-		if (dotp(U_L, R_A1) > 0)
-		{
-			phase = -phase;
-		}
-		n = OrbMech::GetMeanMotion(sv_A1.R, sv_A1.V, mu);
-		ddt = phase / n;
-		sv_A1 = coast_auto(sv_A1, ddt);
-		dt += ddt;
-	} while (abs(ddt) > 0.01);
-
-	return sv_A1;
-}
-
-VECTOR3 ShuttleFDOCore::SOIManeuver(SV sv_A, SV sv_P, double GMT1, double dt, VECTOR3 off)
-{
-	SV sv_A1, sv_P2;
-	VECTOR3 RP2_off, VA1_apo, DV;
-	double dt1, dt2;
-
-	dt1 = GMT1 - sv_A.GMT;
-	dt2 = GMT1 - sv_P.GMT + dt;
-
-	sv_A1 = coast_auto(sv_A, dt1);
-	sv_P2 = coast_auto(sv_P, dt2);
-
-	OrbMech::REL_COMP(sv_P2.R, sv_P2.V, RP2_off, off);
-	VA1_apo = LambertAuto(sv_A1.R, sv_A1.V, sv_A1.GMT, RP2_off, dt, 0, true);
-	DV = VA1_apo - sv_A1.V;
-	return DV;
-}
-
-VECTOR3 ShuttleFDOCore::SORManeuver(SV sv_A, SV sv_P, double GMT1, VECTOR3 off)
-{
-	SV sv_A1, sv_P1, sv_P2;
-	VECTOR3 VA1_apo, DV, RP2_off;
-	double dt, dt1, dt2;
-
-	dt1 = GMT1 - sv_A.GMT;
-	dt2 = GMT1 - sv_P.GMT;
-
-	sv_A1 = coast_auto(sv_A, dt1);
-	sv_P1 = coast_auto(sv_P, dt2);
-
-	dt = OrbMech::time_theta(sv_P1.R, sv_P1.V, 270.0*RAD, mu);
-	sv_P2 = coast_auto(sv_P1, dt);
-
-	OrbMech::REL_COMP(sv_P2.R, sv_P2.V, RP2_off, off);
-	VA1_apo = LambertAuto(sv_A1.R, sv_A1.V, sv_A1.GMT, RP2_off, dt, 0, true);
-	DV = VA1_apo - sv_A1.V;
-	return DV;
-}
-
-VECTOR3 ShuttleFDOCore::LambertAuto(VECTOR3 RA, VECTOR3 VA, double GMT0, VECTOR3 RP_off, double dt, int N, bool prog)
-{
-	if (useNonSphericalGravity)
-	{
-		return OrbMech::Vinti(RA, VA, RP_off, GMT0, dt, N, prog, _V(0, 0, 0));
-	}
-	else
-	{
-		return OrbMech::elegant_lambert(RA, VA, RP_off, dt, N, prog, mu);
-	}
-}
-
-void ShuttleFDOCore::AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins)
-{
-	ManeuverConstraints man;
-
-	sprintf_s(man.name, name);
-	man.type = type;
-	man.threshold = OMPDefs::THRESHOLD::NOTHR;
+	man.threshold = OMP::OMPDefs::THRESHOLD::NOTHR;
 	man.thresh_num = 0.0;
 
 	if (ins == 0 || ins == ManeuverConstraintsTable.size() + 1)
 	{
+		//Maximum number of maneuvers reached?
+		if (ManeuverConstraintsTable.size() >= OMP::MAXMANEUVERS) return false;
+
 		ManeuverConstraintsTable.push_back(man);
 	}
 	else
 	{
 		ManeuverConstraintsTable.insert(ManeuverConstraintsTable.begin() + ins - 1, man);
 	}
+	return true;
 }
 
-void ShuttleFDOCore::ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *name)
+void ShuttleFDOCore::ModifyManeuver(unsigned num, OMP::OMPDefs::MANTYPE type, char *name)
 {
 	if (num >= 0 && num < ManeuverConstraintsTable.size())
 	{
-		sprintf_s(ManeuverConstraintsTable[num].name, name);
+		ManeuverConstraintsTable[num].name.assign(name);
 		ManeuverConstraintsTable[num].type = type;
 		//ManeuverConstraintsTable[num].threshold = OMPDefs::THRESHOLD::NOTHR;
 		//ManeuverConstraintsTable[num].thresh_num = 0.0;
@@ -425,7 +306,7 @@ void ShuttleFDOCore::ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *n
 	}
 }
 
-void ShuttleFDOCore::AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time)
+void ShuttleFDOCore::AddManeuverThreshold(unsigned num, OMP::OMPDefs::THRESHOLD type, double time)
 {
 	ManeuverConstraintsTable[num].threshold = type;
 	ManeuverConstraintsTable[num].thresh_num = time;
@@ -433,1257 +314,55 @@ void ShuttleFDOCore::AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type,
 
 void ShuttleFDOCore::AddManeuverSecondary(unsigned num, char *type, double value)
 {
-	SecData sec;
+	OMP::SecData sec;
 
-	sprintf_s(sec.type, 5, type);
+	OMP::OMPDefs::SECONDARIES typ = OMP::OrbitalManeuverProcessor::GetSecondaryType(type);
+	if (typ == OMP::OMPDefs::SECONDARIES::NOSEC) return;
+
+	sec.type = typ;
 	sec.value = value;
 	ManeuverConstraintsTable[num].secondaries.push_back(sec);
 }
 
-int ShuttleFDOCore::CalculateOMPPlan()
+void ShuttleFDOCore::CalculateOMPPlan()
 {
-	if (target == NULL) return 100;
-	if (ManeuverConstraintsTable.size() < 1) return 1;	//Error 1: No maneuvers in constraint table
-	if (ManeuverConstraintsTable[0].threshold != OMPDefs::THRESHOLD::THRES_T) return 2;	//Error 2: First maneuver needs a T as threshold
+	OMPErrorMessage = "";
 
-	ManeuverEvaluationTable.clear();
-
-	std::vector<SV> sv_bef_table, sv_aft_table, sv_P_table;
-	SV sv_phantom;
-	VECTOR3 DV;
-	std::vector<VECTOR3> dv_table;
-	std::vector<VECTOR3> add_constraint;
-	std::vector<TIGSecondaries> tigmodifiers;
-	std::vector<SV> sv_thres;
-	double dt;
-	unsigned i, j, k, l, TAB;
-	std::vector<ITERCONSTR> iterators;
-
-	TAB = ManeuverConstraintsTable.size();
-	l = 0;
-
-	sv_bef_table.resize(TAB);
-	sv_aft_table.resize(TAB);
-	sv_P_table.resize(TAB);
-	tigmodifiers.resize(TAB);
-	dv_table.resize(TAB);
-	add_constraint.resize(TAB);
-	sv_thres.resize(TAB);
-
-	for (i = 0;i < TAB;i++)
+	if (shuttle == NULL)
 	{
-		tigmodifiers[i].type = OMPDefs::SECONDARIES::NOSEC;
-		tigmodifiers[i].value = 0.0;
-		dv_table[i] = _V(0, 0, 0);
-		add_constraint[i] = _V(0, 0, 0);
+		OMPErrorMessage = "Error: select Shuttle vessel";
+		return;
+	}
+	if (target == NULL)
+	{
+		OMPErrorMessage = "Error: select target vessel";
+		return;
 	}
 
-	ITERCONSTR con;
-	bool npcflag = false;
-	int found;
-	//SET UP ITERATORS and CHECK THAT THRESHOLDS EXIST
-	for (i = 0;i < TAB;i++)
-	{
-		found = 0;
+	OMP::OMPInputs OMPIn;
+	OMP::OMPOutputs OMPOut;
 
-		if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::NOTHR) return 5;	//Error 5: Maneuver doesn't have a threshold
-		
-		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC)
-		{
-			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
-			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
-				{
-					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "DR") == 0)
-					{
-						found = 1;
-					}
-					if (found) break;
-				}
-				if (found) break;
-			}
-
-			if (!found) return 7;	//Error 7: didn't find NC constraint
-
-			con.man = i;
-			con.type = 1;
-			con.constr = k;
-			con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
-
-			iterators.push_back(con);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NHRD)
-		{
-			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
-			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
-				{
-					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "DH") == 0)
-					{
-						found = 1;
-					}
-					if (found) break;
-				}
-				if (found) break;
-			}
-
-			if (!found) return 8;	//Error 8: didn't find NH constraint
-
-			con.man = i;
-			con.type = 2;
-			con.constr = k;
-			con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
-
-			iterators.push_back(con);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
-		{
-			for (k = i + 1;k < ManeuverConstraintsTable.size();k++)
-			{
-				for (j = 0;j < ManeuverConstraintsTable[k].secondaries.size();j++)
-				{
-					if (strcmp(ManeuverConstraintsTable[k].secondaries[j].type, "WEDG") == 0)
-					{
-						found = 1;
-					}
-					if (found) break;
-				}
-				if (found) break;
-			}
-
-			if (npcflag) return 22;	//More than one NPC maneuver found
-
-			//Only set up iterator if constraint was found
-			if (found)
-			{
-				npcflag = true;
-
-				con.man = i;
-				con.type = 3;
-				con.constr = k;
-				con.value = ManeuverConstraintsTable[k].secondaries[j].value*1852.0;
-				iterators.push_back(con);
-			}			
-		}
-	}
-
-	ITERSTATE *iterstate;
-	iterstate = new ITERSTATE[iterators.size()];
-
-	//CHECK THAT MANEUVER CONSTRAINTS EXIST
-	for (i = 0;i < TAB;i++)
-	{
-		found = 0;
-		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
-		{
-			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-			{
-				if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "HD") == 0)
-				{
-					add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value * 1852.0;
-					found++;
-				}
-			}
-			if (found != 1) return 6;	//Didn't find HD constraints for HA maneuver
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV)
-		{
-			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-			{
-				if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DVLV") == 0)
-				{
-					if (found > 2) return 4;													//Error 4: too many DV components specified
-					dv_table[i].data[found] = ManeuverConstraintsTable[i].secondaries[j].value*0.3048;
-					found++;
-				}
-			}
-			if (found < 3) return 3;													//Error 3: Not enough DV components specified
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
-		{
-			if (i + 1 >= TAB) return 11; //Error 11: No maneuver after SOI/NCC
-			if (ManeuverConstraintsTable[i + 1].type != OMPDefs::MANTYPE::SOR) return 12;	//Error 12: Wrong maneuver after SOI
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOR)
-		{
-			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-			{
-				if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "CXYZ") == 0)
-				{
-					if (found > 2) return 9; //Error 9: too many CXYZ components specified
-					add_constraint[i].data[found] = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
-					found++;
-				}
-			}
-			if (found < 3) return 10; //Error 10: Not enough CXYZ components specified
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NCC)
-		{
-			if (i + 1 >= TAB) return 11; //Error 11: No maneuver after SOI/NCC
-
-			for (j = 0;j < ManeuverConstraintsTable[i + 1].secondaries.size();j++)
-			{
-				if (strcmp(ManeuverConstraintsTable[i + 1].secondaries[j].type, "CXYZ") == 0)
-				{
-					if (found > 2) return 9; //Error 9: too many CXYZ components specified
-					add_constraint[i + 1].data[found] = ManeuverConstraintsTable[i + 1].secondaries[j].value*1852.0;
-					found++;
-				}
-				else if (strcmp(ManeuverConstraintsTable[i + 1].secondaries[j].type, "DH") == 0)
-				{
-					if (found > 2) return 9; //Error 9: too many CXYZ components specified
-					add_constraint[i + 1].z = ManeuverConstraintsTable[i + 1].secondaries[j].value*1852.0;
-					found++;
-				}
-				else if (strcmp(ManeuverConstraintsTable[i + 1].secondaries[j].type, "DR") == 0)
-				{
-					if (found > 2) return 9; //Error 9: too many CXYZ components specified
-					add_constraint[i + 1].x = ManeuverConstraintsTable[i + 1].secondaries[j].value*1852.0;
-					found++;
-				}
-				else if (strcmp(ManeuverConstraintsTable[i + 1].secondaries[j].type, "WEDG") == 0)
-				{
-					if (found > 2) return 9; //Error 9: too many CXYZ components specified
-					add_constraint[i + 1].y = ManeuverConstraintsTable[i + 1].secondaries[j].value*1852.0;
-					found++;
-				}
-			}
-			if (found < 3) return 10; //Error 10: Not enough CXYZ components specified
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
-		{
-			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-			{
-				if(strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DV") == 0)
-				{
-					add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value*0.3048;
-				}
-				else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "PIT") == 0)
-				{
-					add_constraint[i].y = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-				}
-				else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "YAW") == 0)
-				{
-					add_constraint[i].z = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-				}
-			}
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NOSH)
-		{
-			for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-			{
-				if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DNOD") == 0)
-				{
-					add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
-					found++;
-				}
-			}
-			if (found != 1) return 24;	//Didn't find DNOD constraint for NOSH maneuver
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::PC)
-		{
-		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-		{
-			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DPC") == 0)
-			{
-				add_constraint[i].x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
-				found++;
-			}
-		}
-		if (found != 1) return 27;	//Didn't find DPC constraint for PC maneuver
-		}
-	}
-
-	//CHECK AND LOAD TIG MODIFIERS
-	for (i = 0;i < TAB;i++)
-	{
-		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-		{
-			//Maneuver at apogee
-			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "APO") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::APO;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			//Maneuver at apogee
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "PER") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::PER;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			//Initial guess
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DV") == 0)
-			{
-				dv_table[i] = _V(ManeuverConstraintsTable[i].secondaries[j].value*0.3048, 0, 0);
-			}
-			//Common Node
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "CN") == 0)
-			{
-				if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NPC) return 14;	//Error 14: CN secondary only applies to NPC
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::CN;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			//Maneuver at nth upcoming apsis
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "APS") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::SEC_APS;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITI") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITI;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITM") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITM;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LITO") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::LITO;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITI") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITI;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITM") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITM;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NITO") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::NITO;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*60.0;
-			}
-			//Optimum node shift
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "OPT") == 0)
-			{
-				if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NOSH) return 25;	//Error 25: OPT secondary only applies to NOSH
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::OPT;
-			}
-			//Angle from apogee
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "A") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::A;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Angle from perigee
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "P") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::P;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Argument of latitude
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "U") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::U;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Ascending Node
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "ASC") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::ASC;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			//Descending Node
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DSC") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::DSC;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value;
-			}
-			//Latitude
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LAT") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::LAT;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Longitude
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "LON") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::LON;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Declination
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "DEC") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::DEC;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*RAD;
-			}
-			//Latitude
-			else if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "ALT") == 0)
-			{
-				tigmodifiers[i].type = OMPDefs::SECONDARIES::ALT;
-				tigmodifiers[i].value = ManeuverConstraintsTable[i].secondaries[j].value*1852.0;
-			}
-		}
-	}
-
-	SV sv_A0, sv_P0, sv_cur, sv_P_cur;
 	if (chaserSVOption)
 	{
-		sv_A0 = sv_chaser;
+		OMPIn.CHASER = sv_chaser;
+		OMPIn.OMPChaserFile.assign("LWP");
 	}
 	else
 	{
-		sv_A0 = StateVectorCalc(shuttle);
+		OMPIn.CHASER = StateVectorCalc(shuttle);
+		OMPIn.OMPChaserFile.assign(shuttle->GetName());
 	}
-	sv_P0 = StateVectorCalc(target);
+	OMPIn.TARGET = StateVectorCalc(target);
+	OMPIn.OMPTargetFile.assign(target->GetName());
+	OMPIn.useNonSphericalGravity = useNonSphericalGravity;
+	OMPIn.ManeuverConstraintsTable = ManeuverConstraintsTable;
 
-	//Save for later use
-	sv_chaser = sv_A0;
-	sv_target = sv_P0;
+	// Run calculation
+	omp.Calculate(OMPIn, OMPOut);
 
-	//For Testing
-	VECTOR3 u;
-	/*u = unit(crossp(sv_P0.R, sv_P0.V));
-	sv_A0.R = unit(sv_A0.R - u * dotp(sv_A0.R, u))*length(sv_A0.R);
-	sv_A0.V = unit(sv_A0.V - u * dotp(sv_A0.V, u))*length(sv_A0.V);*/
+	OMPErrorMessage = OMPOut.ErrorMessage;
 
-	//Set up loop
-	i = 0;
-	bool recycle;
-
-	do
-	{
-		recycle = false;
-		if (i == 0)
-		{
-			sv_cur = sv_A0;
-			sv_P_cur = sv_P0;
-		}
-		else
-		{
-			sv_cur = sv_aft_table[i - 1];
-			sv_P_cur = sv_P_table[i - 1];
-		}
-
-		//THRESHOLD
-		if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_T)
-		{
-			dt = GMTfromGET(ManeuverConstraintsTable[i].thresh_num) - sv_cur.GMT;
-			sv_bef_table[i] = coast_auto(sv_cur, dt);
-		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV ||
-			ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_APS || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_N)
-		{
-			double mult;
-
-			if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_REV)
-			{
-				mult = 1.0;
-			}
-			else
-			{
-				mult = 0.5;
-			}
-
-			if (i > 0 && ManeuverConstraintsTable[i - 1].type == OMPDefs::MANTYPE::NPC)
-			{
-				//Special NPC logic. Propagate threshold state vector for desired orbits, then propagate current state vector to same time. Assumes plane change doesn't affect orbital period
-				sv_bef_table[i] = DeltaOrbitsAuto(sv_thres[i - 1], mult*ManeuverConstraintsTable[i].thresh_num);
-				sv_bef_table[i] = coast_auto(sv_cur, sv_bef_table[i].GMT - sv_cur.GMT);
-			}
-			else
-			{
-				sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, mult*ManeuverConstraintsTable[i].thresh_num);
-			}
-		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_DT)
-		{
-			//Special NPC logic. DT from threshold time, not current time
-			double ddt;
-			if (i > 0 && ManeuverConstraintsTable[i - 1].type == OMPDefs::MANTYPE::NPC)
-			{
-				ddt = ManeuverConstraintsTable[i].thresh_num - (sv_cur.GMT - sv_thres[i - 1].GMT);
-			}
-			else
-			{
-				ddt = ManeuverConstraintsTable[i].thresh_num;
-			}
-			sv_bef_table[i] = coast_auto(sv_cur, ddt);
-		}
-		else if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_CAN || ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::THRES_WT)
-		{
-			dt = OrbMech::time_theta(sv_bef_table[i].R, sv_bef_table[i].V, ManeuverConstraintsTable[i].thresh_num, mu, true);
-			sv_bef_table[i] = DeltaOrbitsAuto(sv_cur, dt);
-		}
-
-		//Save state vector at threshold
-		sv_thres[i] = sv_bef_table[i];
-
-		//TIG MODIFICATION
-		if (tigmodifiers[i].type != OMPDefs::SECONDARIES::NOSEC)
-		{
-			if (tigmodifiers[i].type == OMPDefs::SECONDARIES::APO)
-			{
-				sv_bef_table[i] = timetoapo_auto(sv_bef_table[i], tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::PER)
-			{
-				double dt_P = 0.0;
-				if (tigmodifiers[i].value > 1.0)
-				{
-					double P = OrbMech::period(sv_bef_table[i].R, sv_bef_table[i].V, mu);
-					dt_P = P * tigmodifiers[i].value - 1.0;
-					sv_bef_table[i] = coast_auto(sv_bef_table[i], dt_P);
-				}
-				dt = OrbMech::timetoperi(sv_bef_table[i].R, sv_bef_table[i].V, mu, 1);
-				sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::CN)
-			{
-				bool err;
-
-				//First iteration
-				if (sv_phantom.GMT == 0.0)
-				{
-					SV sv_P1 = coast_auto(sv_P_cur, sv_bef_table[i].GMT - sv_P_cur.GMT);
-					err = FindCommonNode(sv_bef_table[i], sv_P1, add_constraint[i], dt);
-				}
-				else
-				{
-					err = FindCommonNode(sv_bef_table[i], sv_phantom, add_constraint[i], dt);
-				}
-				if (err) return 31;
-
-				sv_bef_table[i] = coast_auto(sv_bef_table[i], dt);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::SEC_APS)
-			{
-				sv_bef_table[i] = FindNthApsidalCrossingAuto(sv_bef_table[i], tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ARG)
-			{
-				OrbMech::OELEMENTS coe;
-				double u_b, DN, u_d;
-
-				coe = OrbMech::coe_from_sv(sv_bef_table[i].R, sv_bef_table[i].V, mu);
-				u_b = fmod(coe.TA + coe.w, PI2);
-				u_d = tigmodifiers[i].value*RAD;
-				if (u_b > u_d)
-				{
-					DN = 1.0;
-				}
-				else
-				{
-					DN = 0.0;
-				}
-
-				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, u_d, DN, useNonSphericalGravity);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITI || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITO)
-			{
-				sv_bef_table[i] = FindOrbitalSunriseRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITM)
-			{
-				sv_bef_table[i] = FindOrbitalMidnightRelativeTime(sv_bef_table[i], false, tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LITO || tigmodifiers[i].type == OMPDefs::SECONDARIES::NITI)
-			{
-				sv_bef_table[i] = FindOrbitalSunriseRelativeTime(sv_bef_table[i], false, tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::NITM)
-			{
-				sv_bef_table[i] = FindOrbitalMidnightRelativeTime(sv_bef_table[i], true, tigmodifiers[i].value);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::OPT)
-			{
-				sv_bef_table[i] = FindOptimumNodeShiftPoint(sv_bef_table[i], add_constraint[i].x);
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::LAT || tigmodifiers[i].type == OMPDefs::SECONDARIES::LON || tigmodifiers[i].type == OMPDefs::SECONDARIES::DEC || tigmodifiers[i].type == OMPDefs::SECONDARIES::ALT)
-			{
-				SV sv_temp;
-				bool err;
-
-				err = SEARMT(sv_bef_table[i], tigmodifiers[i].type, tigmodifiers[i].value, sv_temp);
-				if (err) return 26; //Failure to find maneuver time
-				sv_bef_table[i] = sv_temp;
-			}
-			else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ASC || tigmodifiers[i].type == OMPDefs::SECONDARIES::DSC || tigmodifiers[i].type == OMPDefs::SECONDARIES::U)
-			{
-				VECTOR3 N, H;
-				double U, crossings, U_D;
-
-				//Calculate current argument of latitude
-				H = unit(crossp(sv_bef_table[i].R, sv_bef_table[i].V));
-				N = unit(crossp(_V(0, 0, 1), H));
-				U = PHSANG(sv_bef_table[i].R, sv_bef_table[i].V, N);
-				if (U < 0)
-				{
-					U += PI2;
-				}
-
-				if (tigmodifiers[i].type == OMPDefs::SECONDARIES::ASC)
-				{
-					U_D = 0.0;
-					crossings = round(tigmodifiers[i].value) - 1.0;
-				}
-				else if (tigmodifiers[i].type == OMPDefs::SECONDARIES::DSC)
-				{
-					U_D = PI;
-					crossings = round(tigmodifiers[i].value) - 1.0;
-				}
-				else
-				{
-					U_D = tigmodifiers[i].value;
-					crossings = 0.0;
-				}
-
-				if (U > U_D)
-				{
-					crossings = crossings + 1.0;
-				}
-
-				sv_bef_table[i] = GeneralTrajectoryPropagation(sv_bef_table[i], 2, U_D, crossings, useNonSphericalGravity);
-			}
-		}
-
-		//TIG has been calculated, now get target SV at TIG
-		sv_P_table[i] = coast_auto(sv_P_cur, sv_bef_table[i].GMT - sv_P_cur.GMT);
-
-		//ITERATORS
-		for (unsigned l = 0;l < iterators.size();l++)
-		{
-			if (iterators[l].constr == i)
-			{
-				//NC Manever Iterator
-				if (iterators[l].type == 1)
-				{
-					VECTOR3 R_REL, V_REL;
-					SV SV_ACON = sv_bef_table[i];
-					SV SV_PCON = sv_P_table[i];
-					OrbMech::REL_COMP(true, SV_PCON.R, SV_PCON.V, SV_ACON.R, SV_ACON.V, R_REL, V_REL);
-
-					iterstate[l].err = iterators[l].value - R_REL.x;
-
-					if (abs(iterstate[l].err) > 10.0)
-					{
-						iterstate[l].converged = false;
-						iterstate[l].dv = dv_table[iterators[l].man].x;
-						OrbMech::ITER(iterstate[l].c_I, iterstate[l].s_F, iterstate[l].err, iterstate[l].p_H, iterstate[l].dv, iterstate[l].erro, iterstate[l].dvo);
-
-						if (iterstate[l].s_F) return 20;	//Error 20: Too many iterations
-
-						dv_table[iterators[l].man].x = iterstate[l].dv;
-
-						//return to maneuver
-						i = iterators[l].man;
-						recycle = true;
-						break;
-					}
-					else
-					{
-						iterstate[l].converged = true;
-						iterstate[l].c_I = 0;
-					}
-				}
-				//NH Maneuver Iterator
-				if (iterators[l].type == 2)
-				{
-					//Calculate error
-					VECTOR3 Rtemp, Vtemp;
-					SV SV_ACON = sv_bef_table[i];
-					SV SV_PCON = sv_P_table[i];
-
-					u = unit(crossp(SV_PCON.R, SV_PCON.V));
-					SV_ACON.R = unit(SV_ACON.R - u * dotp(SV_ACON.R, u))*length(SV_ACON.R);
-					OrbMech::RADUP(SV_PCON.R, SV_PCON.V, SV_ACON.R, mu, Rtemp, Vtemp);
-
-					iterstate[l].err = length(Rtemp) - length(SV_ACON.R) - iterators[l].value;
-
-					if (abs(iterstate[l].err) > 10.0)
-					{
-						iterstate[l].converged = false;
-						iterstate[l].dv = dv_table[iterators[l].man].x;
-						OrbMech::ITER(iterstate[l].c_I, iterstate[l].s_F, iterstate[l].err, iterstate[l].p_H, iterstate[l].dv, iterstate[l].erro, iterstate[l].dvo);
-
-						if (iterstate[l].s_F) return 20;	//Error 20: Too many iterations
-
-						dv_table[iterators[l].man].x = iterstate[l].dv;
-
-						//return to maneuver
-						i = iterators[l].man;
-						recycle = true;
-						break;
-					}
-					else
-					{
-						iterstate[l].converged = true;
-						iterstate[l].c_I = 0;
-					}
-				}
-				//NPC Iterator
-				if (iterators[l].type == 3)
-				{
-					SV SV_ACON = sv_bef_table[i];
-					SV SV_PCON = sv_P_table[i];
-					VECTOR3 H_A = crossp(SV_ACON.R, SV_ACON.V);
-					VECTOR3 H_P = crossp(SV_PCON.R, SV_PCON.V);
-
-					iterstate[l].err = OrbMech::acos2(dotp(H_A, H_P) / length(H_A) / length(H_P)) - iterators[l].value;
-
-					if (abs(iterstate[l].err) > 0.0005*RAD)
-					{
-						SV sv_PH;
-						iterstate[l].converged = false;
-
-						//Generate phantom plane
-						u = unit(H_P);
-						sv_PH = SV_ACON;
-						sv_PH.R = unit(SV_ACON.R - u * dotp(SV_ACON.R, u))*length(SV_ACON.R);
-						sv_PH.V = unit(SV_ACON.V - u * dotp(SV_ACON.V, u))*length(SV_ACON.V);
-
-						//Iterate backwards to NPC TIG
-						for (unsigned m = iterators[l].constr - 1;m >= iterators[l].man;m--)
-						{
-							sv_PH = coast_auto(sv_PH, sv_bef_table[m].GMT - sv_PH.GMT);
-							if (m > iterators[l].man)
-							{
-								DV = tmul(OrbMech::LVLH_Matrix(sv_PH.R, sv_PH.V), dv_table[m]);
-								sv_PH.V -= DV;
-							}
-							else break;
-						}
-
-						sv_phantom = sv_PH;
-
-						iterstate[l].c_I += 1.0;
-						if (iterstate[l].c_I > 15) return 20; //Error 20: Too many iterations
-
-						//return to maneuver
-						/*i = iterators[l].man;
-						recycle = true;
-						break;*/
-					}
-					else
-					{
-						iterstate[l].converged = true;
-						iterstate[l].c_I = 0;
-					}
-				}
-			}
-		}
-
-		if (recycle) continue;
-
-		//MANEUVER
-		if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA)
-		{
-			if (HeightManeuverAuto(sv_bef_table[i], OrbMech::EARTH_RADIUS_EQUATOR + add_constraint[i].x, true, DV))
-			{
-				return 28;	//HA maneuver failed to converge
-			}
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
-		{
-			if (HeightManeuverAuto(sv_bef_table[i], OrbMech::EARTH_RADIUS_EQUATOR + add_constraint[i].x, false, DV))
-			{
-				return 29;	//HASH maneuver failed to converge
-			}
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH)
-		{
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NHRD)
-		{
-			double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
-			dv_table[i].z = -r_dot;
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
-		{
-			double ddt;
-			if (ManeuverConstraintsTable[i + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
-			{
-				ddt = GMTfromGET(ManeuverConstraintsTable[i + 1].thresh_num) - sv_bef_table[i].GMT;
-			}
-			else if (ManeuverConstraintsTable[i + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
-			{
-				ddt = ManeuverConstraintsTable[i + 1].thresh_num;
-			}
-			else
-			{
-				return 23;	//No valid threshold for SOI/NCC
-			}
-
-			DV = SOIManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].GMT, ddt, add_constraint[i + 1]);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOR)
-		{
-			DV = SORManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].GMT, add_constraint[i]);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
-		{
-			VECTOR3 H_P;
-			//First iteration
-			if (add_constraint[i].x == 0.0)
-			{
-				SV sv_P1 = coast_auto(sv_P_cur, sv_bef_table[i].GMT - sv_P_cur.GMT);
-				H_P = crossp(sv_P1.R, sv_P1.V);
-			}
-			else
-			{
-				H_P = add_constraint[i];
-			}
-
-			DV = NPCManeuver(sv_bef_table[i], H_P);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NCC)
-		{
-			double ddt;
-			if (ManeuverConstraintsTable[i + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
-			{
-				ddt = GMTfromGET(ManeuverConstraintsTable[i + 1].thresh_num) - sv_bef_table[i].GMT;
-			}
-			else if (ManeuverConstraintsTable[i + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
-			{
-				ddt = ManeuverConstraintsTable[i + 1].thresh_num;
-			}
-			else
-			{
-				return 23;	//No valid threshold for SOI/NCC
-			}
-
-			DV = SOIManeuver(sv_bef_table[i], sv_P_cur, sv_bef_table[i].GMT, ddt, add_constraint[i + 1]);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		//Apsidal Shift
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::APSO)
-		{
-			double r_dot = dotp(sv_bef_table[i].R, sv_bef_table[i].V) / length(sv_bef_table[i].R);
-			dv_table[i] = _V(0, 0, -2.0*r_dot);
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		//Circularization
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::CIRC)
-		{
-			if (HeightManeuverAuto(sv_bef_table[i], length(sv_bef_table[i].R), false, DV))
-			{
-				return 30;	//CIRC maneuver failed to converge
-			}
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
-		{
-			double dv = add_constraint[i].x;
-			double pit = add_constraint[i].y;
-			double yaw = add_constraint[i].z;
-			dv_table[i] = _V(dv*cos(pit)*cos(yaw), dv*sin(yaw), -dv * sin(pit)*cos(yaw));
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		//Node Shift setting up common node 90° later
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NS)
-		{
-			double Y_A_dot = CalculateYDot(sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
-			dv_table[i] = _V(0, -Y_A_dot, 0);
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NSR)
-		{
-			dv_table[i] = NSRManeuver(sv_bef_table[i], sv_P_table[i]);
-			DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NOSH)
-		{
-			DV = NodeShiftManeuver(sv_bef_table[i], add_constraint[i].x);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-		else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::PC)
-		{
-			DV = PlaneChangeManeuver(sv_bef_table[i], add_constraint[i].x);
-			dv_table[i] = mul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), DV);
-		}
-
-		//Additional secondary maneuver constraints
-		for (j = 0;j < ManeuverConstraintsTable[i].secondaries.size();j++)
-		{
-			if (strcmp(ManeuverConstraintsTable[i].secondaries[j].type, "NULL") == 0)
-			{
-				double Y_A_dot = CalculateYDot(sv_bef_table[i].V, sv_P_table[i].R, sv_P_table[i].V);
-				dv_table[i].y = -Y_A_dot;
-				DV = tmul(OrbMech::LVLH_Matrix(sv_bef_table[i].R, sv_bef_table[i].V), dv_table[i]);
-			}
-		}
-
-		//Calculate SV after the maneuver
-		sv_aft_table[i] = sv_bef_table[i];
-		sv_aft_table[i].V += DV;
-
-		
-		i++;
-		if (i == TAB && IsOMPConverged(iterstate, iterators.size()) == false)
-		{
-			i = 0;
-		}
-	} while (i < TAB || IsOMPConverged(iterstate, iterators.size()) == false);
-
-	MANEUVER man;
-
-	ManeuverTable.clear();
-
-	for (i = 0;i < TAB;i++)
-	{
-		man.dV_LVLH = dv_table[i];
-		sprintf_s(man.name, 10, ManeuverConstraintsTable[i].name);
-		man.TIG_GMT = sv_bef_table[i].GMT;
-		man.type = ManeuverConstraintsTable[i].type;
-
-		ManeuverTable.push_back(man);
-	}
-
-	CalculateManeuverEvalTable(sv_A0, sv_P0);
-
-	return 0;
-}
-
-void ShuttleFDOCore::CalculateManeuverEvalTable(SV sv_A0, SV sv_P0)
-{
-	SV sv_cur, sv_Pcur;
-	VECTOR3 DV, u, R, Rtemp, Vtemp, R_REL, V_REL;
-	double apo, peri, dt1, dt2;
-	OBJHANDLE hSun;
-	MANEVALDATA man;
-
-	sv_cur = sv_A0;
-	hSun = oapiGetObjectByName("hSun");
-
-	for (unsigned i = 0;i < ManeuverTable.size();i++)
-	{
-		sv_cur = coast_auto(sv_cur, ManeuverTable[i].TIG_GMT - sv_cur.GMT);
-		DV = tmul(OrbMech::LVLH_Matrix(sv_cur.R, sv_cur.V), ManeuverTable[i].dV_LVLH);
-		sv_cur.V += DV;
-
-		GetOPMManeuverType(man.type, ManeuverTable[i].type);
-		sprintf_s(man.name, 10, ManeuverTable[i].name);
-		man.DVMag = length(ManeuverTable[i].dV_LVLH) / 0.3048;
-		man.GMTIG = ManeuverTable[i].TIG_GMT;
-		man.METIG = GETfromGMT(ManeuverTable[i].TIG_GMT);
-		if (i < ManeuverTable.size() - 1)
-		{
-			man.DT = ManeuverTable[i + 1].TIG_GMT - ManeuverTable[i].TIG_GMT;
-		}
-		else
-		{
-			man.DT = 0.0;
-		}
-		man.DV = ManeuverTable[i].dV_LVLH / 0.3048;
-
-		if (useNonSphericalGravity)
-		{
-			ApsidesMagnitudeDetermination(sv_cur, apo, peri);
-		}
-		else
-		{
-			OrbMech::periapo(sv_cur.R, sv_cur.V, mu, apo, peri);
-		}
-		man.HA = (apo - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
-		man.HP = (peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
-
-		sv_Pcur = coast_auto(sv_P0, sv_cur.GMT - sv_P0.GMT);
-		u = unit(crossp(sv_Pcur.R, sv_Pcur.V));
-		R = unit(sv_cur.R - u * dotp(sv_cur.R, u))*length(sv_cur.R);
-		OrbMech::RADUP(sv_Pcur.R, sv_Pcur.V, R, mu, Rtemp, Vtemp);
-		man.DH = (length(Rtemp) - length(R)) / 1852.0;
-		man.RANGE = length(sv_Pcur.R - sv_cur.R) / 1852.0;
-		OrbMech::REL_COMP(true, sv_Pcur.R, sv_Pcur.V, sv_cur.R, sv_cur.V, R_REL, V_REL);
-		man.PHASE = -R_REL.x / length(sv_Pcur.R)*DEG;
-		man.Y = R_REL.y / 0.3048;
-		man.Ydot = V_REL.y / 0.3048;
-
-		dt1 = OrbMech::sunrise(sv_cur.R, sv_cur.V, sv_cur.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, true, true, true);
-		dt2 = OrbMech::sunrise(sv_cur.R, sv_cur.V, sv_cur.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, false, true, true);
-
-		if (dt1 < dt2)
-		{
-			man.noon = false;
-			man.TTN = dt1;
-		}
-		else
-		{
-			man.noon = true;
-			man.TTN = dt2;
-		}
-
-		dt1 = OrbMech::sunrise(sv_cur.R, sv_cur.V, sv_cur.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, true, false, true);
-		dt2 = OrbMech::sunrise(sv_cur.R, sv_cur.V, sv_cur.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, false, false, true);
-
-		if (dt1 < dt2)
-		{
-			man.sunrise = true;
-			man.TTS = dt1;
-		}
-		else
-		{
-			man.sunrise = false;
-			man.TTS = dt2;
-		}
-
-		ManeuverEvaluationTable.push_back(man);
-	}
-}
-
-OMPDefs::MANTYPE ShuttleFDOCore::GetOPMManeuverType(char *buf)
-{
-	OMPDefs::MANTYPE man = OMPDefs::MANTYPE::NOMAN;
-
-	if (strcmp(buf, "HA") == 0)
-	{
-		man = OMPDefs::HA;
-	}
-	else if (strcmp(buf, "HASH") == 0)
-	{
-		man = OMPDefs::HASH;
-	}
-	else if (strcmp(buf, "NC") == 0)
-	{
-		man = OMPDefs::NC;
-	}
-	else if (strcmp(buf, "EXDV") == 0)
-	{
-		man = OMPDefs::EXDV;
-	}
-	else if (strcmp(buf, "NH") == 0)
-	{
-		man = OMPDefs::NH;
-	}
-	else if (strcmp(buf, "SOI") == 0)
-	{
-		man = OMPDefs::SOI;
-	}
-	else if (strcmp(buf, "SOR") == 0)
-	{
-		man = OMPDefs::SOR;
-	}
-	else if (strcmp(buf, "NPC") == 0)
-	{
-		man = OMPDefs::NPC;
-	}
-	else if (strcmp(buf, "NCC") == 0)
-	{
-		man = OMPDefs::NCC;
-	}
-	else if (strcmp(buf, "APSO") == 0)
-	{
-		man = OMPDefs::APSO;
-	}
-	else if (strcmp(buf, "CIRC") == 0)
-	{
-		man = OMPDefs::CIRC;
-	}
-	else if (strcmp(buf, "NHRD") == 0)
-	{
-		man = OMPDefs::NHRD;
-	}
-	else if (strcmp(buf, "NSR") == 0)
-	{
-		man = OMPDefs::NSR;
-	}
-	else if (strcmp(buf, "NOSH") == 0)
-	{
-		man = OMPDefs::NOSH;
-	}
-	else if (strcmp(buf, "PC") == 0)
-	{
-		man = OMPDefs::PC;
-	}
-
-	return man;
-}
-
-void ShuttleFDOCore::GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type)
-{
-	if (type == OMPDefs::MANTYPE::HA)
-	{
-		sprintf_s(buf, 100, "HA");
-	}
-	else if (type == OMPDefs::MANTYPE::HASH)
-	{
-		sprintf_s(buf, 100, "HASH");
-	}
-	else if (type == OMPDefs::MANTYPE::NC)
-	{
-		sprintf_s(buf, 100, "NC");
-	}
-	else if (type == OMPDefs::MANTYPE::EXDV)
-	{
-		sprintf_s(buf, 100, "EXDV");
-	}
-	else if (type == OMPDefs::MANTYPE::NH)
-	{
-		sprintf_s(buf, 100, "NH");
-	}
-	else if (type == OMPDefs::MANTYPE::SOI)
-	{
-		sprintf_s(buf, 100, "SOI");
-	}
-	else if (type == OMPDefs::MANTYPE::SOR)
-	{
-		sprintf_s(buf, 100, "SOR");
-	}
-	else if (type == OMPDefs::MANTYPE::NPC)
-	{
-		sprintf_s(buf, 100, "NPC");
-	}
-	else if (type == OMPDefs::MANTYPE::NCC)
-	{
-		sprintf_s(buf, 100, "NCC");
-	}
-	else if (type == OMPDefs::MANTYPE::APSO)
-	{
-		sprintf_s(buf, 100, "APSO");
-	}
-	else if (type == OMPDefs::MANTYPE::CIRC)
-	{
-		sprintf_s(buf, 100, "CIRC");
-	}
-	else if (type == OMPDefs::MANTYPE::NHRD)
-	{
-		sprintf_s(buf, 100, "NHRD");
-	}
-	else if (type == OMPDefs::MANTYPE::NSR)
-	{
-		sprintf_s(buf, 100, "NSR");
-	}
-	else if (type == OMPDefs::MANTYPE::NOSH)
-	{
-		sprintf_s(buf, 100, "NOSH");
-	}
-	else if (type == OMPDefs::MANTYPE::PC)
-	{
-		sprintf_s(buf, 100, "PC");
-	}
-	else
-	{
-		sprintf_s(buf, 100, "N/A");
-	}
-
-}
-
-VECTOR3 ShuttleFDOCore::NPCManeuver(SV sv_A, VECTOR3 H_P)
-{
-	VECTOR3 I_T, V2;
-
-	I_T = unit(H_P);
-	V2 = unit(sv_A.V - I_T * dotp(sv_A.V, I_T))*length(sv_A.V);
-	return V2 - sv_A.V;
-}
-
-bool ShuttleFDOCore::FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d, double &dt)
-{
-	SV sv_A1, sv_P1;
-	VECTOR3 H_A, H_P, C_N;
-	double dtheta, ddt, eps_C;
-	int C, CMAX;
-
-	sv_A1 = sv_A;
-	sv_P1 = GeneralTrajectoryPropagation(sv_P, 0, sv_A1.GMT, 0.0, useNonSphericalGravity);
-	C = 0;
-	dt = 0.0;
-
-	CMAX = 20;
-	eps_C = 0.0115*RAD;
-
-	do
-	{
-		sv_P1 = PositionMatch(sv_P1, sv_A1);
-
-		H_A = unit(crossp(sv_A1.R, sv_A1.V));
-		H_P = unit(crossp(sv_P1.R, sv_P1.V));
-		C_N = crossp(H_A, H_P);
-
-		if (C == 0)
-		{
-			VECTOR3 T_EST = crossp(sv_A1.R, C_N);
-			if (dotp(T_EST, H_A) < 0)
-			{
-				C_N = -C_N;
-			}
-			dtheta = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, C_N);
-		}
-		else
-		{
-			double dtheta1, dtheta2;
-
-			dtheta1 = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, C_N);
-			dtheta2 = -OrbMech::PHSANG(sv_A1.R, sv_A1.V, -C_N);
-			if (abs(dtheta1) < abs(dtheta2))
-			{
-				dtheta = dtheta1;
-			}
-			else
-			{
-				dtheta = dtheta2;
-			}
-		}
-		ddt = OrbMech::time_theta(sv_A1.R, sv_A1.V, dtheta, mu, false);
-		sv_A1 = coast_auto(sv_A1, ddt);
-		dt += ddt;
-		C++;
-		if (useNonSphericalGravity == false) break;
-	} while (abs(dtheta) >= eps_C && C < CMAX);
-
-	u_d = H_P;
-	if (C >= CMAX)
-	{
-		return true;
-	}
-	return false;
-}
-
-VECTOR3 ShuttleFDOCore::NSRManeuver(SV sv_A, SV sv_P)
-{
-	//Assume both SVs are at TIG
-	VECTOR3 R_P2, V_P2, R_A2, V_A2, R_PC, V_PC, u, V_A2_apo, DV2, X, Y, Z;
-	double DH_CDH, r_PC, r_A2, v_PV, a_A, a_P, v_A2, v_AV, v_AH;
-
-	R_A2 = sv_A.R;
-	r_A2 = length(R_A2);
-	V_A2 = sv_A.V;
-	v_A2 = length(V_A2);
-	R_P2 = sv_P.R;
-	V_P2 = sv_P.V;
-	u = unit(crossp(R_P2, V_P2));
-	R_A2 = unit(R_A2 - u * dotp(R_A2, u))*r_A2;
-	V_A2 = unit(V_A2 - u * dotp(V_A2, u))*v_A2;
-
-	OrbMech::RADUP(R_P2, V_P2, R_A2, mu, R_PC, V_PC);
-	a_P = OrbMech::GetSemiMajorAxis(R_PC, V_PC, mu);
-
-	r_PC = length(R_PC);
-	DH_CDH = r_PC - r_A2;
-	v_PV = dotp(V_PC, R_A2) / r_A2;
-	a_A = a_P - DH_CDH;
-	v_AV = v_PV * pow(a_P / a_A, 1.5);
-	v_AH = sqrt(mu*(2.0 / r_A2 - 1.0 / a_A) - v_AV * v_AV);
-	V_A2_apo = unit(crossp(u, R_A2))*v_AH + unit(R_A2)*v_AV;
-	DV2 = V_A2_apo - V_A2;
-	Z = unit(-R_A2);
-	Y = -u;
-	X = unit(crossp(Y, Z));
-	return tmul(_M(X.x, Y.x, Z.x, X.y, Y.y, Z.y, X.z, Y.z, Z.z), DV2);
-}
-
-SV ShuttleFDOCore::coast_auto(SV sv0, double dt)
-{
-	if (useNonSphericalGravity)
-	{
-		return coast(sv0, dt);
-	}
-	else
-	{
-		return coast_osc(sv0, dt, mu);
-	}
+	ManeuverEvaluationTable = OMPOut.ManeuverEvaluationTable;
 }
 
 void ShuttleFDOCore::CalcLaunchTime()
@@ -1711,8 +390,8 @@ void ShuttleFDOCore::ExportLTP()
 	VECTOR3 IYD;
 	double T_GMTLO_REF;
 
-	T_GMTLO_REF = LTP_Output.GMTLO + launchdate[1] * 24.0*3600.0;
-	IYD = TEG2M50(LTP_Output.IY_MECO);
+	T_GMTLO_REF = LTP_Output.GMTLO + sescnst.DayOfYear * 24.0*3600.0;
+	IYD = mul(sescnst.M_TEG_TO_M50, LTP_Output.IY_MECO);
 
 	//LAUNCH TARGETING LOAD
 	//T_GMTLO_REF, IY_MIN_EF, IYD, IYD_NOM, DELTA_PSI, DELTA_NODE_PHASE, T_GMTLO_PHASE
@@ -1726,7 +405,7 @@ int ShuttleFDOCore::subThread()
 	ErrorCode = 0;
 
 	//Do nothing if mission not initialized
-	if (BaseMJD == 0.0)
+	if (sescnst.GMTBASE == 0.0)
 	{
 		ErrorCode = 1;
 		subThreadStatus = 0;
@@ -1744,8 +423,7 @@ int ShuttleFDOCore::subThread()
 		break;
 	case 1: //Maneuver Plan
 	{
-		OMPErrorCode = 0;
-		OMPErrorCode = CalculateOMPPlan();
+		CalculateOMPPlan();
 
 		Result = 0;
 	}
@@ -1792,10 +470,10 @@ int ShuttleFDOCore::subThread()
 			opt.GETF = DOPS_GETF;
 			opt.INORB = DOPS_InitialRev;
 			opt.SVPROP = useNonSphericalGravity;
-			opt.GMTR = LaunchGMT;
+			opt.GMTR = sescnst.GMTLO;
 			opt.XRNG = DOPS_MaxXRNG;
-			opt.BaseMJD = BaseMJD;
-			opt.RM = M_EFTOECL_AT_EPOCH;
+			opt.BaseMJD = sescnst.GMTBASE;
+			opt.RM = sescnst.M_TEG_TO_M50;
 
 			lop.LOPT(opt, DODS_Output);
 
@@ -1813,13 +491,13 @@ int ShuttleFDOCore::subThread()
 
 		if (opt2.ITIGFR == 0)
 		{
-			opt2.TIG += LaunchGMT;
+			opt2.TIG += sescnst.GMTLO;
 			opt2.TTHRSH = 0.0;
 		}
 		else
 		{
 			opt2.TIG = 0.0;
-			opt2.TTHRSH += LaunchGMT;
+			opt2.TTHRSH += sescnst.GMTLO;
 		}
 
 		opt2.INTEGF = useNonSphericalGravity;
@@ -1876,14 +554,14 @@ int ShuttleFDOCore::subThread()
 		if (DMPRes.ErrorCode == 0)
 		{
 			DMPRes.Site = DMPLandingSite;
-			DMPRes.TIG -= LaunchGMT;
+			DMPRes.TIG -= sescnst.GMTLO;
 
 			//Calculate MM304 attitude
 			SV sv_MM304;
 			MATRIX3 Rot;
 			VECTOR3 R, V;
 			
-			sv_MM304 = coast_auto(DMPRes.sv_EI, -5.0*60.0);
+			sv_MM304 = coast_auto(DMPRes.sv_EI, -5.0*60.0, useNonSphericalGravity);
 			R = TEG2M50(sv_MM304.R);
 			V = TEG2M50(sv_MM304.V);
 
@@ -2036,17 +714,17 @@ void ShuttleFDOCore::ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const
 
 bool ShuttleFDOCore::MET2MTT()
 {
-	if (ManeuverEvaluationTable.size() < 1) return false;
+	if (ManeuverEvaluationTable.Maneuvers.size() < 1) return false;
 
 	ManeuverTransferTable.clear();
 
 	MANTRANSDATA man;
 
-	for (unsigned i = 0;i < ManeuverEvaluationTable.size();i++)
+	for (unsigned i = 0;i < ManeuverEvaluationTable.Maneuvers.size();i++)
 	{
 		man.MNVR = i + 1;
-		sprintf_s(man.NAME, ManeuverEvaluationTable[i].type, 4);
-		sprintf_s(man.COMMENT, ManeuverEvaluationTable[i].name, 10);
+		man.NAME = ManeuverEvaluationTable.Maneuvers[i].type;
+		man.COMMENT = ManeuverEvaluationTable.Maneuvers[i].name;
 		LoadMTTSlotData(man, 1);
 
 		ManeuverTransferTable.push_back(man);
@@ -2076,40 +754,31 @@ void ShuttleFDOCore::ExecuteMTT()
 {
 	//Sanity checks
 	if (ManeuverTransferTable.size() < 1) return;
-	if (ManeuverEvaluationTable.size() < 1) return;
-	if (ManeuverTransferTable.size() != ManeuverEvaluationTable.size()) return;
-	if (sv_chaser.GMT == 0.0) return;
+	if (ManeuverEvaluationTable.Maneuvers.size() < 1) return;
+	if (ManeuverTransferTable.size() != ManeuverEvaluationTable.Maneuvers.size()) return;
 
 	DMTInputTable.clear();
 
 	DMTINPUT man;
-	SV sv_cur, sv_tig, sv_cut;
-	VECTOR3 DV_iner;
-	double dt, F, isp, dv, dt_burn, W_dot;
-
-	sv_cur = sv_chaser;
+	SV sv_cur, sv_tig;
+	double dt, F, isp, dt_burn, W_dot, cutoff_mass;
 
 	for (unsigned i = 0;i < ManeuverTransferTable.size();i++)
 	{
-		dt = ManeuverEvaluationTable[i].GMTIG - sv_cur.GMT;
-		sv_cur = coast_auto(sv_cur, dt);
-
+		//Get state vector before maneuver
+		sv_cur = ManeuverEvaluationTable.Maneuvers[i].sv_before;
+		//Get thruster data
 		GetThrusterData(ManeuverTransferTable[i].thrusters, F, isp);
 		W_dot = F / isp;
-
-		dv = ManeuverEvaluationTable[i].DVMag*0.3048;
-		dt_burn = sv_cur.mass / W_dot * (1.0 - exp(-dv * W_dot / F));
-
-		DV_iner = tmul(OrbMech::LVLH_Matrix(sv_cur.R, sv_cur.V), ManeuverEvaluationTable[i].DV*0.3048);
-		man.DV_iner = DV_iner;
-
-		sv_cut = sv_cur;
-		sv_cut.mass -= W_dot * dt_burn;
-		//TBD: ITER support
-		sv_cut.V += DV_iner;
+		//Inertial DV
+		man.DV_iner = ManeuverEvaluationTable.Maneuvers[i].V_after - ManeuverEvaluationTable.Maneuvers[i].sv_before.V;
+		//Calculate burn time
+		dt_burn = sv_cur.mass / W_dot * (1.0 - exp(-length(man.DV_iner) * W_dot / F));
+		//Estimate cutoff mass
+		cutoff_mass = sv_cur.mass - W_dot * dt_burn;
 
 		//Very small burn, bypass logic
-		if (ManeuverEvaluationTable[i].DVMag < 0.1)
+		if (ManeuverEvaluationTable.Maneuvers[i].DVMag < 0.1)
 		{
 			sv_tig = sv_cur;
 		}
@@ -2120,11 +789,11 @@ void ShuttleFDOCore::ExecuteMTT()
 				//Balance DV before and after impulsive TIG
 				double S, A, B, dt_tig;
 				S = F / W_dot;
-				A = S * log(sv_cur.mass / sv_cut.mass);
+				A = S * log(sv_cur.mass / cutoff_mass);
 				B = (sv_cur.mass / W_dot)*A - S * dt_burn;
 				dt_tig = -B / A;
 
-				sv_tig = coast_auto(sv_cur, dt_tig);
+				sv_tig = OrbMech::coast_auto(sv_cur, dt_tig, useNonSphericalGravity);
 			}
 			else
 			{
@@ -2133,11 +802,10 @@ void ShuttleFDOCore::ExecuteMTT()
 		}
 
 		man.sv_tig = sv_tig;
-		sv_cur = sv_cut;
 
 		man.TV_ROLL = ManeuverTransferTable[i].ROLL;
 		man.thrusters = ManeuverTransferTable[i].thrusters;
-		sprintf_s(man.comment, ManeuverTransferTable[i].COMMENT);
+		man.comment = ManeuverTransferTable[i].COMMENT;
 
 		DMTInputTable.push_back(man);
 	}
@@ -2160,11 +828,11 @@ void ShuttleFDOCore::CalcDMT()
 
 	//PAD Data
 	GetDMTThrusterType(Buffer, input.thrusters);
-	GetDMTManeuverID(Buffer2, input.comment);
+	GetDMTManeuverID(Buffer2, input.comment.c_str());
 
 	sprintf_s(DMT.CODE, "%sE%02d%s", Buffer, DMT_MNVR, Buffer2);
 	DMT.TV_ROLL = input.TV_ROLL*DEG;
-	if (input.thrusters == OMPDefs::THRUSTERS::OBP)
+	if (input.thrusters == OMP::OMPDefs::THRUSTERS::OBP)
 	{
 		OMSTVC(_V(1071.75429, 0.0, 364.71665), true, P, LY, RY);
 
@@ -2175,7 +843,7 @@ void ShuttleFDOCore::CalcDMT()
 		p_T = P - PITCH_BIAS;
 		y_T = 0.0;
 	}
-	else if (input.thrusters == OMPDefs::THRUSTERS::OL || input.thrusters == OMPDefs::THRUSTERS::OR)
+	else if (input.thrusters == OMP::OMPDefs::THRUSTERS::OL || input.thrusters == OMP::OMPDefs::THRUSTERS::OR)
 	{
 		OMSTVC(_V(1071.75429, 0.0, 364.71665), false, P, LY, RY);
 
@@ -2183,7 +851,7 @@ void ShuttleFDOCore::CalcDMT()
 		DMT.TRIMS_LY = LY * DEG;
 		DMT.TRIMS_RY = RY * DEG;
 
-		if (input.thrusters == OMPDefs::THRUSTERS::OL)
+		if (input.thrusters == OMP::OMPDefs::THRUSTERS::OL)
 		{
 			p_T = P - PITCH_BIAS;
 			y_T = LY + YAW_BIAS;
@@ -2293,14 +961,14 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.TGT_HP = (peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
 }
 
-void ShuttleFDOCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp)
+void ShuttleFDOCore::GetThrusterData(OMP::OMPDefs::THRUSTERS type, double &F, double &isp)
 {
-	if (type == OMPDefs::THRUSTERS::OBP)
+	if (type == OMP::OMPDefs::THRUSTERS::OBP)
 	{
 		F = 2.0*OMS_THRUST;
 		isp = OMS_ISP0;
 	}
-	else if (type == OMPDefs::THRUSTERS::OL || type == OMPDefs::THRUSTERS::OR)
+	else if (type == OMP::OMPDefs::THRUSTERS::OL || type == OMP::OMPDefs::THRUSTERS::OR)
 	{
 		F = OMS_THRUST;
 		isp = OMS_ISP0;
@@ -2308,75 +976,75 @@ void ShuttleFDOCore::GetThrusterData(OMPDefs::THRUSTERS type, double &F, double 
 	else
 	{
 		isp = RCS_ISP0;
-		if (type == OMPDefs::THRUSTERS::PX2) F = 2.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::PX3) F = 3.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::PX3) F = 4.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::MXL) F = 2.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::YL) F = 2.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::MYL) F = 2.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::ZH) F = 3.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::ZL) F = 4.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::MZL) F = 6.0*RCS_THRUST;
-		else if (type == OMPDefs::THRUSTERS::MZH) F = 2.0*RCS_THRUST;
+		if (type == OMP::OMPDefs::THRUSTERS::PX2) F = 2.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::PX3) F = 3.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::PX3) F = 4.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::MXL) F = 2.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::YL) F = 2.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::MYL) F = 2.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::ZH) F = 3.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::ZL) F = 4.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::MZL) F = 6.0*RCS_THRUST;
+		else if (type == OMP::OMPDefs::THRUSTERS::MZH) F = 2.0*RCS_THRUST;
 		else F = 2.0*RCS_THRUST;
 	}
 }
 
-void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
+void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
 {
-	if (type == OMPDefs::THRUSTERS::PX4)
+	if (type == OMP::OMPDefs::THRUSTERS::PX4)
 	{
 		sprintf_s(buf, 100, "PX4");
 	}
-	else if (type == OMPDefs::THRUSTERS::PX3)
+	else if (type == OMP::OMPDefs::THRUSTERS::PX3)
 	{
 		sprintf_s(buf, 100, "PX3");
 	}
-	else if (type == OMPDefs::THRUSTERS::PX2)
+	else if (type == OMP::OMPDefs::THRUSTERS::PX2)
 	{
 		sprintf_s(buf, 100, "PX2");
 	}
-	else if (type == OMPDefs::THRUSTERS::MXL)
+	else if (type == OMP::OMPDefs::THRUSTERS::MXL)
 	{
 		sprintf_s(buf, 100, "MXL");
 	}
-	else if (type == OMPDefs::THRUSTERS::YL)
+	else if (type == OMP::OMPDefs::THRUSTERS::YL)
 	{
 		sprintf_s(buf, 100, "YL");
 	}
-	else if (type == OMPDefs::THRUSTERS::MYL)
+	else if (type == OMP::OMPDefs::THRUSTERS::MYL)
 	{
 		sprintf_s(buf, 100, "MYL");
 	}
-	else if (type == OMPDefs::THRUSTERS::ZH)
+	else if (type == OMP::OMPDefs::THRUSTERS::ZH)
 	{
 		sprintf_s(buf, 100, "ZH");
 	}
-	else if (type == OMPDefs::THRUSTERS::ZL)
+	else if (type == OMP::OMPDefs::THRUSTERS::ZL)
 	{
 		sprintf_s(buf, 100, "ZL");
 	}
-	else if (type == OMPDefs::THRUSTERS::MZH)
+	else if (type == OMP::OMPDefs::THRUSTERS::MZH)
 	{
 		sprintf_s(buf, 100, "MZH");
 	}
-	else if (type == OMPDefs::THRUSTERS::M1)
+	else if (type == OMP::OMPDefs::THRUSTERS::M1)
 	{
 		sprintf_s(buf, 100, "M1");
 	}
-	else if (type == OMPDefs::THRUSTERS::M2)
+	else if (type == OMP::OMPDefs::THRUSTERS::M2)
 	{
 		sprintf_s(buf, 100, "M2");
 	}
-	else if (type == OMPDefs::THRUSTERS::OL)
+	else if (type == OMP::OMPDefs::THRUSTERS::OL)
 	{
 		sprintf_s(buf, 100, "OL");
 	}
-	else if (type == OMPDefs::THRUSTERS::OR)
+	else if (type == OMP::OMPDefs::THRUSTERS::OR)
 	{
 		sprintf_s(buf, 100, "OR");
 	}
-	else if (type == OMPDefs::THRUSTERS::OBP)
+	else if (type == OMP::OMPDefs::THRUSTERS::OBP)
 	{
 		sprintf_s(buf, 100, "OBP");
 	}
@@ -2386,57 +1054,57 @@ void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 	}
 }
 
-void ShuttleFDOCore::GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type)
+void ShuttleFDOCore::GetDMTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
 {
-	if (type == OMPDefs::THRUSTERS::PX4 || type == OMPDefs::THRUSTERS::PX3)
+	if (type == OMP::OMPDefs::THRUSTERS::PX4 || type == OMP::OMPDefs::THRUSTERS::PX3)
 	{
 		sprintf_s(buf, 100, "XH");
 	}
-	else if (type == OMPDefs::THRUSTERS::PX2)
+	else if (type == OMP::OMPDefs::THRUSTERS::PX2)
 	{
 		sprintf_s(buf, 100, "XL");
 	}
-	else  if (type == OMPDefs::THRUSTERS::ZL)
+	else  if (type == OMP::OMPDefs::THRUSTERS::ZL)
 	{
 		sprintf_s(buf, 100, "ZL");
 	}
-	else if (type == OMPDefs::THRUSTERS::MXL)
+	else if (type == OMP::OMPDefs::THRUSTERS::MXL)
 	{
 		sprintf_s(buf, 100, "MX");
 	}
-	else if (type == OMPDefs::THRUSTERS::YL)
+	else if (type == OMP::OMPDefs::THRUSTERS::YL)
 	{
 		sprintf_s(buf, 100, "YL");
 	}
-	else if (type == OMPDefs::THRUSTERS::MYL)
+	else if (type == OMP::OMPDefs::THRUSTERS::MYL)
 	{
 		sprintf_s(buf, 100, "MY");
 	}
-	else if (type == OMPDefs::THRUSTERS::ZH)
+	else if (type == OMP::OMPDefs::THRUSTERS::ZH)
 	{
 		sprintf_s(buf, 100, "ZH");
 	}
-	else if (type == OMPDefs::THRUSTERS::MZH)
+	else if (type == OMP::OMPDefs::THRUSTERS::MZH)
 	{
 		sprintf_s(buf, 100, "ZM");
 	}
-	else if (type == OMPDefs::THRUSTERS::M1)
+	else if (type == OMP::OMPDefs::THRUSTERS::M1)
 	{
 		sprintf_s(buf, 100, "M1");
 	}
-	else if (type == OMPDefs::THRUSTERS::M2)
+	else if (type == OMP::OMPDefs::THRUSTERS::M2)
 	{
 		sprintf_s(buf, 100, "M2");
 	}
-	else if (type == OMPDefs::THRUSTERS::OL)
+	else if (type == OMP::OMPDefs::THRUSTERS::OL)
 	{
 		sprintf_s(buf, 100, "OL");
 	}
-	else if (type == OMPDefs::THRUSTERS::OR)
+	else if (type == OMP::OMPDefs::THRUSTERS::OR)
 	{
 		sprintf_s(buf, 100, "OR");
 	}
-	else if (type == OMPDefs::THRUSTERS::OBP)
+	else if (type == OMP::OMPDefs::THRUSTERS::OBP)
 	{
 		sprintf_s(buf, 100, "BP");
 	}
@@ -2446,7 +1114,7 @@ void ShuttleFDOCore::GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type)
 	}
 }
 
-void ShuttleFDOCore::GetDMTManeuverID(char *buf, char *name)
+void ShuttleFDOCore::GetDMTManeuverID(char *buf, const char *name)
 {
 	if (strcmp(name, "OMS-1") == 0)
 	{
@@ -2480,27 +1148,36 @@ void ShuttleFDOCore::SetLaunchDay()
 
 void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 {
-	launchdate[0] = Y;
-	launchdate[1] = D;
+	// Calculate base MJD
+	sescnst.GMTBASE = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
+	// Reset launch time to zero
+	sescnst.GMTLO = 0.0;
 
-	//Calculate base MJD
-	BaseMJD = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
-	//Calculate rotation matrix
-	M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(BaseMJD);
-	//Calculate matrix from TEG to M50
+	// TEG to J2000 ecliptic (left handed)
+	MATRIX3 M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(sescnst.GMTBASE);
+	// M50 to J2000 (left handed)
 	MATRIX3 M_M50TOECL = OrbMech::GetObliquityMatrix(33281.923357);
-	M_TEGTOECL = OrbMech::MatrixRH_LH(mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH));
-	//sprintf(oapiDebugString(), "%f", BaseMJD);
+	// TEG to M50 (right handed)
+	sescnst.M_TEG_TO_M50 = OrbMech::MatrixRH_LH(mul(OrbMech::tmat(M_M50TOECL), M_EFTOECL_AT_EPOCH));
+	// TEG to J2000 ecliptic (right handed)
+	sescnst.M_TEG_TO_J2000 = OrbMech::MatrixRH_LH(M_EFTOECL_AT_EPOCH);
+
+	sescnst.Year = Y;
+	sescnst.DayOfYear = D;
+	sescnst.Hours = sescnst.Minutes = 0;
+	sescnst.launchdateSec = 0.0;
+
 	ErrorCode = 0;
 }
 
 void ShuttleFDOCore::SetLaunchTime(int H, int M, double S)
 {
-	launchdate[2] = H;
-	launchdate[3] = M;
-	launchdateSec = S;
+	//Launch time
+	sescnst.GMTLO = (double)(H * 3600 + M * 60) + S;
 
-	LaunchGMT = 3600.0*(double)H + 60.0*(double)M + S;
+	sescnst.Hours = H;
+	sescnst.Minutes = M;
+	sescnst.launchdateSec = S;
 }
 
 void ShuttleFDOCore::OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY)
@@ -2532,134 +1209,6 @@ MATRIX3 MATRIX(VECTOR3 A, VECTOR3 B, VECTOR3 C)
 	return _M(A.x, A.y, A.z, B.x, B.y, B.z, C.x, C.y, C.z);
 }
 
-SV ShuttleFDOCore::timetoapo_auto(SV sv_A, double revs)
-{
-	SV sv_out;
-	if (useNonSphericalGravity)
-	{
-		double v_r = dotp(sv_A.R, sv_A.V) / length(sv_A.R);
-		if (v_r > 0)
-		{
-			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs - 1.0, useNonSphericalGravity);
-		}
-		else
-		{
-			sv_out = GeneralTrajectoryPropagation(sv_A, 1, PI, revs, useNonSphericalGravity);
-		}
-	}
-	else
-	{
-		double dt1 = 0.0;
-		if (revs > 1.0)
-		{
-			double T_P = OrbMech::period(sv_A.R, sv_A.V, mu);
-			dt1 = T_P * (revs - 1.0);
-
-		}
-		double dt2 = OrbMech::timetoapo(sv_A.R, sv_A.V, mu, 1);
-		sv_out = coast_auto(sv_A, dt1 + dt2);
-	}
-
-	return sv_out;
-}
-
-bool ShuttleFDOCore::IsOMPConverged(ITERSTATE *iters, int size)
-{
-	if (size > 0)
-	{
-		for (int i = 0;i < size;i++)
-		{
-			if (iters[i].converged == false) return false;
-		}
-		return true;
-	}
-
-	return true;
-}
-
-SV ShuttleFDOCore::AEG(SV sv0, int opt, double dval, double DN)
-{
-	SV sv1 = sv0;
-	OrbMech::AEGServiceRoutine(sv0.R, sv0.V, sv0.GMT, opt, dval, DN, sv1.R, sv1.V, sv1.GMT);
-	return sv1;
-}
-
-SV ShuttleFDOCore::DeltaOrbitsAuto(SV sv0, double M)
-{
-	if (useNonSphericalGravity)
-	{
-		return GeneralTrajectoryPropagation(sv0, 3, 0.0, M, useNonSphericalGravity);
-	}
-	else
-	{
-		double P = OrbMech::period(sv0.R, sv0.V, mu);
-		double dt = P * M;
-		return coast_osc(sv0, dt, mu);
-	}
-}
-
-SV ShuttleFDOCore::FindNthApsidalCrossingAuto(SV sv0, double N)
-{
-	int M = (int)N;
-	bool even = (M % 2) == 0;
-	double fact;
-	if (even)
-	{
-		fact = -1.0;
-	}
-	else
-	{
-		fact = 1.0;
-	}
-	double v_r = dotp(sv0.R, sv0.V) / length(sv0.R);
-	
-	if (useNonSphericalGravity)
-	{
-		double DN;
-
-		if (v_r > 0)
-		{
-			DN = (double)((M - 1) / 2);
-		}
-		else
-		{
-			DN = (double)(M / 2);
-		}
-
-		if (fact*v_r > 0)
-		{
-			//Apoapsis
-			return GeneralTrajectoryPropagation(sv0, 1, PI, DN, useNonSphericalGravity);
-		}
-		else
-		{
-			//Periapsis
-			return GeneralTrajectoryPropagation(sv0, 1, 0, DN, useNonSphericalGravity);
-		}
-	}
-	else
-	{
-		double dt;
-		if (v_r > 0)
-		{
-			dt = OrbMech::timetoapo(sv0.R, sv0.V, mu, 1);
-		}
-		else
-		{
-			dt = OrbMech::timetoperi(sv0.R, sv0.V, mu, 1);
-		}
-		double P = OrbMech::period(sv0.R, sv0.V, mu);
-		return coast_osc(sv0, dt + 0.5*P * (N - 1.0), mu);
-	}
-}
-
-double ShuttleFDOCore::CalculateYDot(VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P)
-{
-	VECTOR3 u2 = unit(crossp(V_P, R_P));
-	double Y_A_dot = dotp(V_A, u2);
-	return Y_A_dot;
-}
-
 SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical)
 {
 	SV sv_cut;
@@ -2670,506 +1219,7 @@ SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T
 	return sv_cut;
 }
 
-SV ShuttleFDOCore::FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1)
-{
-	SV sv1;
-	OBJHANDLE hSun;
-	double dt2;
-
-	hSun = oapiGetObjectByName("hSun");
-
-	dt2 = OrbMech::sunrise(sv0.R, sv0.V, sv0.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, sunrise, false, true);
-	sv1 = coast_auto(sv0, dt1 + dt2);
-	return sv1;
-}
-
-SV ShuttleFDOCore::FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1)
-{
-	SV sv1;
-	OBJHANDLE hSun;
-	double dt2;
-
-	hSun = oapiGetObjectByName("hSun");
-
-	dt2 = OrbMech::sunrise(sv0.R, sv0.V, sv0.GMT, BaseMJD, M_EFTOECL_AT_EPOCH, hEarth, hSun, midnight, true, true);
-	sv1 = coast_auto(sv0, dt1 + dt2);
-	return sv1;
-}
-
-bool ShuttleFDOCore::FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2)
-{
-	SV sv_A1, sv_P1;
-	double c_I, p_H, dt, elev, e_H, e_Ho, eps2, dto;
-	int s_F;
-
-	eps2 = 0.01*RAD;
-	p_H = c_I = 0.0;
-	s_F = 0;
-
-	dt = t_guess - GETfromGMT(sv_A.GMT);
-	sv_A1 = coast_auto(sv_A, dt);
-	dt = t_guess - GETfromGMT(sv_P.GMT);
-	sv_P1 = coast_auto(sv_P, dt);
-	dt = 0.0;
-	dto = 0.0;
-
-	do
-	{
-		sv_A1 = coast_auto(sv_A1, dt - dto);
-		sv_P1 = coast_auto(sv_P1, dt - dto);
-
-		elev = OrbMech::COMELE(sv_A1.R, sv_A1.V, sv_P1.R);
-		e_H = elev_D - elev;
-
-		if (abs(e_H) >= eps2)
-		{
-			OrbMech::ITER(c_I, s_F, e_H, p_H, dt, e_Ho, dto);
-			if (s_F == 1)
-			{
-				return false;
-			}
-		}
-	} while (abs(e_H) >= eps2);
-
-	sv_A2 = sv_A1;
-	return true;
-}
-
-bool ShuttleFDOCore::HeightManeuverAuto(SV sv_A, double r_D, bool horizontal, VECTOR3 &DV)
-{
-	SV sv_A_apo, sv_D;
-	OrbMech::OELEMENTS coe;
-	VECTOR3 am, U_hor;
-	double eps, p_H, c_I, u_b, u_d, DN, v_H, e_H, e_Ho, v_Ho;
-	int s_F;
-
-	sv_A_apo = sv_A;
-
-	//Some helping vectors
-	am = unit(crossp(sv_A.R, sv_A.V));
-	U_hor = unit(crossp(am, unit(sv_A.R)));
-
-	//Tolerance
-	eps = 250.0*0.3048;
-	//Set up iterator
-	p_H = c_I = 0.0;
-	s_F = 0;
-
-	//Set up desired argument of latitude (only used with non-spherical gravity)
-	coe = OrbMech::coe_from_sv(sv_A.R, sv_A.V, mu);
-	u_b = fmod(coe.TA + coe.w, PI2);
-	u_d = u_b + PI;
-	if (u_d < PI2)
-	{
-		DN = 0.0;
-	}
-	else
-	{
-		u_d = u_d - PI2;
-		DN = 1.0;
-	}
-
-	//Initial guess
-	if (horizontal)
-	{
-		v_H = 0.0;
-	}
-	else
-	{
-		v_H = sqrt(2.0*mu / (length(sv_A.R)*(1.0 + length(sv_A.R) / r_D)));
-	}
-
-	do
-	{
-		if (horizontal)
-		{
-			sv_A_apo.V = sv_A.V + U_hor * v_H;
-		}
-		else
-		{
-			sv_A_apo.V = U_hor * v_H;
-		}
-
-		if (useNonSphericalGravity)
-		{
-			sv_D = GeneralTrajectoryPropagation(sv_A_apo, 2, u_d, DN, useNonSphericalGravity);
-		}
-		else
-		{
-			double dt_temp;
-			OrbMech::REVUP(sv_A_apo.R, sv_A_apo.V, 0.5, mu, sv_D.R, sv_D.V, dt_temp);
-		}
-
-		e_H = length(sv_D.R) - r_D;
-		if (abs(e_H) >= eps)
-		{
-			OrbMech::ITER(c_I, s_F, e_H, p_H, v_H, e_Ho, v_Ho);
-			if (s_F == 1)
-			{
-				//Error
-				return true;
-			}
-		}
-	} while (abs(e_H) >= eps);
-
-	DV = sv_A_apo.V - sv_A.V;
-	return false;
-}
-
-SV ShuttleFDOCore::FindOptimumNodeShiftPoint(SV sv0, double dh)
-{
-	SV sv1;
-	OrbMech::InvariantElements coe;
-	double U_D, U_B, DN;
-
-	coe = OrbMech::CalculateInvariantElementsBlock(sv0, mu, 0.0, useNonSphericalGravity);
-	U_B = fmod(OrbMech::MeanToTrueAnomaly(coe.l, coe.e) + coe.g, PI2);
-
-	U_D = atan2(1.0 + cos(dh), -sin(dh)*cos(coe.i));
-	if (U_D < 0)
-	{
-		U_D += PI2;
-	}
-
-	if (U_B < U_D)
-	{
-		DN = 0.0;
-	}
-	else
-	{
-		if (U_B < U_D + PI)
-		{
-			U_D = U_D + PI;
-			DN = 0.0;
-		}
-		else
-		{
-			DN = 1.0;
-		}
-	}
-	if (useNonSphericalGravity)
-	{
-		sv1 = GeneralTrajectoryPropagation(sv0, 2, U_D, DN, useNonSphericalGravity);
-	}
-	else
-	{
-		double dt = OrbMech::time_theta(sv0.R, sv0.V, U_D + DN * PI2 - U_B, mu);
-		sv1 = sv0;
-		OrbMech::rv_from_r0v0(sv0.R, sv0.V, dt, sv1.R, sv1.V, mu);
-		sv1.GMT = sv0.GMT + dt;
-	}
-	return sv1;
-}
-
-VECTOR3 ShuttleFDOCore::NodeShiftManeuver(SV sv0, double dh_D)
-{
-	OrbMech::CELEMENTS coe_b, coe_a;
-	VECTOR3 Rtemp, Vtemp;
-	double cos_u_a, sin_u_a, u_b, u_a, cos_dw, sin_dw, dw, f_a, f_b;
-
-	coe_b = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu);
-	f_b = OrbMech::MeanToTrueAnomaly(coe_b.l, coe_b.e);
-	u_b = fmod(f_b + coe_b.g, PI2);
-
-	coe_a = coe_b;
-	f_a = f_b;
-
-	cos_u_a = cos(dh_D)*cos(u_b) + sin(dh_D)*sin(u_b)*cos(coe_b.i);
-	sin_u_a = sqrt(1.0 - cos_u_a * cos_u_a);
-	if (u_b > PI)
-	{
-		sin_u_a = -sin_u_a;
-	}
-	u_a = atan2(sin_u_a, cos_u_a);
-	if (u_a < 0)
-	{
-		u_a = PI2;
-	}
-	cos_dw = (cos(dh_D) - cos(u_b)*cos(u_a)) / (sin(u_b)*sin(u_a));
-	sin_dw = sin(dh_D)*sin(coe_b.i) / sin_u_a;
-	dw = atan2(sin_dw, cos_dw);
-	coe_a.i = acos(cos(coe_b.i)*cos_dw - sin(coe_b.i)*sin_dw*cos(u_b));
-	coe_a.h = coe_b.h + dh_D;
-	coe_a.h = fmod(coe_a.h, PI2);
-	coe_a.g = u_a - f_a;
-	if (coe_a.h < 0)
-	{
-		coe_a.h += PI2;
-	}
-	if (coe_a.g < 0)
-	{
-		coe_a.g += PI2;
-	}
-	OrbMech::KeplerianToCartesian(coe_a, mu, Rtemp, Vtemp);
-
-	return Vtemp - sv0.V;
-}
-
-VECTOR3 ShuttleFDOCore::PlaneChangeManeuver(SV sv0, double dw_D)
-{
-	OrbMech::CELEMENTS coe_b, coe_a;
-	VECTOR3 Rtemp, Vtemp;
-	double f_b, u_b, sin_dh, cos_dh, dh, sin_u_a, cos_u_a, u_a, f_a;
-
-	coe_b = OrbMech::CartesianToKeplerian(sv0.R, sv0.V, mu);
-	f_b = OrbMech::MeanToTrueAnomaly(coe_b.l, coe_b.e);
-	u_b = fmod(f_b + coe_b.g, PI2);
-
-	coe_a = coe_b;
-	f_a = f_b;
-
-	coe_a.i = acos(cos(coe_b.i)*cos(dw_D) - sin(coe_b.i)*sin(dw_D)*cos(u_b));
-	sin_dh = sin(dw_D)*sin(u_b) / sin(coe_a.i);
-	cos_dh = (cos(dw_D) - cos(coe_b.i)*cos(coe_a.i)) / (sin(coe_b.i)*sin(coe_a.i));
-	dh = atan2(sin_dh, cos_dh);
-	coe_a.h = coe_b.h + dh;
-	if (coe_a.h < 0)
-	{
-		coe_a.h += PI2;
-	}
-	else if (coe_a.h >= PI2)
-	{
-		coe_a.h -= PI2;
-	}
-	sin_u_a = sin(u_b)*sin(coe_b.i) / sin(coe_a.i);
-	cos_u_a = cos(u_b)*cos(dh) + sin(u_b)*sin(dh)*cos(coe_b.i);
-	u_a = atan2(sin_u_a, cos_u_a);
-	if (u_a < 0)
-	{
-		u_a += PI2;
-	}
-	coe_a.g = u_a - f_a;
-	if (coe_a.g < 0)
-	{
-		coe_a.g += PI2;
-	}
-
-	OrbMech::KeplerianToCartesian(coe_a, mu, Rtemp, Vtemp);
-	return Vtemp - sv0.V;
-}
-
-bool TLAT(VECTOR3 R, VECTOR3 V, double lat, int C, double & K_AD, double &dtheta)
-{
-	VECTOR3 H, N;
-	double i, U, Ulat;
-	
-	H = unit(crossp(R, V));
-	N = unit(crossp(_V(0, 0, 1), H));
-	i = acos(H.z);
-	if (abs(lat) > i) return true;
-	U = OrbMech::PHSANG(R, V, N);
-	if (U < 0)
-	{
-		U += PI2;
-	}
-	Ulat = asin(abs(sin(lat)) / sin(i));
-	if (C == 0)
-	{
-		K_AD = -1.0;
-	}
-	if (lat < 0)
-	{
-		U = U - PI;
-	}
-	U = atan2(sin(U), cos(U));
-	if (U < 0)
-	{
-		U += PI2;
-	}
-	if (K_AD > 0)
-	{
-		Ulat = PI - Ulat;
-	}
-	if (C == 0)
-	{
-		double Ulat_pi = PI - Ulat;
-
-		if (U >= Ulat)
-		{
-			if (U < Ulat_pi)
-			{
-				Ulat = Ulat_pi;
-				K_AD = 1.0;
-			}
-			else
-			{
-				Ulat = Ulat + PI2;
-			}
-		}
-	}
-	dtheta = Ulat - U;
-	if (C != 0)
-	{
-		if (abs(dtheta) > PI)
-		{
-			dtheta = dtheta - PI2 * sign(dtheta);
-		}
-	}
-	return false;
-}
-
-double TLON(VECTOR3 R, VECTOR3 V, double t, double lng, int C)
-{
-	VECTOR3 N, H;
-	double alpha1, alpha2, I, NODE, U, pro, U_lng, dtheta;
-
-	H = unit(crossp(R, V));
-	N = unit(crossp(_V(0, 0, 1), H));
-	I = acos(H.z);
-	NODE = atan2(N.y, N.x);
-	U = OrbMech::PHSANG(R, V, N);
-	if (U < 0)
-	{
-		U += PI2;
-	}
-	pro = 1.0;
-	if (PI05 - I < 0)
-	{
-		pro = -1.0;
-	}
-
-	alpha1 = pro*(lng - NODE);
-	alpha2 = alpha1 + OrbMech::w_Earth*t;
-	U_lng = atan2(sin(alpha2), pro*cos(alpha2)*cos(I));
-	if (U_lng < 0)
-	{
-		U_lng += PI2;
-	}
-	if (C == 0)
-	{
-		if (U_lng < U)
-		{
-			U_lng = U_lng + PI2;
-		}
-		dtheta = U_lng - U;
-	}
-	else
-	{
-		dtheta = U_lng - U;
-		if (abs(dtheta) >= PI)
-		{
-			dtheta = dtheta - sign(dtheta)*PI2;
-		}
-	}
-	return dtheta;
-}
-
-bool TALT(VECTOR3 R, VECTOR3 V, double rad, int C, double mu, double &dtheta)
-{
-	double r, v, r_dot, P, a, ecosE, esinE, e, r_MIN, r_MAX, theta_D, theta;
-
-	r = length(R);
-	v = length(V);
-	r_dot = dotp(V, R) / r;
-	P = pow(length(crossp(R, V)), 2) / mu;
-	a = r / (2.0 - v * v*r / mu);
-	ecosE = (a - r) / a;
-	esinE = r * r_dot / sqrt(mu*a);
-	e = sqrt(esinE*esinE + ecosE * ecosE);
-	r_MIN = P / (1.0 + e);
-	r_MAX = 2.0*a - r_MIN;
-
-	//Error condition
-	if (rad < r_MIN || r > r_MAX) return true;
-
-	theta_D = acos((P / rad - 1.0) / e);
-	theta = acos((P / r - 1.0) / e);
-	
-	if (C != 0)
-	{
-		dtheta = theta_D - theta;
-		if (r_dot < 0)
-		{
-			dtheta = -dtheta;
-		}
-	}
-	else
-	{
-		dtheta = 0.0;
-
-		if (r_dot > 0)
-		{
-			if (theta_D > theta)
-			{
-				dtheta = theta_D - theta;
-			}
-			else if (theta_D < theta)
-			{
-				dtheta = PI2 - (theta_D + theta);
-			}
-		}
-		else
-		{
-			if (theta_D > theta)
-			{
-				dtheta = theta + theta_D;
-			}
-			else if (theta_D < theta)
-			{
-				dtheta = theta - theta_D;
-			}
-		}
-	}
-	return false;
-}
-
-bool ShuttleFDOCore::SEARMT(SV sv0, int opt, double val, SV &sv1)
-{
-	double K_AD, dtheta, dt;
-	int C;
-	bool CEND;
-
-	const int CMAX = 20;
-	const double eps4 = 0.011*RAD;
-
-	C = 0;
-	CEND = false;
-	sv1 = sv0;
-
-	do
-	{
-		if (opt == OMPDefs::SECONDARIES::LAT || opt == OMPDefs::SECONDARIES::DEC)
-		{
-			if (TLAT(sv1.R, sv1.V, val, C, K_AD, dtheta))
-			{
-				//Error
-				return true;
-			 }
-		}
-		else if (opt == OMPDefs::SECONDARIES::ALT)
-		{
-			if (TALT(sv1.R, sv1.V, val + OrbMech::EARTH_RADIUS_EQUATOR, C, mu, dtheta))
-			{
-				//Error
-				return true;
-			}
-		}
-		else
-		{
-			dtheta = TLON(sv1.R, sv1.V, sv1.GMT, val, C);
-		}
-
-		dt = OrbMech::time_theta(sv1.R, sv1.V, dtheta, mu, C == 0);
-		sv1 = coast_auto(sv1, dt);
-		//If we don't use nonspherical gravity, we might be already done
-		if (useNonSphericalGravity == false)
-		{
-			if (opt == OMPDefs::SECONDARIES::LAT || opt == OMPDefs::SECONDARIES::DEC || opt == OMPDefs::SECONDARIES::ALT)
-			{
-				break;
-			}
-		}
-		C++;
-	} while (abs(dtheta) > eps4 && C < CMAX);
-
-	if (C >= CMAX)
-	{
-		return true;
-	}
-	return false;
-}
-
 VECTOR3 ShuttleFDOCore::TEG2M50(VECTOR3 v_TEG)
 {
-	return mul(M_TEGTOECL, v_TEG);
+	return mul(sescnst.M_TEG_TO_M50, v_TEG);
 }

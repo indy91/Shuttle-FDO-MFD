@@ -754,133 +754,6 @@ namespace OrbMech
 		}
 	}
 
-	VECTOR3 Vinti(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double gmt0, double dt, int N, bool prog, VECTOR3 V_guess, double tol)
-	{
-		double h, rho, error3, mu, max_dr;
-		int nMax, nMax2, n;
-		VECTOR3 Vt1, V1_star, dr2, R2_star, V2_star, R1_ref, V1_ref, R2_ref;
-		VECTOR3 v_l[3][4];
-		VECTOR3 R2l[3][4];
-		VECTOR3 V2l[3][4];
-		VECTOR3 T[3];
-		MATRIX3 T2;
-
-		h = 10e-3;
-		rho = 0.5;
-		error3 = 100.0;
-		dr2 = _V(1.0, 1.0, 1.0);
-		n = 0;
-		nMax = 100;
-		nMax2 = 10;
-
-		mu = mu_Earth;
-
-		double hvec[4] = { h / 2, -h / 2, rho*h / 2, -rho * h / 2 };
-
-		if (length(V_guess) == 0.0)
-		{
-			R1_ref = R1;
-			V1_ref = V1;
-			R2_ref = R2;
-
-			if (dt > 0)
-			{
-				Vt1 = elegant_lambert(R1_ref, V1_ref, R2_ref, dt, N, prog, mu);
-			}
-			else
-			{
-				Vt1 = elegant_lambert(R1_ref, V1_ref, R2_ref, -dt, N, !prog, mu);
-			}
-
-			V1_star = Vt1 * sign(dt);
-		}
-		else
-		{
-			V1_star = V_guess;
-		}
-
-		if (dt > 0)
-		{
-			rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star);
-			dr2 = R2 - R2_star;
-
-			while (length(dr2) > error3 && nMax2 >= n)
-			{
-				n += 1;
-				for (int i = 0; i < 4; i++)
-				{
-					v_l[0][i] = V1_star + _V(1, 0, 0)*hvec[i];
-					v_l[1][i] = V1_star + _V(0, 1, 0)*hvec[i];
-					v_l[2][i] = V1_star + _V(0, 0, 1)*hvec[i];
-				}
-				for (int i = 0; i < 3; i++)
-				{
-					for (int j = 0; j < 4; j++)
-					{
-						rv_from_r0v0_obla(R1, v_l[i][j], dt, R2l[i][j], V2l[i][j]);
-					}
-				}
-				for (int i = 0; i < 3; i++)
-				{
-					T[i] = (R2l[i][2] - R2l[i][3] - (R2l[i][0] - R2l[i][1])*OrbMech::power(rho, 3.0)) * 1.0 / (rho*h*(1.0 - OrbMech::power(rho, 2.0)));
-				}
-				T2 = _M(T[0].x, T[1].x, T[2].x, T[0].y, T[1].y, T[2].y, T[0].z, T[1].z, T[2].z);
-				V1_star = V1_star + mul(inverse(T2), dr2);
-				rv_from_r0v0_obla(R1, V1_star, dt, R2_star, V2_star);
-				dr2 = R2 - R2_star;
-			}
-			//return V1_star;
-
-			if (n == nMax2 || _isnan(R2_star.x))// || isinf(R2_star.x))
-			{
-				return _V(0, 0, 0);
-			}
-
-			dr2 = _V(1.0, 1.0, 1.0);
-			n = 0;
-		}
-
-		oneclickcoast(R1, V1_star, dt, R2_star, V2_star);
-		dr2 = R2 - R2_star;
-		max_dr = 0.5*length(R2_star);
-		if (length(dr2) > max_dr)
-		{
-			dr2 = unit(dr2)*max_dr;
-		}
-
-		while (length(dr2) > tol && nMax >= n)
-		{
-			n += 1;
-			for (int i = 0; i < 4; i++)
-			{
-				v_l[0][i] = V1_star + _V(1, 0, 0)*hvec[i];
-				v_l[1][i] = V1_star + _V(0, 1, 0)*hvec[i];
-				v_l[2][i] = V1_star + _V(0, 0, 1)*hvec[i];
-			}
-			for (int i = 0; i < 3; i++)
-			{
-				for (int j = 0; j < 4; j++)
-				{
-					oneclickcoast(R1, v_l[i][j],  dt, R2l[i][j], V2l[i][j]);
-				}
-			}
-			for (int i = 0; i < 3; i++)
-			{
-				T[i] = (R2l[i][2] - R2l[i][3] - (R2l[i][0] - R2l[i][1])*OrbMech::power(rho, 3.0)) * 1.0 / (rho*h*(1.0 - OrbMech::power(rho, 2.0)));
-			}
-			T2 = _M(T[0].x, T[1].x, T[2].x, T[0].y, T[1].y, T[2].y, T[0].z, T[1].z, T[2].z);
-			V1_star = V1_star + mul(inverse(T2), dr2);
-			oneclickcoast(R1, V1_star, dt, R2_star, V2_star);
-			dr2 = R2 - R2_star;
-			max_dr = 0.5*length(R2_star);
-			if (length(dr2) > max_dr)
-			{
-				dr2 = unit(dr2)*max_dr;
-			}
-		}
-		return V1_star;
-	}
-
 	void periapo(VECTOR3 R, VECTOR3 V, double mu, double &apo, double &peri)
 	{
 		double a, e, epsilon;
@@ -898,345 +771,12 @@ namespace OrbMech
 		{
 			apo = DBL_MAX;
 		}
-	}
-
-	void orbitmidnight(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool night, double &v1)
-	{
-		double tol, swit, mu, R_E, g1, g2, beta1, beta2, aa, SS, p;
-		OELEMENTS coe;
-		VECTOR3 P, Q, h, h_proj, r_proj;
-
-		if (night)
-		{
-			swit = -1.0;
-		}
-		else
-		{
-			swit = 1.0;
-		}
-		tol = 1e-6;
-		mu = GGRAV * oapiGetMass(planet);
-		R_E = oapiGetSize(planet);
-
-		coe = coe_from_sv(R, V, mu);
-
-		P = _V(cos(coe.w)*cos(coe.RA) - sin(coe.w)*sin(coe.RA)*cos(coe.i), cos(coe.w)*sin(coe.RA) + sin(coe.w)*cos(coe.RA)*cos(coe.i), sin(coe.w)*sin(coe.i));
-		Q = _V(-sin(coe.w)*cos(coe.RA) - cos(coe.w)*sin(coe.RA)*cos(coe.i), -sin(coe.w)*sin(coe.RA) + cos(coe.w)*cos(coe.RA)*cos(coe.i), cos(coe.w)*sin(coe.i));
-
-		beta1 = dotp(sun, P) / length(sun);
-
-		aa = coe.h*coe.h / (mu*(1 - coe.e*coe.e));
-
-		//if (beta1*beta1 > 1.0 - pow(R_E / (aa*(1.0 - coe.e)), 2) && beta1*beta1 < 1.0 - pow(R_E / (aa*(1.0 + coe.e)), 2))
-		//{
-		//	v1 = 0;
-		//	return;
-		//}
-		beta2 = dotp(sun, Q) / length(sun);
-		p = coe.h*coe.h / mu;
-
-		h = unit(crossp(R, V));
-		h_proj = unit(crossp(unit(sun), h));
-		r_proj = unit(crossp(h, h_proj));
-		g1 = dotp(r_proj, P);
-		g2 = dotp(r_proj, Q);
-
-		v1 = 2.0*atan(g2 / (g1 + swit * 1.0));
-
-		SS = cos(v1)*g1 + sin(v1)*g2;
-
-		if (abs(SS - swit) > tol)
-		{
-			v1 += PI;
-		}
-		if (v1 > PI)
-		{
-			v1 -= PI2;
-		}
-		else if (v1 < -PI)
-		{
-			v1 += PI2;
-		}
-		return;
-	}
-
-	void umbra(VECTOR3 R, VECTOR3 V, VECTOR3 sun, OBJHANDLE planet, bool rise, double &v1)
-	{
-		OELEMENTS coe;
-		VECTOR3 P, Q;
-		double R_E, beta1, beta2, a, b, c, d, e, p, q, D0, D1, S, DD, SS[2], sinx[2], pp, alpha, cond, aa, mu;
-		double x[4];
-		double cosv[2], sinv[2];
-		int j, l;
-
-		mu = GGRAV * oapiGetMass(planet);
-		R_E = oapiGetSize(planet);
-
-		coe = coe_from_sv(R, V, mu);
-
-		P = _V(cos(coe.w)*cos(coe.RA) - sin(coe.w)*sin(coe.RA)*cos(coe.i), cos(coe.w)*sin(coe.RA) + sin(coe.w)*cos(coe.RA)*cos(coe.i), sin(coe.w)*sin(coe.i));
-		P = unit(P);
-		Q = _V(-sin(coe.w)*cos(coe.RA) - cos(coe.w)*sin(coe.RA)*cos(coe.i), -sin(coe.w)*sin(coe.RA) + cos(coe.w)*cos(coe.RA)*cos(coe.i), cos(coe.w)*sin(coe.i));
-		Q = unit(Q);
-
-		beta1 = dotp(unit(sun), P);
-
-		aa = coe.h*coe.h / (mu*(1.0 - coe.e*coe.e));
-		p = aa * (1.0 - coe.e*coe.e);
-
-		if (beta1*beta1 > 1.0 - pow(R_E / (aa*(1.0 - coe.e)), 2) && beta1*beta1 < 1.0 - pow(R_E / (aa*(1.0 + coe.e)), 2))
-		{
-			v1 = 0;
-			return;
-		}
-
-		beta2 = dotp(unit(sun), Q);
-		p = coe.h*coe.h / mu;
-		/*A = coe.e*coe.e*R_E*R_E + p*p*beta1*beta1 - p*p*beta2*beta2;
-		B = 2.0 * coe.e*R_E;
-		C = 2.0*beta1*beta2*p*p;
-		D = R_E*R_E + p*p*beta2*beta2 - p*p;*/
-
-		alpha = R_E / p;
-
-		a = pow(alpha, 4)*pow(coe.e, 4) - 2.0*pow(alpha, 2)*(beta2*beta2 - beta1 * beta1)*coe.e*coe.e + pow(beta1*beta1 + beta2 * beta2, 2);
-		b = 4.0*pow(alpha, 4)*pow(coe.e, 3) - 4.0*pow(alpha, 2)*(beta2*beta2 - beta1 * beta1)*coe.e;
-		c = 6.0*pow(alpha, 4)*coe.e*coe.e - 2.0*pow(alpha, 2)*(beta2*beta2 - beta1 * beta1) - 2.0*pow(alpha, 2)*(1.0 - beta2 * beta2)*coe.e*coe.e + 2.0*(beta2*beta2 - beta1 * beta1)*(1.0 - beta2 * beta2) - 4.0*beta1*beta1*beta2*beta2;
-		d = 4.0*pow(alpha, 4)*coe.e - 4.0*pow(alpha, 2)*(1.0 - beta2 * beta2)*coe.e;
-		e = pow(alpha, 4) - 2.0*pow(alpha, 2)*(1.0 - beta2 * beta2) + pow(1.0 - beta2 * beta2, 2);
-
-		pp = (8.0*a*c - 3.0 * b*b) / (8.0*a*a);
-		q = (b*b*b - 4.0*a*b*c + 8.0*a*a*d) / (8.0 * a*a*a);
-		D0 = c * c - 3.0*b*d + 12.0 * a*e;
-		D1 = 2.0*c*c*c - 9.0*b*c*d + 27.0*b*b*e + 27.0*a*d*d - 72.0*a*c*e;
-		DD = -(D1*D1 - 4.0*D0*D0*D0) / 27.0;
-
-		if (DD > 0)
-		{
-			double phi;
-
-			phi = acos(D1 / (2.0*sqrt(D0*D0*D0)));
-			S = 0.5*sqrt(-2.0 / 3.0*pp + 2.0 / 3.0 / a * sqrt(D0)*cos(phi / 3.0));
-		}
-		else
-		{
-			double QQ;
-
-			QQ = OrbMech::power((D1 + sqrt(D1*D1 - 4.0*D0*D0*D0)) / 2.0, 1.0 / 3.0);
-			S = 0.5*sqrt(-2.0 / 3.0*pp + 1.0 / (3.0*a)*(QQ + D0 / QQ));
-		}
-		x[0] = -b / (4.0*a) - S + 0.5*sqrt(-4.0*S*S - 2.0 * pp + q / S);
-		x[1] = -b / (4.0*a) - S - 0.5*sqrt(-4.0*S*S - 2.0 * pp + q / S);
-		x[2] = -b / (4.0*a) + S + 0.5*sqrt(-4.0*S*S - 2.0 * pp - q / S);
-		x[3] = -b / (4.0*a) + S - 0.5*sqrt(-4.0*S*S - 2.0 * pp - q / S);
-
-		j = 0;
-
-		//Select the two physicals solutions from the (up to) four real roots of the quartic
-		for (int i = 0; i < 4; i++)
-		{
-			sinx[0] = sqrt(1.0 - x[i] * x[i]);
-			sinx[1] = -sinx[0];
-
-			for (int k = 0;k < 2;k++)
-			{
-				SS[k] = R_E * R_E*pow(1.0 + coe.e*x[i], 2) + p * p*pow(beta1*x[i] + beta2 * sinx[k], 2) - p * p;
-			}
-			if (abs(SS[0]) < abs(SS[1]))
-			{
-				l = 0;
-			}
-			else
-			{
-				l = 1;
-			}
-			cond = beta1 * x[i] + beta2 * sinx[l];
-			if (cond < 0)
-			{
-				cosv[j] = x[i];
-				sinv[j] = sinx[l];
-				j++;
-			}
-
-			/*SS = R_E*R_E*pow(1.0 + coe.e*x[i], 2) + p*p*pow(beta1*x[i] + beta2*sinx, 2) - p*p;
-			if (abs(SS) < 1.0)
-			{
-				cond = beta1*x[i] + beta2*sinx;
-				if (cond < 0)
-				{
-					cosv[j] = x[i];
-					sinv[j] = sinx;
-					j++;
-				}
-			}
-			sinx = -sinx;
-			SS = R_E*R_E*pow(1.0 + coe.e*x[i], 2) + p*p*pow(beta1*x[i] + beta2*sinx, 2) - p*p;
-			if (abs(SS) < 1.0)
-			{
-				cond = beta1*x[i] + beta2*sinx;
-				if (cond < 0)
-				{
-					cosv[j] = x[i];
-					sinv[j] = sinx;
-					j++;
-				}
-			}*/
-		}
-
-		//If it didn't find 2 physical solutions, abort
-		if (j != 2)
-		{
-			v1 = 0.0;
-			return;
-		}
-
-		//Choose entry vs. exit
-		double dSS0 = 2.0*p*p*(beta2*cosv[0] - beta1 * sinv[0])*(beta1*cosv[0] + beta2 * sinv[0]) - 2.0*R_E*R_E*coe.e*sinv[0] * (coe.e*cosv[0] + 1.0);
-
-		if (rise)
-		{
-			if (dSS0 < 0)
-			{
-				v1 = atan2(sinv[0], cosv[0]);
-			}
-			else
-			{
-				v1 = atan2(sinv[1], cosv[1]);
-			}
-		}
-		else
-		{
-			if (dSS0 > 0)
-			{
-				v1 = atan2(sinv[0], cosv[0]);
-			}
-			else
-			{
-				v1 = atan2(sinv[1], cosv[1]);
-			}
-		}
-	}
-
-
-	double sunrise(VECTOR3 R, VECTOR3 V, double GMT, double BaseMJD, MATRIX3 Rot, OBJHANDLE planet, OBJHANDLE planet2, bool rise, bool midnight, bool future)
-	{
-		//midnight = 0-> rise=0:sunset, rise=1:sunrise
-		//midnight = 1-> rise=0:midday, rise=1:midnight
-		double PlanPos[12];
-		VECTOR3 PlanVec, R_EM, R_SE;
-		OBJHANDLE hEarth, hMoon, hSun;
-		double mu, v1;
-		unsigned char options;
-
-		mu = GGRAV * oapiGetMass(planet);
-
-		hEarth = oapiGetObjectByName("Earth");
-		hMoon = oapiGetObjectByName("Moon");
-		hSun = oapiGetObjectByName("Sun");
-
-		CELBODY *cPlan = oapiGetCelbodyInterface(planet);
-
-		OELEMENTS coe;
-		double h, e, theta0, a, dt, dt_alt;
-
-		dt = 0;
-		dt_alt = 1;
-
-		while (abs(dt_alt - dt) > 0.5)
-		{
-			if (planet == hMoon && planet2 == hSun)
-			{
-				CELBODY *cEarth = oapiGetCelbodyInterface(hEarth);
-				options = cPlan->clbkEphemeris(BaseMJD + (GMT + dt) / 24.0 / 3600.0, EPHEM_TRUEPOS, PlanPos);
-				if (options & EPHEM_POLAR)
-				{
-					R_EM = Polar2Cartesian(PlanPos[2] * AU, PlanPos[1], PlanPos[0]);
-				}
-				else
-				{
-					R_EM = _V(PlanPos[0], PlanPos[2], PlanPos[1]);
-				}
-				options = cEarth->clbkEphemeris(BaseMJD + (GMT + dt) / 24.0 / 3600.0, EPHEM_TRUEPOS, PlanPos);
-				if (options & EPHEM_POLAR)
-				{
-					R_SE = Polar2Cartesian(PlanPos[2] * AU, PlanPos[1], PlanPos[0]);
-				}
-				else
-				{
-					R_SE = _V(PlanPos[0], PlanPos[2], PlanPos[1]);
-				}
-				PlanVec = -(R_EM + R_SE);
-			}
-			else
-			{
-				options = cPlan->clbkEphemeris(BaseMJD + (GMT + dt) / 24.0 / 3600.0, EPHEM_TRUEPOS, PlanPos);
-
-				if (options & EPHEM_POLAR)
-				{
-					PlanVec = -Polar2Cartesian(PlanPos[2] * AU, PlanPos[1], PlanPos[0]);
-				}
-				else
-				{
-					PlanVec = -_V(PlanPos[0], PlanPos[2], PlanPos[1]);
-				}
-			}
-			//Convert to desired coordinate system
-			PlanVec = rhtmul(Rot, PlanVec);
-
-			if (midnight)
-			{
-				orbitmidnight(R, V, PlanVec, planet, rise, v1);
-			}
-			else
-			{
-				umbra(R, V, PlanVec, planet, rise, v1);
-			}
-
-			coe = coe_from_sv(R, V, mu);
-			h = coe.h;
-			e = coe.e;
-			theta0 = coe.TA;
-
-			if (e > 1.0)
-			{
-				VECTOR3 R1, V1;
-				double ddt;
-
-				rv_from_r0v0(R, V, dt, R1, V1, mu);
-
-				coe = coe_from_sv(R1, V1, mu);
-				h = coe.h;
-				e = coe.e;
-				theta0 = coe.TA;
-
-				dt_alt = dt;
-				ddt = time_theta(R1, V1, calculateDifferenceBetweenAngles(theta0, v1), mu);
-				dt += ddt;
-			}
-			else
-			{
-				double T;
-
-				a = h * h / mu * 1.0 / (1.0 - e * e);
-				T = PI2 / sqrt(mu)*OrbMech::power(a, 3.0 / 2.0);
-
-				dt_alt = dt;
-				dt = time_theta(R, V, calculateDifferenceBetweenAngles(theta0, v1), mu);
-
-				if (dt < 0 && future)
-				{
-					dt += T;
-				}
-			}
-		}
-
-		return dt;
-	}
+	}	
 
 	//Analytical sun ephemeris
-	VECTOR3 SUN(double MJD, const MATRIX3 &RM)
+	VECTOR3 SUN(double MJD)
 	{
-		//Calculate solar direction vector in ecliptic coordinates, then rotate to desired coordinate system with RM
+		//Calculate solar direction vector in ecliptic J2000 coordinates
 		VECTOR3 R_Sun;
 		double T_UT, lng_mean, T_TDB, M, lng_ecl, obl, r;
 		
@@ -1252,7 +792,21 @@ namespace OrbMech
 		obl = 0.0;
 		r = 1.000140612 - 0.016708617 *cos(M) - 0.000139589 *cos(2.0*M);
 		R_Sun = _V(cos(lng_ecl), cos(obl)*sin(lng_ecl), sin(obl)*sin(lng_ecl))*r*AU;
-		return rhtmul(RM, R_Sun);
+		return R_Sun;
+	}
+
+	VECTOR3 SUN(double GMTBASE, double GMT, const MATRIX3& RM)
+	{
+		//Return sun vector in TEG coordinates
+		//RM: TEG to M50 rotation matrix
+
+		VECTOR3 R_Sun;
+		double MJD;
+
+		MJD = GMTBASE + GMT / 24.0 / 3600.0;
+		R_Sun = SUN(MJD);
+
+		return tmul(RM, mul(M_J2000_to_M50, R_Sun));
 	}
 
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
@@ -1331,6 +885,7 @@ namespace OrbMech
 		double t_slip_old, t_go, v_goz, dr_z, dt_go, m_p;
 		int n, nmax;
 
+		n = 0;
 		nmax = 100;
 		t_slip = 0;
 		t_slip_old = 1;
@@ -1339,6 +894,8 @@ namespace OrbMech
 		R_ref = R;
 		V_ref = V + DV;
 		i_y = -unit(crossp(R_ref, V_ref));
+		R_p = V_p = _V(0, 0, 0);
+		m_p = t_go = 0.0;
 
 		while (abs(t_slip - t_slip_old) > 0.01)
 		{
@@ -1434,59 +991,6 @@ namespace OrbMech
 			R_S_INER = R_T_INER + RTS_M50;
 			V_S_INER = V_T_INER + VTS_M50;
 		}
-	}
-
-	void LVC_to_M50(VECTOR3 R_T_INER, VECTOR3 V_T_INER, VECTOR3 R_REL, VECTOR3 V_REL, VECTOR3& R_S_INER, VECTOR3 &V_S_INER)
-	{
-		MATRIX3 MAT_M50_LVIR;
-		VECTOR3 V1, V2, V3, VTAN, OMEGA_LV_PROX, RTS_LV, VTS_LV, RTS_LVIR, VTS_LVIR, RTS_M50, VTS_M50;
-		double RT_MAG, OMEGA_PROX, THETA, THETA_DOT, ZCON;
-
-		RT_MAG = length(R_T_INER);
-		V1 = unit(crossp(crossp(R_T_INER, V_T_INER), R_T_INER));
-		V2 = -unit(crossp(R_T_INER, V_T_INER));
-		V3 = -unit(R_T_INER);
-		MAT_M50_LVIR = _M(V1.x, V1.y, V1.z, V2.x, V2.y, V2.z, V3.x, V3.y, V3.z);
-		VTAN = V_T_INER - unit(R_T_INER)*dotp(R_T_INER, V_T_INER) / RT_MAG;
-		OMEGA_PROX = length(VTAN) / RT_MAG;
-		OMEGA_LV_PROX = _V(0, -1, 0)*OMEGA_PROX;
-		THETA = R_REL.x / RT_MAG;
-		THETA_DOT = V_REL.x / RT_MAG;
-		ZCON = RT_MAG - R_REL.z;
-		RTS_LV = _V(ZCON*sin(THETA), R_REL.y, RT_MAG - ZCON * cos(THETA));
-		VTS_LV = _V(ZCON*THETA_DOT*cos(THETA) - V_REL.z*sin(THETA), V_REL.y, RTS_LV.x*THETA_DOT + V_REL.z*cos(THETA));
-		RTS_LVIR = RTS_LV;
-		VTS_LVIR = VTS_LV + crossp(OMEGA_LV_PROX, RTS_LVIR);
-		RTS_M50 = tmul(MAT_M50_LVIR, RTS_LVIR);
-		VTS_M50 = tmul(MAT_M50_LVIR, VTS_LVIR);
-		R_S_INER = R_T_INER + RTS_M50;
-		V_S_INER = V_T_INER + VTS_M50;
-	}
-
-	//Calculate elevation angle
-	double COMELE(VECTOR3 RS_COM, VECTOR3 VS_COM, VECTOR3 RT_COM)
-	{
-		double A, B, C, D, E, EL_ANG_COM;
-
-		//a.
-		A = dotp(RS_COM, RS_COM);
-		B = dotp(RS_COM, RT_COM);
-		C = dotp(RT_COM, RT_COM);
-		D = dotp(RS_COM, VS_COM);
-		E = dotp(RT_COM, VS_COM);
-
-		//b.
-		if (A*C - B * B < 0)
-		{
-			EL_ANG_COM = PI + (sign(A - C))*PI05;
-		}
-		else
-		{
-			EL_ANG_COM = PI + atan2(A - B, (sign(B*D - A * E))*sqrt(A*C - B * B));
-		}
-		if (EL_ANG_COM >= PI2) EL_ANG_COM -= PI2;
-
-		return EL_ANG_COM;
 	}
 
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE)
@@ -1713,7 +1217,7 @@ namespace OrbMech
 
 				COUNT--;
 
-			} while (abs(DX_L) > 2e-4 && COUNT > 0);
+			} while (abs(DX_L) > 1e-4 && COUNT > 0);
 
 			return sv1;
 		}
@@ -1841,20 +1345,6 @@ namespace OrbMech
 		const double offsetValue = value - start;
 
 		return (offsetValue - (floor(offsetValue / width) * width)) + start;
-	}
-
-	MATRIX3 inverse(MATRIX3 a)
-	{
-		double det;
-
-		det = determinant(a);
-		return _M(a.m22*a.m33 - a.m23*a.m32, a.m13*a.m32 - a.m12*a.m33, a.m12*a.m23 - a.m13*a.m22, a.m23*a.m31 - a.m21*a.m33, a.m11*a.m33 - a.m13*a.m31, a.m13*a.m21 - a.m11*a.m23, a.m21*a.m32 - a.m22*a.m31, a.m12*a.m31 - a.m11*a.m32, a.m11*a.m22 - a.m12*a.m21) / det;
-
-	}
-
-	double determinant(MATRIX3 a)
-	{
-		return a.m11*a.m22*a.m33 + a.m12*a.m23*a.m31 + a.m13*a.m21*a.m32 - a.m13*a.m22*a.m31 - a.m12*a.m21*a.m33 - a.m11*a.m23*a.m32;
 	}
 
 	MATRIX3 tmat(MATRIX3 a)
@@ -2128,6 +1618,22 @@ namespace OrbMech
 		out.l = TrueToMeanAnomaly(coe.TA, coe.e);
 
 		return out;
+	}
+
+	double ArgLat(VECTOR3 R, VECTOR3 V)
+	{
+		VECTOR3 K, h, n;
+		double u;
+
+		K = _V(0, 0, 1);
+		h = unit(crossp(R, V));
+		n = crossp(K, h);
+		u = acos2(dotp(unit(n), unit(R)));
+		if (R.z < 0)
+		{
+			u = PI2 - u;
+		}
+		return u;
 	}
 
 	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V)
@@ -2693,180 +2199,6 @@ namespace OrbMech
 		return blmean;
 	}
 
-	void AEGServiceRoutine(VECTOR3 R, VECTOR3 V, double GMT, int opt, double dval, double DN, VECTOR3 &R2, VECTOR3 &V2, double &GMT_out)
-	{
-		double DeltaTime;
-		OBJHANDLE hEarth = oapiGetObjectByName("Earth");
-
-		double mu = GGRAV * oapiGetMass(hEarth);
-		CELEMENTS osc0 = CartesianToKeplerian(R, V, mu);
-
-		CELEMENTS osc1 = AnalyticEphemerisGenerator(osc0, opt, dval, DN, mu, DeltaTime);
-
-		KeplerianToCartesian(osc1, mu, R2, V2);
-		GMT_out = GMT + DeltaTime;
-	}
-
-	CELEMENTS AnalyticEphemerisGenerator(CELEMENTS osc0, int opt, double dval, double DN, double mu, double &DeltaTime)
-	{
-		//INPUT:
-		//opt: 0 = update to time, 1 = update to mean anomaly, 2 = update to argument of latitude, 3 = update to maneuver counter line
-
-		double ll_dot, g_dot, h_dot, dt;
-		CELEMENTS mean0, mean1, osc1;
-
-		mean0 = OsculatingToBrouwerMeanLong(osc0, mu);
-		BrouwerSecularRates(osc0, mean0, ll_dot, g_dot, h_dot);
-
-		if (opt == 0)
-		{
-			dt = dval;
-
-			mean1.a = mean0.a;
-			mean1.e = mean0.e;
-			mean1.i = mean0.i;
-			mean1.l = ll_dot * dt + mean0.l;
-			mean1.g = g_dot * dt + mean0.g;
-			mean1.h = h_dot * dt + mean0.h;
-			DeltaTime = dt;
-		}
-		else
-		{
-			double DX_L, X_L, X_L_dot, ddt, L_D;
-			int LINE, COUNT;
-			bool DH;
-
-			osc1 = osc0;
-			if (opt != 3)
-			{
-				L_D = dval;
-			}
-			else
-			{
-				double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-				u = fmod(u, PI2);
-				if (u < 0)
-					u += PI2;
-				L_D = u;
-			}
-			DX_L = 1.0;
-			DH = DN > 0.0;
-			dt = 0.0;
-			LINE = 0;
-			COUNT = 24;
-
-			do
-			{
-				//Mean anomaly
-				if (opt == 1)
-				{
-					X_L = osc1.l;
-					X_L_dot = ll_dot;
-				}
-				//Argument of latitude
-				else if (opt == 2)
-				{
-					double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-					u = fmod(u, PI2);
-					if (u < 0)
-						u += PI2;
-
-					X_L = u;
-					X_L_dot = ll_dot + g_dot;
-				}
-				//Maneuver line
-				else
-				{
-					double u = MeanToTrueAnomaly(osc1.l, osc1.e) + osc1.g;
-					u = fmod(u, PI2);
-					if (u < 0)
-						u += PI2;
-
-					X_L = u;
-					X_L_dot = ll_dot + g_dot;
-					LINE = 2;
-				}
-
-				if (DH)
-				{
-					double DN_apo = DN * PI2;
-					ddt = DN_apo / ll_dot;
-					DH = false;
-
-					if (LINE != 0)
-					{
-						L_D = L_D + g_dot * ddt + DN_apo;
-						while (L_D < 0) L_D += PI2;
-						while (L_D >= PI2) L_D -= PI2;
-					}
-					else
-					{
-						ddt += (L_D - X_L) / X_L_dot;
-					}
-				}
-				else
-				{
-					DX_L = L_D - X_L;
-					if (abs(DX_L) - PI >= 0)
-					{
-						if (DX_L > 0)
-						{
-							DX_L -= PI2;
-						}
-						else
-						{
-							DX_L += PI2;
-						}
-					}
-					ddt = DX_L / X_L_dot;
-					if (LINE != 0)
-					{
-						L_D = L_D + ddt * g_dot;
-					}
-				}
-
-				
-				dt += ddt;
-
-				mean1.a = mean0.a;
-				mean1.e = mean0.e;
-				mean1.i = mean0.i;
-				mean1.l = ll_dot * dt + mean0.l;
-				mean1.g = g_dot * dt + mean0.g;
-				mean1.h = h_dot * dt + mean0.h;
-
-				osc1 = BrouwerMeanLongToOsculatingElements(mean1);
-
-				COUNT--;
-
-			} while (abs(DX_L) > 0.0005 && COUNT > 0);
-
-			DeltaTime = dt;
-		}
-
-		mean1.l = fmod(mean1.l, PI2);
-		if (mean1.l < 0)
-		{
-			mean1.l = mean1.l + PI2;
-		}
-
-		mean1.g = fmod(mean1.g, PI2);
-		if (mean1.g < 0)
-		{
-			mean1.g = mean1.g + PI2;
-		}
-
-		mean1.h = fmod(mean1.h, PI2);
-		if (mean1.h < 0)
-		{
-			mean1.h = mean1.h + PI2;
-		}
-
-		osc1 = BrouwerMeanLongToOsculatingElements(mean1);
-
-		return osc1;
-	}
-
 	double timetoapo(VECTOR3 R, VECTOR3 V, double mu, int s)
 	{
 		//s = 1: ensure the next apoapsis is returned
@@ -3075,15 +2407,6 @@ namespace OrbMech
 		return (ro*vro / sqrt(mu)*x*x*stumpC(a*x*x) + (1.0 - a * ro)*x*x*x*stumpS(a*x*x) + ro * x) / sqrt(mu);
 	}
 
-	void REVUP(VECTOR3 R, VECTOR3 V, double n, double mu, VECTOR3 &R1, VECTOR3 &V1, double &t)
-	{
-		double a;
-
-		a = 1.0 / (2.0 / length(R) - dotp(V, V) / mu);
-		t = n * PI2*sqrt(power(a, 3.0) / mu);
-		rv_from_r0v0(R, V, t, R1, V1, mu);
-	}
-
 	void RADUP(VECTOR3 R_W, VECTOR3 V_W, VECTOR3 R_C, double mu, VECTOR3 &R_W1, VECTOR3 &V_W1)
 	{
 		double theta, dt;
@@ -3091,191 +2414,6 @@ namespace OrbMech
 		theta = sign(dotp(crossp(R_W, R_C), crossp(R_W, V_W)))*acos2(dotp(R_W / length(R_W), R_C / length(R_C)));
 		dt = time_theta(R_W, V_W, theta, mu);
 		rv_from_r0v0(R_W, V_W, dt, R_W1, V_W1, mu);
-	}
-
-	bool CSIToDH(VECTOR3 R_A1, VECTOR3 V_A1, VECTOR3 R_P2, VECTOR3 V_P2, double DH, double mu, double &dv)
-	{
-		int s_F;
-		double c_I, tt, e_H, dvo, eps2, p_H, e_Ho;
-		VECTOR3 u, R_A2, V_A2, V_A1F, R_PH2, V_PH2;
-
-		p_H = c_I = 0.0;
-		s_F = 0;
-		eps2 = 1.0;
-
-		u = unit(crossp(R_P2, V_P2));
-		R_A1 = unit(R_A1 - u * dotp(R_A1, u))*length(R_A1);
-		V_A1 = unit(V_A1 - u * dotp(V_A1, u))*length(V_A1);
-
-		do
-		{
-			V_A1F = V_A1 + unit(crossp(u, R_A1))*dv;
-			OrbMech::REVUP(R_A1, V_A1F, 0.5, mu, R_A2, V_A2, tt);
-			//t_H2 = t_H1 + tt;
-			OrbMech::RADUP(R_P2, V_P2, R_A2, mu, R_PH2, V_PH2);
-			e_H = length(R_PH2) - length(R_A2) - DH;
-
-			if (abs(e_H) >= eps2)
-			{
-				ITER(c_I, s_F, e_H, p_H, dv, e_Ho, dvo);
-				if (s_F == 1)
-				{
-					return false;
-				}
-			}
-		} while (abs(e_H) >= eps2);
-
-		return true;
-	}
-
-	double findlatitude_integ(VECTOR3 R, VECTOR3 V, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat)
-	{
-		OELEMENTS coe;
-		VECTOR3 R0, V0, R1, V1, H, u;
-		double dt, ddt, mu, Tguess, sgn, sign2, inc, cosI, sinBeta, cosBeta, sinBeta2, cosBeta2, l1, l0, lat_now, dl, lat_des;
-		int i;
-
-		R0 = R;
-		V0 = V;
-		lat_des = lat;
-
-		i = 0;
-		dt = 0.0;
-		ddt = 1.0;
-		mu = GGRAV * oapiGetMass(gravref);
-		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
-		if (up)
-		{
-			sgn = 1.0;
-		}
-		else
-		{
-			sgn = -1.0;
-		}
-		H = crossp(R0, V0);
-		inc = acos(H.z / length(H));
-		if (inc < abs(lat_des))
-		{
-			lat_des = inc;
-		}
-
-		while (abs(ddt) > 0.1)
-		{
-			oneclickcoast(R0, V0, dt, R1, V1);
-			coe = coe_from_sv(R1, V1, mu);
-			Tguess = PI2 * sqrt(pow(coe.RA, 3) / mu);
-
-			H = crossp(R1, V1);
-			cosI = H.z / length(H);
-			if (acos(cosI) < abs(lat_des))
-			{
-				lat_des = inc;
-			}
-			sinBeta = cosI / cos(lat_des);
-			cosBeta = sgn * sqrt(1.0 - sinBeta * sinBeta);
-			l1 = atan2(tan(lat_des), cosBeta);
-
-			u = unit(R1);
-			lat_now = atan(u.z / sqrt(u.x*u.x + u.y*u.y));
-			if (V1.z > 0.0)
-			{
-				sign2 = 1.0;
-			}
-			else
-			{
-				sign2 = -1.0;
-			}
-			sinBeta2 = cosI / cos(lat_now);
-			cosBeta2 = sign2 * sqrt(1.0 - sinBeta2 * sinBeta2);
-			l0 = atan2(tan(lat_now), cosBeta2);
-
-			dl = l1 - l0;
-			ddt = Tguess * dl / PI2;
-			if (ddt > Tguess / 2.0)
-			{
-				ddt -= Tguess;
-			}
-			if (abs(ddt) > 100.0)
-			{
-				ddt = sign(ddt)*100.0;
-			}
-			dt += ddt;
-			i++;
-		}
-		Rlat = R1;
-		Vlat = V1;
-
-		return dt;
-	}
-
-	double findlatitude(VECTOR3 R, VECTOR3 V, OBJHANDLE gravref, double lat, bool up, VECTOR3 &Rlat, VECTOR3 &Vlat)
-	{
-		OELEMENTS coe;
-		VECTOR3 R0, V0, R1, V1, H, u;
-		double dt, ddt, mu, Tguess, sgn, sign2, inc, cosI, sinBeta, cosBeta, sinBeta2, cosBeta2, l1, l0, lat_now, dl, lat_des;
-		int i;
-
-		R0 = R;
-		V0 = V;
-		lat_des = lat;
-
-		i = 0;
-		dt = 0.0;
-		ddt = 1.0;
-		mu = GGRAV * oapiGetMass(gravref);
-		Tguess = PI2 / sqrt(mu)*OrbMech::power(length(R0), 1.5);
-		if (up)
-		{
-			sgn = 1.0;
-		}
-		else
-		{
-			sgn = -1.0;
-		}
-		H = crossp(R0, V0);
-		inc = acos(H.z / length(H));
-		if (inc < abs(lat_des))
-		{
-			lat_des = inc;
-		}
-
-		cosI = cos(inc);
-		sinBeta = cosI / cos(lat_des);
-		cosBeta = sgn * sqrt(1.0 - sinBeta * sinBeta);
-		l1 = atan2(tan(lat_des), cosBeta);
-
-		while (abs(ddt) > 0.1)
-		{
-			rv_from_r0v0(R0, V0, dt, R1, V1, mu);
-			coe = coe_from_sv(R1, V1, mu);
-
-			u = unit(R1);
-			lat_now = atan(u.z / sqrt(u.x*u.x + u.y*u.y));
-			if (V1.z > 0.0)
-			{
-				sign2 = 1.0;
-			}
-			else
-			{
-				sign2 = -1.0;
-			}
-			sinBeta2 = cosI / cos(lat_now);
-			cosBeta2 = sign2 * sqrt(1.0 - sinBeta2 * sinBeta2);
-			l0 = atan2(tan(lat_now), cosBeta2);
-
-			dl = l1 - l0;
-			ddt = Tguess * dl / PI2;
-			if (ddt > Tguess / 2.0)
-			{
-				ddt -= Tguess;
-			}
-			dt += ddt;
-			i++;
-		}
-		Rlat = R1;
-		Vlat = V1;
-
-		return dt;
 	}
 
 	void ITER(double &c, int &s, double e, double &p, double &x, double &eo, double &xo, double dx0)
@@ -3341,6 +2479,37 @@ namespace OrbMech
 		result.l = this->l - c.l;
 
 		return result;
+	}
+
+	void SS2HHMMSS(double val, double& hh, double& mm, double& ss)
+	{
+		val = round(val);
+		hh = floor(val / 3600.0);
+		mm = floor(fmod(val, 3600.0) / 60.0);
+		ss = fmod(val, 60.0);
+	}
+
+	void GMT2String(char* buf, double GMT, int Day)
+	{
+		//Format: DDD:HH:MM:SS.SSS
+		GMT = round(GMT * 1000.0) / 1000.0;
+		sprintf_s(buf, 100, "%03.0lf:%02.0lf:%02.0lf:%06.3lf", floor(GMT / 86400.0) + (double)Day, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+	}
+
+	void MET2String(char* buf, double MET)
+	{
+		bool neg = (MET < 0.0);
+
+		MET = round(abs(MET) * 1000.0) / 1000.0;
+
+		if (neg == false)
+		{
+			sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
+		}
+		else
+		{
+			sprintf_s(buf, 100, "-%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
+		}
 	}
 
 	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double deltat)

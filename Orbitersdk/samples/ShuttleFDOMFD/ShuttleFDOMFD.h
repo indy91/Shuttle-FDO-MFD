@@ -24,10 +24,10 @@
 
 struct ShuttleFDOMFDInputBoxData
 {
-	double *dVal;
-	int *iVal;
-	VECTOR3 *vVal;
-	double factor;
+	double *dVal = NULL;
+	int *iVal = NULL;
+	VECTOR3 *vVal = NULL;
+	double factor = 0.0;
 };
 
 class ShuttleFDOMFD : public MFD2 {
@@ -134,6 +134,7 @@ public:
 	void menuSetLTPPage();
 	void menuLWPOMSTargetSetsPage();
 	void menuSetDMPSolutionPage();
+	void menuSetOMPMenuPage();
 	void SetScreen(int s);
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
@@ -149,7 +150,7 @@ public:
 	void set_LaunchDay();
 	void set_LaunchDay(int YY, int DD);
 	void set_LiftoffTime(int HH, int MM, double SS);
-	void WriteMCTLine(std::ofstream &file, ManeuverConstraints &constr);
+	void WriteMCTLine(std::ofstream &file, OMP::ManeuverConstraints &constr);
 	void ReadMCTLine(const char *line);
 	void set_LWP_DELNO(double delno);
 	void set_LWP_DTOPT(double dtopt);
@@ -184,13 +185,12 @@ public:
 	void SS2HHMMSS(double val, double &hh, double &mm, double &ss);
 	void SS2MMSS(double val, double &mm, double &ss);
 
-	void GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type);
-	void GetOPMManeuverThreshold(char *buf, OMPDefs::THRESHOLD type);
-	void GetOPMManeuverThresholdTime(char *buf, OMPDefs::THRESHOLD type, double num);
-	void GetOPMManeuverSecondary(char *buf, char *type, double num);
-	void GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type);
-	void GetMTTGuidanceType(char *buf, OMPDefs::GUID type);
-	void GetOMPError(char *buf, int err);
+	void GetOPMManeuverType(char *buf, OMP::OMPDefs::MANTYPE type);
+	void GetOPMManeuverThreshold(char *buf, OMP::OMPDefs::THRESHOLD type);
+	void GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHOLD type, double num);
+	void GetOPMManeuverSecondary(char *buf, OMP::OMPDefs::SECONDARIES type, double num);
+	void GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
+	void GetMTTGuidanceType(char *buf, OMP::OMPDefs::GUID type);
 	void GetLWPError(char *buf, int err);
 
 protected:

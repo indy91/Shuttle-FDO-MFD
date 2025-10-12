@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FDD37414-3C8F-4322-8B45-BAAEC4B23F38}</ProjectGuid>
     <ProjectName>ShuttleFDOMFD</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -114,6 +114,7 @@
     <ClCompile Include="DeorbitOpportunities.cpp" />
     <ClCompile Include="DMP.cpp" />
     <ClCompile Include="LWP.cpp" />
+    <ClCompile Include="OrbitalManeuverProcessor.cpp" />
     <ClCompile Include="PEG4.cpp" />
     <ClCompile Include="ShuttleFDOoapiModule.cpp" />
     <ClCompile Include="ShuttleFDOCore.cpp" />
@@ -125,6 +126,7 @@
     <ClInclude Include="DeorbitOpportunities.h" />
     <ClInclude Include="DMP.h" />
     <ClInclude Include="LWP.h" />
+    <ClInclude Include="OrbitalManeuverProcessor.h" />
     <ClInclude Include="PEG4.h" />
     <ClInclude Include="ShuttleFDOoapiModule.h" />
     <ClInclude Include="MFDButtonPage.hpp" />
