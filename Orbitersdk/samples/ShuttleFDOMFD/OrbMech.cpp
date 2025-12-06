@@ -2609,7 +2609,7 @@ namespace OrbMech
 		return false;
 	}
 
-	VECTOR3 CoastIntegrator::f(VECTOR3 alpha, VECTOR3 R, VECTOR3 a_d)
+	VECTOR3 CoastIntegrator::f(VECTOR3 alpha, VECTOR3 R, VECTOR3 a_d) const
 	{
 		VECTOR3 R_CON;
 		double q;
@@ -2619,12 +2619,12 @@ namespace OrbMech
 		return -(R*fq(q) + alpha)*mu / OrbMech::power(length(R_CON), 3.0) + a_d;
 	}
 
-	double CoastIntegrator::fq(double q)
+	double CoastIntegrator::fq(double q) const
 	{
-		return q * (3.0 + 3.0 * q + q * q) / (1.0 + OrbMech::power(1 + q, 1.5));
+		return q * (3.0 + 3.0 * q + q * q) / (1.0 + OrbMech::power(1.0 + q, 1.5));
 	}
 
-	VECTOR3 CoastIntegrator::adfunc(VECTOR3 R)
+	VECTOR3 CoastIntegrator::adfunc(VECTOR3 R) const
 	{
 		double r, costheta, P2, P3, P4, P5;
 		VECTOR3 U_R, a_dP, a_d;

@@ -139,7 +139,7 @@ public:
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
 
-	std::vector<OMP::ManeuverConstraints> ManeuverConstraintsTable;
+	OMP::ManeuverConstraintsTable MCT;
 	OMP::MANEVALTABLE ManeuverEvaluationTable;
 	std::vector<MANTRANSDATA> ManeuverTransferTable;
 	std::vector<DMTINPUT> DMTInputTable;

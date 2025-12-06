@@ -29,6 +29,13 @@
 #include "ShuttleFDOMFD.h"
 #include "ShuttleFDOoapiModule.h"
 
+// DEFINITIONS
+
+// Maximum number of maneuvers shown on the Maneuver Constraints Table display
+#define FDOMFD_MCT_MAX_MANEUVERS 7
+// Maximum number of maneuvers shown on the Maneuver Evaluation Table display
+#define FDOMFD_MET_MAX_MANEUVERS 6
+
 // ==============================================================
 // Global variables
 
@@ -37,6 +44,7 @@ int g_MFDmode; // identifier for new MFD mode
 ShuttleFDOCore *GCoreData[32];
 OBJHANDLE GCoreVessel[32];
 int nGutsUsed;
+std::vector<RTCCMFDData> g_MFDData;
 
 // ==============================================================
 // MFD class implementation
@@ -45,14 +53,23 @@ int nGutsUsed;
 ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 : MFD2 (w, h, v)
 {
+	ID = im;
 	font = oapiCreateFont(w / 20, true, "Courier", FONT_NORMAL, 0);
 	font2 = oapiCreateFont(w / 30, true, "Courier", FONT_NORMAL, 0);
+	font3 = oapiCreateFont(w / 32, false, "Fixed", FONT_NORMAL);
+	pen1 = oapiCreatePen(1, 1, 0x00FFFFFF);
 	// Add MFD initialisation here
 	G = NULL;
 	screen = 0;
 	MTTFlag = false;
+	MCTSelectedManeuver = 0;
 	MCTScroll = 0;
 	METScroll = 0;
+	x = 0;
+	dx = 0;
+	y = 0;
+	xmax = 0;
+	ymax = 0;
 	sprintf(Buffer, "");
 	bool found = false;
 	for (int i = 0; i < nGutsUsed; i++) {
@@ -73,6 +90,8 @@ ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 		GCoreVessel[nGutsUsed] = v;
 		nGutsUsed++;
 	}
+
+	LoadState();
 }
 
 // Destructor
@@ -80,7 +99,57 @@ ShuttleFDOMFD::~ShuttleFDOMFD()
 {
 	oapiReleaseFont(font);
 	oapiReleaseFont(font2);
-	// Add MFD cleanup code here
+	oapiReleaseFont(font3);
+	oapiReleasePen(pen1);
+
+	SaveState();
+}
+
+void ShuttleFDOMFD::SaveState()
+{
+	RTCCMFDData temp;
+
+	temp.ID = ID;
+	temp.screen = screen;
+
+	bool found = false;
+
+	//Search for existing MFD data
+	for (unsigned i = 0; i < g_MFDData.size(); i++)
+	{
+		if (g_MFDData[i].ID == ID)
+		{
+			//Found it, save in that place
+			g_MFDData[i] = temp;
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+	{
+		//Found in array yet, add it
+		g_MFDData.push_back(temp);
+	}
+}
+
+void ShuttleFDOMFD::LoadState()
+{
+	//Load MFD data
+
+	for (unsigned i = 0; i < g_MFDData.size(); i++)
+	{
+		if (g_MFDData[i].ID == ID)
+		{
+			screen = g_MFDData[i].screen;
+		}
+	}
+}
+
+void ShuttleFDOMFD::RecallStatus(void)
+{
+	//MFD data got reloaded in LoadState from the constructor, but resetting the MFD buttons crashes there. Do it here instead
+	SetScreen(screen);
 }
 
 // Return button labels
@@ -150,46 +219,62 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		unsigned ii;
 
 		skp->SetFont(font2);
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+		skp->SetPen(pen1);
 
-		sprintf_s(Buffer, "MANEUVER");
-		skp->Text(1 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "THRESHOLD");
-		skp->Text(8 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "SECONDARIES");
-		skp->Text(17 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
+		xmax = 80;
+		y = 3;
+		ymax = 38;
 
-		if (G->subThreadStatus)
-		{
-			sprintf_s(Buffer, "Iterating...");
-			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
-		}
-		else
-		{
-			sprintf_s(Buffer, G->OMPErrorMessage.c_str());
-			skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
-		}
+		sprintf_s(Buffer, "MANEUVER CONSTRAINTS TABLE %s", G->MCT.Header.Name.c_str());
+		Text(skp, 25 * W / xmax, y * H / ymax, Buffer);
+		y += 2;
+		sprintf_s(Buffer, "MNVRS: %2d / 40", G->MCT.Table.size());
+		skp->Text(63 * W / xmax, y * H / ymax, Buffer, strlen(Buffer));
+		y++;
+		skp->Line(1 * W / 160, ((2 * y + 1) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 1) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 5) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 5) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 13) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 13) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 21) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 21) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 29) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 29) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 37) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 37) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 45) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 45) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 53) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 53) * H) / (ymax * 2));
+		skp->Line(1 * W / 160, ((2 * y + 61) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 61) * H) / (ymax * 2));
 
-		for (unsigned i = MCTScroll;i < G->ManeuverConstraintsTable.size();i++)
+		skp->Line(1 * W / 160, ((2 * y + 1) * H) / (ymax * 2), 1 * W / 160, ((2 * y + 61) * H) / (ymax * 2));
+		skp->Line(29 * W / 160, ((2 * y + 1) * H) / (ymax * 2), 29 * W / 160, ((2 * y + 61) * H) / (ymax * 2));
+		skp->Line(67 * W / 160, ((2 * y + 1) * H) / (ymax * 2), 67 * W / 160, ((2 * y + 61) * H) / (ymax * 2));
+		skp->Line(159 * W / 160, ((2 * y + 1) * H) / (ymax * 2), 159 * W / 160, ((2 * y + 61) * H) / (ymax * 2));
+		y++;
+		Text(skp, 3 * W / xmax, y * H / ymax, "MANEUVER");
+		Text(skp, 19 * W / xmax, y * H / ymax, "THRESHOLD");
+		Text(skp, 50 * W / xmax, y * H / ymax, "SECONDARIES");
+		y += 2;
+		for (unsigned i = MCTScroll;i < G->MCT.Table.size();i++)
 		{
 			ii = i - MCTScroll;
 			//MANEUVER
-			sprintf_s(Buffer, "%d", i + 1);
-			skp->Text(1 * W / 32, (ii * 3 + 4) * H / 32, Buffer, strlen(Buffer));
+			if (i == MCTSelectedManeuver) skp->SetTextColor(GetDefaultColour(1));
+			else skp->SetTextColor(GetDefaultColour(2));
 
-			GetOPMManeuverType(Buffer, G->ManeuverConstraintsTable[i].type);
-			skp->Text(2 * W / 32, (ii * 3 + 4) * H / 32, Buffer, strlen(Buffer));
+			sprintf_s(Buffer, "%2d", i + 1);
+			skp->Text(2 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
 
-			sprintf_s(Buffer, 100, G->ManeuverConstraintsTable[i].name.c_str());
-			skp->Text(1 * W / 32, (ii * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			GetOPMManeuverType(Buffer, G->MCT.Table[i].type);
+			skp->Text(5 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
 
+			sprintf_s(Buffer, 100, G->MCT.Table[i].name.c_str());
+			skp->Text(2 * W / xmax, (ii * 4 + y + 1) * H / ymax, Buffer, strlen(Buffer));
+			skp->SetTextColor(GetDefaultColour(2));
 			//THRESHOLD
-			GetOPMManeuverThreshold(Buffer, G->ManeuverConstraintsTable[i].threshold);
-			skp->Text(9 * W / 32, (ii * 3 + 4) * H / 32, Buffer, strlen(Buffer));
+			GetOPMManeuverThreshold(Buffer, G->MCT.Table[i].threshold);
+			skp->Text(22 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::CENTER);
 
-			GetOPMManeuverThresholdTime(Buffer, G->ManeuverConstraintsTable[i].threshold, G->ManeuverConstraintsTable[i].thresh_num);
-			skp->Text(9 * W / 32, (ii * 3 + 5) * H / 32, Buffer, strlen(Buffer));
+			GetOPMManeuverThresholdTime(Buffer, G->MCT.Table[i].threshold, G->MCT.Table[i].thresh_num);
+			skp->Text(23 * W / xmax, (ii * 4 + y + 1) * H / ymax, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::LEFT);
 
@@ -197,85 +282,73 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 
 			int k, l;
 
-			for (unsigned j = 0;j < G->ManeuverConstraintsTable[i].secondaries.size();j++)
+			for (unsigned j = 0;j < G->MCT.Table[i].secondaries.size();j++)
 			{
-				if (j >= 6)
-				{
-					k = j - 6;
-					l = 1;
-				}
-				else if (j >= 3)
-				{
-					k = j - 3;
-					l = 1;
-				}
-				else
-				{
-					k = j;
-					l = 0;
-				}
-				GetOPMManeuverSecondary(Buffer, G->ManeuverConstraintsTable[i].secondaries[j].type, G->ManeuverConstraintsTable[i].secondaries[j].value);
-				skp->Text((26 + k * 13) * W / 64, (ii * 3 + 5 + l) * H / 32, Buffer, strlen(Buffer));
+				k = (j % 3);
+				l = j / 3;
+
+				GetOPMManeuverSecondary(Buffer, G->MCT.Table[i].secondaries[j].type, G->MCT.Table[i].secondaries[j].value);
+				skp->Text((35 + k * 15) * W / xmax, (ii * 4 + y + l) * H / ymax, Buffer, strlen(Buffer));
 			}
 
-			//Only display 9 maneuvers at once
-			if (i >= 8 + MCTScroll) break;
+			//Limit number of maneuvers shown
+			if (i >= (FDOMFD_MCT_MAX_MANEUVERS - 1) + MCTScroll) break;
 		}
+
+		if (G->subThreadStatus)
+		{
+			sprintf_s(Buffer, "Iterating...");
+		}
+		else
+		{
+			sprintf_s(Buffer, G->OMPErrorMessage.c_str());
+		}
+		skp->Text(2 * W / 32, 31 * H / 32, Buffer, strlen(Buffer));
 	}
 	else if (screen == 2)
 	{
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
 		unsigned ii;
 
 		skp->SetFont(font2);
 
 		double hh, mm, ss;
 
-		sprintf_s(Buffer, "MNVR  NAME");
-		skp->Text(1 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "COMMENT");
-		skp->Text(2 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "DVMAG");
-		skp->Text(2 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
-		sprintf_s(Buffer, "GMTIG  IMP");
-		skp->Text(8 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "METIG");
-		skp->Text(8 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "DT");
-		skp->Text(9 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
+		y = 2;
+		sprintf_s(Buffer, "MANEUVER EVALUATION TABLE %s", G->ManeuverEvaluationTable.Name.c_str());
+		Text(skp, 8 * W / 32, y* H / 32, Buffer);
+		y += 2;
+		sprintf_s(Buffer, "%2d MNVRS", G->ManeuverEvaluationTable.Maneuvers.size());
+		Text(skp, 25 * W / 32, y* H / 32, Buffer);
+		y += 2;
+		Text(skp, 1 * W / 32, y* H / 32, "MNVR  NAME");
+		Text(skp, 8 * W / 32, y* H / 32, "GMTIG  IMP");
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
-
-		sprintf_s(Buffer, "DVX");
-		skp->Text(16 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "DVY");
-		skp->Text(16 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "DVZ");
-		skp->Text(16 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
-		sprintf_s(Buffer, "HA");
-		skp->Text(18 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "HP");
-		skp->Text(18 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "DH");
-		skp->Text(18 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
-		sprintf_s(Buffer, "RANGE");
-		skp->Text(24 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "PHASE");
-		skp->Text(24 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "Noon/Mid");
-		skp->Text(24 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
-		sprintf_s(Buffer, "Y");
-		skp->Text(29 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "YDOT");
-		skp->Text(30 * W / 32, 3 * H / 32, Buffer, strlen(Buffer));
-		sprintf_s(Buffer, "SR/SS");
-		skp->Text(29 * W / 32, 4 * H / 32, Buffer, strlen(Buffer));
-
+		Text(skp, 16 * W / 32, y* H / 32, "DVX");
+		Text(skp, 18 * W / 32, y* H / 32, "HA");
+		Text(skp, 24 * W / 32, y* H / 32, "RANGE");
+		Text(skp, 29 * W / 32, y* H / 32, "Y");
+		y++;
 		skp->SetTextAlign(oapi::Sketchpad::LEFT);
-
+		Text(skp, 2 * W / 32, y* H / 32, "COMMENT");
+		Text(skp, 8 * W / 32, y* H / 32, "METIG");
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		Text(skp, 16 * W / 32, y* H / 32, "DVY");
+		Text(skp, 18 * W / 32, y* H / 32, "HP");
+		Text(skp, 24 * W / 32, y* H / 32, "PHASE");
+		Text(skp, 30 * W / 32, y* H / 32, "YDOT");
+		y++;
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+		Text(skp, 2 * W / 32, y* H / 32, "DVMAG");
+		Text(skp, 9 * W / 32, y* H / 32, "DT");
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		Text(skp, 16 * W / 32, y* H / 32, "DVZ");
+		Text(skp, 18 * W / 32, y* H / 32, "DH");
+		Text(skp, 24 * W / 32, y* H / 32, "Noon/Mid");
+		Text(skp, 29 * W / 32, y* H / 32, "SR/SS");
+		y += 2;
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
 		if (G->subThreadStatus != 0) return true;
 
 		for (unsigned i = METScroll;i < G->ManeuverEvaluationTable.Maneuvers.size();i++)
@@ -283,44 +356,44 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			ii = i - METScroll;
 
 			sprintf_s(Buffer, "%d", i + 1);
-			skp->Text(1 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].type.c_str());
-			skp->Text(3 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(3 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].name.c_str());
-			skp->Text(1 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (ii * 5)* H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].DVMag);
-			skp->Text(1 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(1 * W / 32, (ii * 5)* H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			GMT2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].GMTIG);
-			skp->Text(6 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].METIG);
-			skp->Text(6 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (ii * 5)* H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].DT);
-			skp->Text(6 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(6 * W / 32, (ii * 5)* H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.x);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.y);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.z);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(16 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].HA);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].HP);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DH);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(19 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable.Maneuvers[i].RANGE);
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable.Maneuvers[i].PHASE);
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 			SS2HHMMSS(G->ManeuverEvaluationTable.Maneuvers[i].TTN, hh, mm, ss);
 			if (G->ManeuverEvaluationTable.Maneuvers[i].noon)
 			{
@@ -330,12 +403,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "M-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(24 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].Y);
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + 5 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].Ydot);
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + 6 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
 			SS2HHMMSS(G->ManeuverEvaluationTable.Maneuvers[i].TTS, hh, mm, ss);
 			if (G->ManeuverEvaluationTable.Maneuvers[i].sunrise)
 			{
@@ -345,12 +418,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "SS-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + 7 * H / 32, Buffer, strlen(Buffer));
+			skp->Text(30 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
 
 			skp->SetTextAlign(oapi::Sketchpad::LEFT);
 
-			//Only display 8 maneuvers at once
-			if (i >= 7 + METScroll) break;
+			//Only display 6 maneuvers at once
+			if (i >= (FDOMFD_MET_MAX_MANEUVERS - 1) + METScroll) break;
 		}
 	}
 	else if (screen == 3)
@@ -1307,6 +1380,11 @@ void ShuttleFDOMFD::SetScreen(int s)
 	coreButtons.SelectPage(this, screen);
 }
 
+void ShuttleFDOMFD::Text(oapi::Sketchpad* skp, int x, int y, std::string val)
+{
+	skp->Text(x, y, val.c_str(), val.size());
+}
+
 void ShuttleFDOMFD::MET2String(char *buf, double MET)
 {
 	MET = round(MET*1000.0) / 1000.0;
@@ -1394,34 +1472,37 @@ bool ShuttleFDOMFD::add_OMPManeuver(char *type, char *name, unsigned ins)
 
 void ShuttleFDOMFD::menuModifySecondary()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
 	bool ModifyOMPSecondaryInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Modify Secondary (format: Man Sec Type Value)", ModifyOMPSecondaryInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Modify Secondary (format: Sec Type Value)", ModifyOMPSecondaryInput, 0, 20, (void*)this);
 }
 
 bool ModifyOMPSecondaryInput(void *id, char *str, void *data)
 {
-	unsigned man, sec;
+	unsigned sec;
 	char type[32];
 	double val;
 
-	if (sscanf_s(str, "%d %d %s %lf", &man, &sec, type, 32, &val) == 4)
+	if (sscanf_s(str, "%d %s %lf", &sec, type, 32, &val) == 3)
 	{
-		return ((ShuttleFDOMFD*)data)->modify_OMPManeuverSecondary(man, sec, type, val);
+		return ((ShuttleFDOMFD*)data)->modify_OMPManeuverSecondary(sec, type, val);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::modify_OMPManeuverSecondary(unsigned man, unsigned sec, char * str, double val)
+bool ShuttleFDOMFD::modify_OMPManeuverSecondary(unsigned sec, char * str, double val)
 {
-	if (man <= G->ManeuverConstraintsTable.size() && man >= 1)
+	unsigned man = MCTSelectedManeuver + 1;
+	if (man <= G->MCT.Table.size() && man >= 1)
 	{
-		if (sec <= G->ManeuverConstraintsTable[man - 1].secondaries.size() && sec >= 1)
+		if (sec <= G->MCT.Table[man - 1].secondaries.size() && sec >= 1)
 		{
 			OMP::OMPDefs::SECONDARIES type = OMP::OrbitalManeuverProcessor::GetSecondaryType(str);
 			if (type == OMP::OMPDefs::NOSEC) return false;
 
-			G->ManeuverConstraintsTable[man - 1].secondaries[sec - 1].type = type;
-			G->ManeuverConstraintsTable[man - 1].secondaries[sec - 1].value = val;
+			G->MCT.Table[man - 1].secondaries[sec - 1].type = type;
+			G->MCT.Table[man - 1].secondaries[sec - 1].value = val;
 			return true;
 		}
 	}
@@ -1431,24 +1512,32 @@ bool ShuttleFDOMFD::modify_OMPManeuverSecondary(unsigned man, unsigned sec, char
 
 void ShuttleFDOMFD::menuModifyOMPManeuver()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
+	char Buff1[64], Buff2[64];
+
+	GetOPMManeuverType(Buff1, G->MCT.Table[MCTSelectedManeuver].type);
+	sprintf_s(Buff2, 64, G->MCT.Table[MCTSelectedManeuver].name.c_str());
+	sprintf_s(Buffer, "%s %s", Buff1, Buff2);
+
 	bool ModifyOMPManeuverInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Modify Maneuver (format: ID type name)", ModifyOMPManeuverInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Modify Maneuver (format: type name)", ModifyOMPManeuverInput, Buffer, 20, (void*)this);
 }
 
 bool ModifyOMPManeuverInput(void *id, char *str, void *data)
 {
-	unsigned num;
 	char type[32], name[32];
 
-	if (sscanf_s(str, "%d %s %s", &num, type, 32, name, 32) == 3)
+	if (sscanf_s(str, "%s %s", type, 32, name, 32) == 2)
 	{
-		return ((ShuttleFDOMFD*)data)->modify_OMPManeuver(num, type, name);
+		return ((ShuttleFDOMFD*)data)->modify_OMPManeuver(type, name);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
+bool ShuttleFDOMFD::modify_OMPManeuver(char *type, char *name)
 {
+	unsigned num = MCTSelectedManeuver + 1;
 	OMP::OMPDefs::MANTYPE man = OMP::OrbitalManeuverProcessor::GetOPMManeuverType(type);
 	if (man == OMP::OMPDefs::MANTYPE::NOMAN)
 	{
@@ -1461,25 +1550,33 @@ bool ShuttleFDOMFD::modify_OMPManeuver(unsigned num, char *type, char *name)
 
 void ShuttleFDOMFD::menuAddOMPThreshold()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
+	char Buff1[64], Buff2[63];
+
+	GetOPMManeuverThreshold(Buff1, G->MCT.Table[MCTSelectedManeuver].threshold);
+	GetOPMManeuverThresholdTime(Buff2, G->MCT.Table[MCTSelectedManeuver].threshold, G->MCT.Table[MCTSelectedManeuver].thresh_num);
+	sprintf(Buffer, "%s %s", Buff1, Buff2);
+
 	bool AddOMPThresholdInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Add Maneuver Threshold (format: Man Type Value)", AddOMPThresholdInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Set Maneuver Threshold (format: Type Value)", AddOMPThresholdInput, Buffer, 25, (void*)this);
 }
 
 bool AddOMPThresholdInput(void *id, char *str, void *data)
 {
-	unsigned num;
 	char type[32], time[32];
 
-	if (sscanf_s(str, "%d %s %s", &num, type, 32, time, 32) == 3)
+	if (sscanf_s(str, "%s %s", type, 32, time, 32) == 2)
 	{
-		return ((ShuttleFDOMFD*)data)->add_OMPManeuverThreshold(num, type, time);
+		return ((ShuttleFDOMFD*)data)->add_OMPManeuverThreshold(type, time);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * str)
+bool ShuttleFDOMFD::add_OMPManeuverThreshold(char *type, char * str)
 {
-	if (num <= G->ManeuverConstraintsTable.size() && num >= 1)
+	unsigned num = MCTSelectedManeuver + 1;
+	if (num <= G->MCT.Table.size() && num >= 1)
 	{
 		if (strcmp(type, "T") == 0)
 		{
@@ -1564,28 +1661,30 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(unsigned num, char *type, char * st
 
 void ShuttleFDOMFD::menuAddOMPSecondary()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
 	bool AddOMPSecondaryInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Add Secondary Constraint (format: Man Type Value)", AddOMPSecondaryInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Add Secondary Constraint (format: Type Value)", AddOMPSecondaryInput, 0, 20, (void*)this);
 }
 
 bool AddOMPSecondaryInput(void *id, char *str, void *data)
 {
-	unsigned num;
 	char type[32];
 	double val;
 
-	if (sscanf_s(str, "%d %s %lf", &num, type, 32, &val) == 3)
+	if (sscanf_s(str, "%s %lf", type, 32, &val) == 2)
 	{
-		return ((ShuttleFDOMFD*)data)->add_OMPManeuverSecondary(num, type, val);
+		return ((ShuttleFDOMFD*)data)->add_OMPManeuverSecondary(type, val);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::add_OMPManeuverSecondary(unsigned num, char * str, double val)
+bool ShuttleFDOMFD::add_OMPManeuverSecondary(char * str, double val)
 {
-	if (num <= G->ManeuverConstraintsTable.size() && num >= 1)
+	unsigned num = MCTSelectedManeuver + 1;
+	if (num <= G->MCT.Table.size() && num >= 1)
 	{
-		if (G->ManeuverConstraintsTable[num - 1].secondaries.size() < 6)
+		if (G->MCT.Table[num - 1].secondaries.size() < 6)
 		{
 			G->AddManeuverSecondary(num - 1, str, val);
 			return true;
@@ -1702,6 +1801,8 @@ void ShuttleFDOMFD::GetOPMManeuverSecondary(char *buf, OMP::OMPDefs::SECONDARIES
 
 void ShuttleFDOMFD::menuDeleteOMPManeuver()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
 	bool DeleteOMPManeuverInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Delete specified maneuver: ", DeleteOMPManeuverInput, 0, 20, (void*)this);
 }
@@ -1719,11 +1820,12 @@ bool DeleteOMPManeuverInput(void *id, char *str, void *data)
 
 bool ShuttleFDOMFD::delete_OMPManeuver(unsigned num)
 {
-	if (num >= 1 && num <= G->ManeuverConstraintsTable.size())
+	if (num >= 1 && num <= G->MCT.Table.size())
 	{
 		MCTScroll = 0;
 		METScroll = 0;
-		G->ManeuverConstraintsTable.erase(G->ManeuverConstraintsTable.begin() + num - 1);
+		MCTSelectedManeuver = 0;
+		G->MCT.Table.erase(G->MCT.Table.begin() + num - 1);
 		return true;
 	}
 
@@ -1855,27 +1957,28 @@ void ShuttleFDOMFD::menuCalcDMT()
 void ShuttleFDOMFD::menuDeleteOMPSecondary()
 {
 	bool DeleteOMPSecondaryInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Secondary to delete (format: MAN SEC)", DeleteOMPSecondaryInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Secondary to delete (format: SEC)", DeleteOMPSecondaryInput, 0, 20, (void*)this);
 }
 
 bool DeleteOMPSecondaryInput(void *id, char *str, void *data)
 {
-	unsigned num, sec;
+	unsigned sec;
 
-	if (sscanf_s(str, "%d %d", &num, &sec) == 2)
+	if (sscanf_s(str, "%d", &sec) == 1)
 	{
-		return ((ShuttleFDOMFD*)data)->delete_OMPSecondary(num, sec);
+		return ((ShuttleFDOMFD*)data)->delete_OMPSecondary(sec);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::delete_OMPSecondary(unsigned num, unsigned sec)
+bool ShuttleFDOMFD::delete_OMPSecondary(unsigned sec)
 {
-	if (num >= 1 && num <= G->ManeuverConstraintsTable.size())
+	unsigned num = MCTSelectedManeuver + 1;
+	if (num >= 1 && num <= G->MCT.Table.size())
 	{
-		if (sec >= 1 && sec <= G->ManeuverConstraintsTable[num - 1].secondaries.size())
+		if (sec >= 1 && sec <= G->MCT.Table[num - 1].secondaries.size())
 		{
-			G->ManeuverConstraintsTable[num - 1].secondaries.erase(G->ManeuverConstraintsTable[num - 1].secondaries.begin() + sec - 1);
+			G->MCT.Table[num - 1].secondaries.erase(G->MCT.Table[num - 1].secondaries.begin() + sec - 1);
 			return true;
 		}
 	}
@@ -1884,25 +1987,27 @@ bool ShuttleFDOMFD::delete_OMPSecondary(unsigned num, unsigned sec)
 
 void ShuttleFDOMFD::menuInsertOMPManeuver()
 {
+	if (G->MCT.Table.size() == 0U) return;
+
 	bool InsertMPManeuverInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Insert maneuver at specified ID: ", InsertMPManeuverInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Insert maneuver before currently selected maneuver (format: type name)", InsertMPManeuverInput, 0, 20, (void*)this);
 }
 
 bool InsertMPManeuverInput(void *id, char *str, void *data)
 {
-	unsigned ins;
 	char type[32], name[32];
 
-	if (sscanf_s(str, "%d %s %s", &ins, type, 32, name, 32) == 3)
+	if (sscanf_s(str, "%s %s", type, 32, name, 32) == 2)
 	{
-		return ((ShuttleFDOMFD*)data)->insert_OMPManeuver(ins, type, name);
+		return ((ShuttleFDOMFD*)data)->insert_OMPManeuver(type, name);
 	}
 	return false;
 }
 
-bool ShuttleFDOMFD::insert_OMPManeuver(unsigned ins, char *type, char *name)
+bool ShuttleFDOMFD::insert_OMPManeuver(char *type, char *name)
 {
-	if (ins >= 1 && ins <= G->ManeuverConstraintsTable.size() + 1)
+	unsigned ins = MCTSelectedManeuver + 1;
+	if (ins >= 1 && ins <= G->MCT.Table.size() + 1)
 	{
 		return add_OMPManeuver(type, name, ins);
 	}
@@ -2063,13 +2168,16 @@ bool ShuttleFDOMFD::SaveState(char *filename)
 			papiWriteLine_string(myfile, "TARGET", G->target->GetName());
 		papiWriteLine_bool(myfile, "NONSPHERICAL", G->useNonSphericalGravity);
 		myfile << "START_MCT" << std::endl;
-		for (unsigned i = 0;i < G->ManeuverConstraintsTable.size();i++)
+		for (unsigned i = 0;i < G->MCT.Table.size();i++)
 		{
-			WriteMCTLine(myfile, G->ManeuverConstraintsTable[i]);
+			WriteMCTLine(myfile, G->MCT.Table[i]);
 		}
 		myfile << "END_MCT" << std::endl;
 
 		myfile.close();
+
+		// Also save as name for MCT
+		G->MCT.Header.Name.assign(filename);
 	}
 
 return true;
@@ -2097,7 +2205,8 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 	myfile.open(Buffer);
 	if (myfile.is_open())
 	{
-		G->ManeuverConstraintsTable.clear();
+		G->MCT.Table.clear();
+		G->MCT.Header.Name.assign(filename);
 
 		int Year, Day, Hour, Minute;
 		double launchdateSec;
@@ -2199,12 +2308,12 @@ void ShuttleFDOMFD::ReadMCTLine(const char *line)
 	{
 		temp.name.assign(name);
 		i = 0;
-		G->ManeuverConstraintsTable.push_back(temp);
+		G->MCT.Table.push_back(temp);
 		while (strcmp(sectype[i], "NSEC") && i < OMP::MAXSECONDARIES)
 		{
 			sec.type = OMP::OrbitalManeuverProcessor::GetSecondaryType(sectype[i]);
 			sec.value = secnum[i];
-			G->ManeuverConstraintsTable.back().secondaries.push_back(sec);
+			G->MCT.Table.back().secondaries.push_back(sec);
 			i++;
 		}
 	}
@@ -2217,17 +2326,20 @@ void ShuttleFDOMFD::menuScrollMETUp()
 
 void ShuttleFDOMFD::menuScrollMETDown()
 {
-	if (METScroll + 8 < G->ManeuverEvaluationTable.Maneuvers.size()) METScroll++;
+	if (METScroll + FDOMFD_MET_MAX_MANEUVERS < G->ManeuverEvaluationTable.Maneuvers.size()) METScroll++;
 }
 
 void ShuttleFDOMFD::menuScrollMCTUp()
 {
-	if (MCTScroll > 0) MCTScroll--;
+	if (MCTSelectedManeuver > 0) MCTSelectedManeuver--;
+	if (MCTSelectedManeuver < MCTScroll) MCTScroll--;
 }
 
 void ShuttleFDOMFD::menuScrollMCTDown()
 {
-	if (MCTScroll + 9 < G->ManeuverConstraintsTable.size()) MCTScroll++;
+	if ((MCTSelectedManeuver + 1) < G->MCT.Table.size()) MCTSelectedManeuver++;
+
+	if ((MCTSelectedManeuver + 1) > (MCTScroll + FDOMFD_MCT_MAX_MANEUVERS)) MCTScroll++;
 }
 
 void ShuttleFDOMFD::menuLWPSetDELNO()

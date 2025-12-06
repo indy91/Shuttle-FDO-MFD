@@ -60,35 +60,35 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu1[] =
 	{
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "Add Maneuver", 0, 'A' },
 		{ "Add Threshold", 0, 'T' },
 		{ "Add Secondary", 0, 'S' },
 		{ "Delete maneuver", 0, 'D' },
-		{ "Modify maneuver", 0, 'M' },
-		{ "Delete secondary", 0, 'E' },
 
 		{ "Calculate plan", 0, 'C' },
+		{ "Modify maneuver", 0, 'M' },
+		{ "Delete secondary", 0, 'E' },
 		{ "Insert maneuver", 0, 'I' },
 		{ "Modify secondary", 0, 'F' },
-		{ "Scroll up", 0, 'G' },
-		{ "Scroll down", 0, 'H' },
 		{ "Back to menu", 0, 'B' },
 	};
 
 	RegisterPage(mnu1, sizeof(mnu1) / sizeof(MFDBUTTONMENU));
 
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMCTUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMCTDown);
 	RegisterFunction("ADD", OAPI_KEY_A, &ShuttleFDOMFD::menuAddOMPManeuver);
 	RegisterFunction("THR", OAPI_KEY_T, &ShuttleFDOMFD::menuAddOMPThreshold);
 	RegisterFunction("SEC", OAPI_KEY_S, &ShuttleFDOMFD::menuAddOMPSecondary);
 	RegisterFunction("DEL", OAPI_KEY_D, &ShuttleFDOMFD::menuDeleteOMPManeuver);
-	RegisterFunction("MOD", OAPI_KEY_M, &ShuttleFDOMFD::menuModifyOMPManeuver);
-	RegisterFunction("DES", OAPI_KEY_E, &ShuttleFDOMFD::menuDeleteOMPSecondary);
 
 	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalculateOMPPlan);
+	RegisterFunction("MOD", OAPI_KEY_M, &ShuttleFDOMFD::menuModifyOMPManeuver);
+	RegisterFunction("DES", OAPI_KEY_E, &ShuttleFDOMFD::menuDeleteOMPSecondary);
 	RegisterFunction("INS", OAPI_KEY_I, &ShuttleFDOMFD::menuInsertOMPManeuver);
 	RegisterFunction("MOS", OAPI_KEY_F, &ShuttleFDOMFD::menuModifySecondary);
-	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMCTUp);
-	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMCTDown);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 

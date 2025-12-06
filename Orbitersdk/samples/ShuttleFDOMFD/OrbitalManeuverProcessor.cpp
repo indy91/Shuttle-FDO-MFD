@@ -23,6 +23,12 @@
 
 namespace OMP
 {
+	ManeuverConstraintsTableHeader::ManeuverConstraintsTableHeader()
+	{
+		Name = "(null)";
+		Comment = "(null)";
+	}
+
 	MANEVALDATA::MANEVALDATA()
 	{
 		DVMag = 0.0;
@@ -48,6 +54,8 @@ namespace OMP
 
 	MANEVALTABLE::MANEVALTABLE()
 	{
+		Name = "(null)";
+		Comment = "(null)";
 		GMT_C = 0.0;
 		GMT_T = 0.0;
 		dv_C = _V(0, 0, 0);
@@ -77,7 +85,7 @@ namespace OMP
 		sv_chaser = in.CHASER;
 		sv_target = in.TARGET;
 		useNonSphericalGravity = in.useNonSphericalGravity;
-		ManeuverConstraintsTable = in.ManeuverConstraintsTable;
+		MCT = in.MCT;
 		OMPChaserFile = in.OMPChaserFile;
 		OMPTargetFile = in.OMPTargetFile;
 		OMPMCTFile = in.OMPMCTFile;
@@ -88,7 +96,7 @@ namespace OMP
 		iterators.clear();
 		iterstate.clear();
 
-		TAB = ManeuverConstraintsTable.size();
+		TAB = MCT.Table.size();
 
 		ManeuverData.clear();
 		ManeuverData.resize(TAB);
@@ -186,8 +194,8 @@ namespace OMP
 
 		//Initial error checks
 		if (sv_target.GMT == 0.0) return 100; //Error 100: Target not defined
-		if (ManeuverConstraintsTable.size() < 1) return 1;	//Error 1: No maneuvers in constraint table
-		if (ManeuverConstraintsTable[0].threshold != OMPDefs::THRESHOLD::THRES_T) return 2;	//Error 2: First maneuver needs a T as threshold
+		if (MCT.Table.size() < 1) return 1;	//Error 1: No maneuvers in constraint table
+		if (MCT.Table[0].threshold != OMPDefs::THRESHOLD::THRES_T) return 2;	//Error 2: First maneuver needs a T as threshold
 
 		//SET UP ITERATORS and CHECK THAT THRESHOLDS EXIST
 		Error = ProcessIterators();
@@ -265,9 +273,9 @@ namespace OMP
 		for (unsigned int i = 0; i < TAB; i++)
 		{
 			man.dV_LVLH = ManeuverData[i].dv_table;
-			man.name = ManeuverConstraintsTable[i].name;
+			man.name = MCT.Table[i].name;
 			man.TIG_GMT = ManeuverData[i].sv_A_bef_table.GMT;
-			man.type = ManeuverConstraintsTable[i].type;
+			man.type = MCT.Table[i].type;
 
 			ManeuverTable.push_back(man);
 		}
@@ -290,19 +298,19 @@ namespace OMP
 		{
 			found = 0;
 
-			if (ManeuverConstraintsTable[i].threshold == OMPDefs::THRESHOLD::NOTHR) return 5;	//Error 5: Maneuver doesn't have a threshold
+			if (MCT.Table[i].threshold == OMPDefs::THRESHOLD::NOTHR) return 5;	//Error 5: Maneuver doesn't have a threshold
 
-			if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NC)
+			if (MCT.Table[i].type == OMPDefs::MANTYPE::NC)
 			{
-				for (k = i + 1; k < ManeuverConstraintsTable.size(); k++)
+				for (k = i + 1; k < MCT.Table.size(); k++)
 				{
-					for (j = 0; j < ManeuverConstraintsTable[k].secondaries.size(); j++)
+					for (j = 0; j < MCT.Table[k].secondaries.size(); j++)
 					{
-						if (ManeuverConstraintsTable[k].secondaries[j].type == OMPDefs::DR)
+						if (MCT.Table[k].secondaries[j].type == OMPDefs::DR)
 						{
 							found = 1;
 						}
-						else if (ManeuverConstraintsTable[k].secondaries[j].type == OMPDefs::PHA)
+						else if (MCT.Table[k].secondaries[j].type == OMPDefs::PHA)
 						{
 							found = 2;
 						}
@@ -320,23 +328,23 @@ namespace OMP
 				if (found == 1)
 				{
 					//DR
-					con.value = ManeuverConstraintsTable[k].secondaries[j].value * 1852.0;
+					con.value = MCT.Table[k].secondaries[j].value * 1852.0;
 				}
 				else
 				{
 					//PHA or ELA
-					con.value = ManeuverConstraintsTable[k].secondaries[j].value * RAD;
+					con.value = MCT.Table[k].secondaries[j].value * RAD;
 				}
 
 				iterators.push_back(con);
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NH || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NHRD)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::NH || MCT.Table[i].type == OMPDefs::MANTYPE::NHRD)
 			{
-				for (k = i + 1; k < ManeuverConstraintsTable.size(); k++)
+				for (k = i + 1; k < MCT.Table.size(); k++)
 				{
-					for (j = 0; j < ManeuverConstraintsTable[k].secondaries.size(); j++)
+					for (j = 0; j < MCT.Table[k].secondaries.size(); j++)
 					{
-						if (ManeuverConstraintsTable[k].secondaries[j].type == OMPDefs::DH)
+						if (MCT.Table[k].secondaries[j].type == OMPDefs::DH)
 						{
 							found = 1;
 						}
@@ -350,17 +358,17 @@ namespace OMP
 				con.man = i;
 				con.type = 2;
 				con.constr = k;
-				con.value = ManeuverConstraintsTable[k].secondaries[j].value * 1852.0;
+				con.value = MCT.Table[k].secondaries[j].value * 1852.0;
 
 				iterators.push_back(con);
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NPC)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::NPC)
 			{
-				for (k = i + 1; k < ManeuverConstraintsTable.size(); k++)
+				for (k = i + 1; k < MCT.Table.size(); k++)
 				{
-					for (j = 0; j < ManeuverConstraintsTable[k].secondaries.size(); j++)
+					for (j = 0; j < MCT.Table[k].secondaries.size(); j++)
 					{
-						if (ManeuverConstraintsTable[k].secondaries[j].type == OMPDefs::WEDG)
+						if (MCT.Table[k].secondaries[j].type == OMPDefs::WEDG)
 						{
 							found = 1;
 						}
@@ -379,7 +387,7 @@ namespace OMP
 					con.man = i;
 					con.type = 3;
 					con.constr = k;
-					con.value = ManeuverConstraintsTable[k].secondaries[j].value * 1852.0;
+					con.value = MCT.Table[k].secondaries[j].value * 1852.0;
 					iterators.push_back(con);
 				}
 			}
@@ -396,124 +404,124 @@ namespace OMP
 		for (i = 0; i < TAB; i++)
 		{
 			found = 0;
-			if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HA || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::HASH)
+			if (MCT.Table[i].type == OMPDefs::MANTYPE::HA || MCT.Table[i].type == OMPDefs::MANTYPE::HASH)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::HD)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::HD)
 					{
-						ManeuverData[i].add_constraint.x = ManeuverConstraintsTable[i].secondaries[j].value * 1852.0;
+						ManeuverData[i].add_constraint.x = MCT.Table[i].secondaries[j].value * 1852.0;
 						found++;
 					}
 				}
 				if (found != 1) return 6;	//Didn't find HD constraints for HA maneuver
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::EXDV)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::EXDV)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DVLV)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::DVLV)
 					{
 						if (found > 2) return 4;													//Error 4: too many DV components specified
-						ManeuverData[i].dv_table.data[found] = ManeuverConstraintsTable[i].secondaries[j].value * 0.3048;
+						ManeuverData[i].dv_table.data[found] = MCT.Table[i].secondaries[j].value * 0.3048;
 						found++;
 					}
 				}
 				if (found < 3) return 3;													//Error 3: Not enough DV components specified
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOI)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::SOI)
 			{
 				if (i + 1 >= TAB) return 11; //Error 11: No maneuver after SOI/NCC
-				if (ManeuverConstraintsTable[i + 1].type != OMPDefs::MANTYPE::SOR) return 12;	//Error 12: Wrong maneuver after SOI
+				if (MCT.Table[i + 1].type != OMPDefs::MANTYPE::SOR) return 12;	//Error 12: Wrong maneuver after SOI
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::SOR)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::SOR)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::CXYZ)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::CXYZ)
 					{
 						if (found > 2) return 9; //Error 9: too many CXYZ components specified
-						ManeuverData[i].add_constraint.data[found] = ManeuverConstraintsTable[i].secondaries[j].value * 1852.0;
+						ManeuverData[i].add_constraint.data[found] = MCT.Table[i].secondaries[j].value * 1852.0;
 						found++;
 					}
 				}
 				if (found < 3) return 10; //Error 10: Not enough CXYZ components specified
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::TPI)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::TPI)
 			{
 				if (i + 1 >= TAB) return 11; //Error 11: No maneuver after SOI/NCC/TPI
-				if (ManeuverConstraintsTable[i + 1].type != OMPDefs::MANTYPE::TPF) return 12;	//Error 12: Wrong maneuver after SOI/TPI
+				if (MCT.Table[i + 1].type != OMPDefs::MANTYPE::TPF) return 12;	//Error 12: Wrong maneuver after SOI/TPI
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NCC)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::NCC)
 			{
 				if (i + 1 >= TAB) return 11; //Error 11: No maneuver after SOI/NCC
 
-				for (j = 0; j < ManeuverConstraintsTable[i + 1].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i + 1].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i + 1].secondaries[j].type == OMPDefs::CXYZ)
+					if (MCT.Table[i + 1].secondaries[j].type == OMPDefs::CXYZ)
 					{
 						if (found > 2) return 9; //Error 9: too many CXYZ components specified
-						ManeuverData[i + 1].add_constraint.data[found] = ManeuverConstraintsTable[i + 1].secondaries[j].value * 1852.0;
+						ManeuverData[i + 1].add_constraint.data[found] = MCT.Table[i + 1].secondaries[j].value * 1852.0;
 						found++;
 					}
-					else if (ManeuverConstraintsTable[i + 1].secondaries[j].type == OMPDefs::DH)
+					else if (MCT.Table[i + 1].secondaries[j].type == OMPDefs::DH)
 					{
 						if (found > 2) return 9; //Error 9: too many CXYZ components specified
-						ManeuverData[i + 1].add_constraint.z = ManeuverConstraintsTable[i + 1].secondaries[j].value * 1852.0;
+						ManeuverData[i + 1].add_constraint.z = MCT.Table[i + 1].secondaries[j].value * 1852.0;
 						found++;
 					}
-					else if (ManeuverConstraintsTable[i + 1].secondaries[j].type == OMPDefs::DR)
+					else if (MCT.Table[i + 1].secondaries[j].type == OMPDefs::DR)
 					{
 						if (found > 2) return 9; //Error 9: too many CXYZ components specified
-						ManeuverData[i + 1].add_constraint.x = ManeuverConstraintsTable[i + 1].secondaries[j].value * 1852.0;
+						ManeuverData[i + 1].add_constraint.x = MCT.Table[i + 1].secondaries[j].value * 1852.0;
 						found++;
 					}
-					else if (ManeuverConstraintsTable[i + 1].secondaries[j].type == OMPDefs::WEDG)
+					else if (MCT.Table[i + 1].secondaries[j].type == OMPDefs::WEDG)
 					{
 						if (found > 2) return 9; //Error 9: too many CXYZ components specified
-						ManeuverData[i + 1].add_constraint.y = ManeuverConstraintsTable[i + 1].secondaries[j].value * 1852.0;
+						ManeuverData[i + 1].add_constraint.y = MCT.Table[i + 1].secondaries[j].value * 1852.0;
 						found++;
 					}
 				}
 				if (found < 3) return 10; //Error 10: Not enough CXYZ components specified
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::DVYP)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::DVPY || MCT.Table[i].type == OMPDefs::MANTYPE::DVYP)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DV)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::DV)
 					{
-						ManeuverData[i].add_constraint.x = ManeuverConstraintsTable[i].secondaries[j].value * 0.3048;
+						ManeuverData[i].add_constraint.x = MCT.Table[i].secondaries[j].value * 0.3048;
 					}
-					else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::PIT)
+					else if (MCT.Table[i].secondaries[j].type == OMPDefs::PIT)
 					{
-						ManeuverData[i].add_constraint.y = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+						ManeuverData[i].add_constraint.y = MCT.Table[i].secondaries[j].value * RAD;
 					}
-					else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::YAW)
+					else if (MCT.Table[i].secondaries[j].type == OMPDefs::YAW)
 					{
-						ManeuverData[i].add_constraint.z = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+						ManeuverData[i].add_constraint.z = MCT.Table[i].secondaries[j].value * RAD;
 					}
 				}
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::NOSH)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::NOSH)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DNOD)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::DNOD)
 					{
-						ManeuverData[i].add_constraint.x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+						ManeuverData[i].add_constraint.x = MCT.Table[i].secondaries[j].value * RAD;
 						found++;
 					}
 				}
 				if (found != 1) return 24;	//Didn't find DNOD constraint for NOSH maneuver
 			}
-			else if (ManeuverConstraintsTable[i].type == OMPDefs::MANTYPE::PC)
+			else if (MCT.Table[i].type == OMPDefs::MANTYPE::PC)
 			{
-				for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+				for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 				{
-					if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DPC)
+					if (MCT.Table[i].secondaries[j].type == OMPDefs::DPC)
 					{
-						ManeuverData[i].add_constraint.x = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+						ManeuverData[i].add_constraint.x = MCT.Table[i].secondaries[j].value * RAD;
 						found++;
 					}
 				}
@@ -530,146 +538,146 @@ namespace OMP
 
 		for (i = 0; i < TAB; i++)
 		{
-			for (j = 0; j < ManeuverConstraintsTable[i].secondaries.size(); j++)
+			for (j = 0; j < MCT.Table[i].secondaries.size(); j++)
 			{
 				//Maneuver at apogee
-				if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::APO)
+				if (MCT.Table[i].secondaries[j].type == OMPDefs::APO)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::APO;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Maneuver at perigee
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::PER)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::PER)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::PER;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Maneuver at target apogee
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::TGTA)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::TGTA)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::TGTA;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Maneuver at target perigee
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::TGTP)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::TGTP)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::TGTP;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Initial guess
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DV)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::DV)
 				{
-					ManeuverData[i].dv_table = _V(ManeuverConstraintsTable[i].secondaries[j].value * 0.3048, 0, 0);
+					ManeuverData[i].dv_table = _V(MCT.Table[i].secondaries[j].value * 0.3048, 0, 0);
 				}
 				//Common Node
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::CN)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::CN)
 				{
-					if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NPC) return 14;	//Error 14: CN secondary only applies to NPC
+					if (MCT.Table[i].type != OMPDefs::MANTYPE::NPC) return 14;	//Error 14: CN secondary only applies to NPC
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::CN;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Maneuver at nth upcoming apsis
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::SEC_APS)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::SEC_APS)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::SEC_APS;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::LITI)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::LITI)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::LITI;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::LITM)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::LITM)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::LITM;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::LITO)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::LITO)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::LITO;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::NITI)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::NITI)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::NITI;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::NITM)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::NITM)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::NITM;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::NITO)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::NITO)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::NITO;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 60.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 60.0;
 				}
 				//Optimum node shift
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::OPT)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::OPT)
 				{
-					if (ManeuverConstraintsTable[i].type != OMPDefs::MANTYPE::NOSH) return 25;	//Error 25: OPT secondary only applies to NOSH
+					if (MCT.Table[i].type != OMPDefs::MANTYPE::NOSH) return 25;	//Error 25: OPT secondary only applies to NOSH
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::OPT;
 				}
 				//Angle from apogee
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::A)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::A)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::A;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Angle from perigee
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::P)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::P)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::P;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Argument of latitude
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::U)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::U)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::U;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Ascending Node
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::ASC)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::ASC)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::ASC;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Descending Node
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DSC)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::DSC)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::DSC;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value;
 				}
 				//Latitude
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::LAT)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::LAT)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::LAT;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Longitude
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::LON)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::LON)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::LON;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Declination
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::DEC)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::DEC)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::DEC;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * RAD;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Latitude
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::ALT)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::ALT)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::ALT;
-					ManeuverData[i].tigmodifiers.value = ManeuverConstraintsTable[i].secondaries[j].value * 1852.0;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 1852.0;
 				}
 				//Maneuver vehicle and thruster
-				else if (ManeuverConstraintsTable[i].secondaries[j].type == OMPDefs::SECONDARIES::VFIL)
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::SECONDARIES::VFIL)
 				{
 					//Only allows target maneuver for EXDV for now
-					int Veh = (int)(ManeuverConstraintsTable[i].secondaries[j].value) / 10;
-					int Thr = (int)(ManeuverConstraintsTable[i].secondaries[j].value) - Veh * 10;
+					int Veh = (int)(MCT.Table[i].secondaries[j].value) / 10;
+					int Thr = (int)(MCT.Table[i].secondaries[j].value) - Veh * 10;
 
 					if (Veh < 1 || Veh > 2) return 32; //Error 32: Wrong vehicle code in VFIL secondary
 					if (Thr < 1 || Thr > 5) return 33; //Error 33: Wrong thruster code in VFIL secondary
@@ -691,19 +699,19 @@ namespace OMP
 
 	int OrbitalManeuverProcessor::UpdateToThreshold()
 	{
-		if (ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_T)
+		if (MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_T)
 		{
 			double dt;
 
-			dt = GMTfromGET(ManeuverConstraintsTable[CurMan].thresh_num) - sv_cur.GMT;
+			dt = GMTfromGET(MCT.Table[CurMan].thresh_num) - sv_cur.GMT;
 			Error = coast_auto(sv_cur, dt, ManeuverData[CurMan].sv_A_bef_table);
 		}
-		else if (ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_REV ||
-			ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_APS || ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_N)
+		else if (MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_M || MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_REV ||
+			MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_APS || MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_N)
 		{
 			double mult;
 
-			if (ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_M || ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_REV)
+			if (MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_M || MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_REV)
 			{
 				mult = 1.0;
 			}
@@ -712,35 +720,35 @@ namespace OMP
 				mult = 0.5;
 			}
 
-			if (CurMan > 0 && ManeuverConstraintsTable[CurMan - 1].type == OMPDefs::MANTYPE::NPC)
+			if (CurMan > 0 && MCT.Table[CurMan - 1].type == OMPDefs::MANTYPE::NPC)
 			{
 				//Special NPC logic. Propagate threshold state vector for desired orbits, then propagate current state vector to same time. Assumes plane change doesn't affect orbital period
-				Error = DeltaOrbitsAuto(ManeuverData[CurMan - 1].sv_A_threshold, mult * ManeuverConstraintsTable[CurMan].thresh_num, ManeuverData[CurMan].sv_A_bef_table);
+				Error = DeltaOrbitsAuto(ManeuverData[CurMan - 1].sv_A_threshold, mult * MCT.Table[CurMan].thresh_num, ManeuverData[CurMan].sv_A_bef_table);
 				if (Error) return Error;
 				Error = coast_auto(sv_cur, ManeuverData[CurMan].sv_A_bef_table.GMT - sv_cur.GMT, ManeuverData[CurMan].sv_A_bef_table);
 			}
 			else
 			{
-				Error = DeltaOrbitsAuto(sv_cur, mult * ManeuverConstraintsTable[CurMan].thresh_num, ManeuverData[CurMan].sv_A_bef_table);
+				Error = DeltaOrbitsAuto(sv_cur, mult * MCT.Table[CurMan].thresh_num, ManeuverData[CurMan].sv_A_bef_table);
 			}
 		}
-		else if (ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_DT)
+		else if (MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_DT)
 		{
 			//Special NPC logic. DT from threshold time, not current time
 			double ddt;
-			if (CurMan > 0 && ManeuverConstraintsTable[CurMan - 1].type == OMPDefs::MANTYPE::NPC)
+			if (CurMan > 0 && MCT.Table[CurMan - 1].type == OMPDefs::MANTYPE::NPC)
 			{
-				ddt = ManeuverConstraintsTable[CurMan].thresh_num - (sv_cur.GMT - ManeuverData[CurMan - 1].sv_A_threshold.GMT);
+				ddt = MCT.Table[CurMan].thresh_num - (sv_cur.GMT - ManeuverData[CurMan - 1].sv_A_threshold.GMT);
 			}
 			else
 			{
-				ddt = ManeuverConstraintsTable[CurMan].thresh_num;
+				ddt = MCT.Table[CurMan].thresh_num;
 			}
 			Error = coast_auto(sv_cur, ddt, ManeuverData[CurMan].sv_A_bef_table);
 		}
-		else if (ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_CAN || ManeuverConstraintsTable[CurMan].threshold == OMPDefs::THRESHOLD::THRES_WT)
+		else if (MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_CAN || MCT.Table[CurMan].threshold == OMPDefs::THRESHOLD::THRES_WT)
 		{
-			Error = DeltaOrbitsAuto(sv_cur, ManeuverConstraintsTable[CurMan].thresh_num / PI2, ManeuverData[CurMan].sv_A_bef_table);
+			Error = DeltaOrbitsAuto(sv_cur, MCT.Table[CurMan].thresh_num / PI2, ManeuverData[CurMan].sv_A_bef_table);
 		}
 		if (Error) return Error;
 		return 0;
@@ -1048,7 +1056,7 @@ namespace OMP
 			sv_maneuver = ManeuverData[CurMan].sv_P_bef_table;
 		}
 
-		if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::HA)
+		if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::HA)
 		{
 			VECTOR3 DV;
 			if (HeightManeuverAuto(ManeuverData[CurMan].sv_A_bef_table, OrbMech::EARTH_RADIUS_EQUATOR + ManeuverData[CurMan].add_constraint.x, true, DV, ManeuverData[CurMan].dv_table.x))
@@ -1057,7 +1065,7 @@ namespace OMP
 			}
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::HASH)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::HASH)
 		{
 			VECTOR3 DV;
 			if (HeightManeuverAuto(sv_maneuver, OrbMech::EARTH_RADIUS_EQUATOR + ManeuverData[CurMan].add_constraint.x, false, DV))
@@ -1066,37 +1074,37 @@ namespace OMP
 			}
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(sv_maneuver.R, sv_maneuver.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::EXDV || ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NC || ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NH)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::EXDV || MCT.Table[CurMan].type == OMPDefs::MANTYPE::NC || MCT.Table[CurMan].type == OMPDefs::MANTYPE::NH)
 		{
 			//Nothing to do
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NHRD)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NHRD)
 		{
 			double r_dot = dotp(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V) / length(ManeuverData[CurMan].sv_A_bef_table.R);
 			ManeuverData[CurMan].dv_table.z = -r_dot;
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::SOI || ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::TPI)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::SOI || MCT.Table[CurMan].type == OMPDefs::MANTYPE::TPI)
 		{
 			VECTOR3 DV, offset;
 			double ddt;
-			if (ManeuverConstraintsTable[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
+			if (MCT.Table[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
 			{
-				ddt = GMTfromGET(ManeuverConstraintsTable[CurMan + 1].thresh_num) - ManeuverData[CurMan].sv_A_bef_table.GMT;
+				ddt = GMTfromGET(MCT.Table[CurMan + 1].thresh_num) - ManeuverData[CurMan].sv_A_bef_table.GMT;
 			}
-			else if (ManeuverConstraintsTable[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
+			else if (MCT.Table[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
 			{
-				ddt = ManeuverConstraintsTable[CurMan + 1].thresh_num;
+				ddt = MCT.Table[CurMan + 1].thresh_num;
 			}
-			else if (ManeuverConstraintsTable[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_WT)
+			else if (MCT.Table[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_WT)
 			{
-				ddt = OrbMech::time_theta(sv_P_cur.R, sv_P_cur.V, ManeuverConstraintsTable[CurMan + 1].thresh_num, OrbMech::mu_Earth);
+				ddt = OrbMech::time_theta(sv_P_cur.R, sv_P_cur.V, MCT.Table[CurMan + 1].thresh_num, OrbMech::mu_Earth);
 			}
 			else
 			{
 				return 23;	//No valid threshold for SOI/NCC/TPI
 			}
 
-			if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::SOI)
+			if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::SOI)
 			{
 				offset = ManeuverData[CurMan + 1].add_constraint;
 			}
@@ -1109,11 +1117,11 @@ namespace OMP
 			if (Error) return Error;
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::SOR || ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::TPF)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::SOR || MCT.Table[CurMan].type == OMPDefs::MANTYPE::TPF)
 		{
 			VECTOR3 DV, offset;
 
-			if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::SOR)
+			if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::SOR)
 			{
 				offset = ManeuverData[CurMan].add_constraint;
 			}
@@ -1126,7 +1134,7 @@ namespace OMP
 			if (Error) return Error;
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NPC)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NPC)
 		{
 			OrbMech::SV sv_P1;
 			VECTOR3 H_P, DV;
@@ -1145,17 +1153,17 @@ namespace OMP
 			DV = NPCManeuver(ManeuverData[CurMan].sv_A_bef_table, H_P);
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NCC)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NCC)
 		{
 			VECTOR3 DV;
 			double ddt;
-			if (ManeuverConstraintsTable[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
+			if (MCT.Table[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_T)
 			{
-				ddt = GMTfromGET(ManeuverConstraintsTable[CurMan + 1].thresh_num) - ManeuverData[CurMan].sv_A_bef_table.GMT;
+				ddt = GMTfromGET(MCT.Table[CurMan + 1].thresh_num) - ManeuverData[CurMan].sv_A_bef_table.GMT;
 			}
-			else if (ManeuverConstraintsTable[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
+			else if (MCT.Table[CurMan + 1].threshold == OMPDefs::THRESHOLD::THRES_DT)
 			{
-				ddt = ManeuverConstraintsTable[CurMan + 1].thresh_num;
+				ddt = MCT.Table[CurMan + 1].thresh_num;
 			}
 			else
 			{
@@ -1167,7 +1175,7 @@ namespace OMP
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
 		//Apsidal Shift
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::APSO)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::APSO)
 		{
 			double r_dot;
 
@@ -1175,7 +1183,7 @@ namespace OMP
 			ManeuverData[CurMan].dv_table = _V(0, 0, -2.0 * r_dot);
 		}
 		//Circularization
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::CIRC)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::CIRC)
 		{
 			VECTOR3 DV;
 
@@ -1185,7 +1193,7 @@ namespace OMP
 			}
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(sv_maneuver.R, sv_maneuver.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::DVPY || ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::DVYP)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::DVPY || MCT.Table[CurMan].type == OMPDefs::MANTYPE::DVYP)
 		{
 			double dv = ManeuverData[CurMan].add_constraint.x;
 			double pit = ManeuverData[CurMan].add_constraint.y;
@@ -1193,23 +1201,23 @@ namespace OMP
 			ManeuverData[CurMan].dv_table = _V(dv * cos(pit) * cos(yaw), dv * sin(yaw), -dv * sin(pit) * cos(yaw));
 		}
 		//Node Shift setting up common node 90° later
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NS)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NS)
 		{
 			double Y_A_dot = CalculateYDot(ManeuverData[CurMan].sv_A_bef_table.V, ManeuverData[CurMan].sv_P_bef_table.R, ManeuverData[CurMan].sv_P_bef_table.V);
 			ManeuverData[CurMan].dv_table = _V(0, -Y_A_dot, 0);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NSR)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NSR)
 		{
 			ManeuverData[CurMan].dv_table = NSRManeuver(ManeuverData[CurMan].sv_A_bef_table, ManeuverData[CurMan].sv_P_bef_table);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::NOSH)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NOSH)
 		{
 			VECTOR3 DV;
 
 			DV = NodeShiftManeuver(ManeuverData[CurMan].sv_A_bef_table, ManeuverData[CurMan].add_constraint.x);
 			ManeuverData[CurMan].dv_table = mul(OrbMech::LVLH_Matrix(ManeuverData[CurMan].sv_A_bef_table.R, ManeuverData[CurMan].sv_A_bef_table.V), DV);
 		}
-		else if (ManeuverConstraintsTable[CurMan].type == OMPDefs::MANTYPE::PC)
+		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::PC)
 		{
 			VECTOR3 DV;
 
@@ -1218,9 +1226,9 @@ namespace OMP
 		}
 
 		//Additional secondary maneuver constraints
-		for (unsigned int j = 0; j < ManeuverConstraintsTable[CurMan].secondaries.size(); j++)
+		for (unsigned int j = 0; j < MCT.Table[CurMan].secondaries.size(); j++)
 		{
-			if (ManeuverConstraintsTable[CurMan].secondaries[j].type == OMPDefs::SEC_NULL)
+			if (MCT.Table[CurMan].secondaries[j].type == OMPDefs::SEC_NULL)
 			{
 				double Y_A_dot = CalculateYDot(ManeuverData[CurMan].sv_A_bef_table.V, ManeuverData[CurMan].sv_P_bef_table.R, ManeuverData[CurMan].sv_P_bef_table.V);
 				ManeuverData[CurMan].dv_table.y = -Y_A_dot;
@@ -1257,6 +1265,10 @@ namespace OMP
 		VECTOR3 u, R, Rtemp, Vtemp, R_REL, V_REL;
 		double apo, peri, dt1, dt2;
 		MANEVALDATA man;
+
+		// Header
+		ManeuverEvaluationTable.Name = MCT.Header.Name;
+		ManeuverEvaluationTable.Comment = MCT.Header.Comment;
 
 		sv_cur = sv_A0;
 		sv_P_cur = sv_P0;

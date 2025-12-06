@@ -280,26 +280,26 @@ bool ShuttleFDOCore::AddManeuver(char* type, char* name, unsigned ins)
 	man.threshold = OMP::OMPDefs::THRESHOLD::NOTHR;
 	man.thresh_num = 0.0;
 
-	if (ins == 0 || ins == ManeuverConstraintsTable.size() + 1)
+	if (ins == 0 || ins == MCT.Table.size() + 1)
 	{
 		//Maximum number of maneuvers reached?
-		if (ManeuverConstraintsTable.size() >= OMP::MAXMANEUVERS) return false;
+		if (MCT.Table.size() >= OMP::MAXMANEUVERS) return false;
 
-		ManeuverConstraintsTable.push_back(man);
+		MCT.Table.push_back(man);
 	}
 	else
 	{
-		ManeuverConstraintsTable.insert(ManeuverConstraintsTable.begin() + ins - 1, man);
+		MCT.Table.insert(MCT.Table.begin() + ins - 1, man);
 	}
 	return true;
 }
 
 void ShuttleFDOCore::ModifyManeuver(unsigned num, OMP::OMPDefs::MANTYPE type, char *name)
 {
-	if (num >= 0 && num < ManeuverConstraintsTable.size())
+	if (num >= 0 && num < MCT.Table.size())
 	{
-		ManeuverConstraintsTable[num].name.assign(name);
-		ManeuverConstraintsTable[num].type = type;
+		MCT.Table[num].name.assign(name);
+		MCT.Table[num].type = type;
 		//ManeuverConstraintsTable[num].threshold = OMPDefs::THRESHOLD::NOTHR;
 		//ManeuverConstraintsTable[num].thresh_num = 0.0;
 		//ManeuverConstraintsTable[num].secondaries.clear();
@@ -308,8 +308,8 @@ void ShuttleFDOCore::ModifyManeuver(unsigned num, OMP::OMPDefs::MANTYPE type, ch
 
 void ShuttleFDOCore::AddManeuverThreshold(unsigned num, OMP::OMPDefs::THRESHOLD type, double time)
 {
-	ManeuverConstraintsTable[num].threshold = type;
-	ManeuverConstraintsTable[num].thresh_num = time;
+	MCT.Table[num].threshold = type;
+	MCT.Table[num].thresh_num = time;
 }
 
 void ShuttleFDOCore::AddManeuverSecondary(unsigned num, char *type, double value)
@@ -321,7 +321,7 @@ void ShuttleFDOCore::AddManeuverSecondary(unsigned num, char *type, double value
 
 	sec.type = typ;
 	sec.value = value;
-	ManeuverConstraintsTable[num].secondaries.push_back(sec);
+	MCT.Table[num].secondaries.push_back(sec);
 }
 
 void ShuttleFDOCore::CalculateOMPPlan()
@@ -355,7 +355,7 @@ void ShuttleFDOCore::CalculateOMPPlan()
 	OMPIn.TARGET = StateVectorCalc(target);
 	OMPIn.OMPTargetFile.assign(target->GetName());
 	OMPIn.useNonSphericalGravity = useNonSphericalGravity;
-	OMPIn.ManeuverConstraintsTable = ManeuverConstraintsTable;
+	OMPIn.MCT = MCT;
 
 	// Run calculation
 	omp.Calculate(OMPIn, OMPOut);

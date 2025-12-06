@@ -67,6 +67,28 @@ namespace OMP
 		std::vector<SecData> secondaries;
 	};
 
+	struct ManeuverConstraintsTableHeader
+	{
+		ManeuverConstraintsTableHeader();
+
+		std::string Name;		// Name of Maneuver Constraints Table
+		std::string Comment;	// Comment about MCT
+	};
+
+	// Table in string format
+	struct ManeuverConstraintsTableInput
+	{
+		ManeuverConstraintsTableHeader Header;
+		std::vector<ManeuverConstraintsInput> Table;
+	};
+
+	// Table in internal format
+	struct ManeuverConstraintsTable
+	{
+		ManeuverConstraintsTableHeader Header;
+		std::vector<ManeuverConstraints> Table;
+	};
+
 	struct ITERCONSTR
 	{
 		int type = 0;			//type of iterator (1 = NC, 2 = NH, 3 = NPC)
@@ -118,8 +140,12 @@ namespace OMP
 	{
 		MANEVALTABLE();
 
-		//Header
+		// Header
 
+		// Name of Maneuver Evaluation Table
+		std::string Name;		
+		// Comment about MET
+		std::string Comment;
 		//Chaser state vector GMT
 		double GMT_C;
 		//Targer state vector GMT
@@ -140,7 +166,7 @@ namespace OMP
 		//Gravity setting
 		bool useNonSphericalGravity;
 		//Table with maneuver constraints
-		std::vector<ManeuverConstraints> ManeuverConstraintsTable;
+		ManeuverConstraintsTable MCT;
 		//Data for the evaluation table
 		std::string OMPChaserFile, OMPTargetFile, OMPMCTFile;
 		//Write output print
@@ -188,17 +214,23 @@ namespace OMP
 		void PrintManeuverEvaluationTable();
 		void GetOMPError(int err, std::string& buf, unsigned int i = 0, unsigned int j = 0) const;
 
-		//TRAJECTORY PROPAGATION
+		// TRAJECTORY PROPAGATION
 		
-		//Propagate through DT
+		// Propagate through DT
 		int coast_auto(OrbMech::SV sv0, double dt, OrbMech::SV& sv1) const;
-		//Propagate through M orbits
+		// Propagate through M orbits
 		int DeltaOrbitsAuto(OrbMech::SV sv0, double M, OrbMech::SV& sv1) const;
+		// Interface to function for propagation to desired time, mean anomaly, argument of latitude or maneuver line
 		int GeneralTrajectoryPropagation(OrbMech::SV sv0, int opt, double param, double DN, OrbMech::SV& sv1) const;
+		// Propagate to upcoming apoapsis
 		int timetoapo_auto(OrbMech::SV sv_A, double revs, OrbMech::SV& sv_out) const;
+		// Propagate to upcoming periapsis
 		int timetoperi_auto(OrbMech::SV sv_A, double revs, OrbMech::SV& sv_out) const;
+		// Find time to common node
 		int FindCommonNode(OrbMech::SV sv_A, OrbMech::SV sv_P, VECTOR3& u_d, double& dt) const;
+		// Propagate to Nth apsidal crossing
 		int FindNthApsidalCrossingAuto(OrbMech::SV sv0, double N, OrbMech::SV& sv_out) const;
+		// Propagate to optimum node shift position
 		int FindOptimumNodeShiftPoint(OrbMech::SV sv0, double dh, OrbMech::SV& sv_out) const;
 		//Computation of the travel angle to a desired latitude
 		bool TLAT(VECTOR3 R, VECTOR3 V, double lat, int C, double& K_AD, double& dtheta) const;
@@ -234,7 +266,7 @@ namespace OMP
 		// INPUTS
 		OrbMech::SV sv_chaser;
 		OrbMech::SV sv_target;
-		std::vector<ManeuverConstraints> ManeuverConstraintsTable;
+		ManeuverConstraintsTable MCT;
 		std::string ProjectFolder, OMPChaserFile, OMPTargetFile, OMPMCTFile;
 
 		// INTERNAL

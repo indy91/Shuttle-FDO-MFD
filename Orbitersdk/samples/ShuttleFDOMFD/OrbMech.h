@@ -256,9 +256,9 @@ namespace OrbMech
 
 		VECTOR3 R2, V2;
 	private:
-		VECTOR3 f(VECTOR3 alpha, VECTOR3 R, VECTOR3 a_d);
-		double fq(double q);
-		VECTOR3 adfunc(VECTOR3 R);
+		VECTOR3 f(VECTOR3 alpha, VECTOR3 R, VECTOR3 a_d) const;
+		double fq(double q) const;
+		VECTOR3 adfunc(VECTOR3 R) const;
 
 		double R_E, mu;
 		double K, dt_lim;

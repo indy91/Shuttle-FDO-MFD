@@ -30,6 +30,12 @@ struct ShuttleFDOMFDInputBoxData
 	double factor = 0.0;
 };
 
+struct RTCCMFDData
+{
+	UINT ID = 0;
+	int screen;
+};
+
 class ShuttleFDOMFD : public MFD2 {
 public:
 	ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im);
@@ -41,6 +47,7 @@ public:
 	bool ConsumeKeyBuffered(DWORD key);
 	//void WriteStatus(FILEHANDLE scn) const;
 	//void ReadStatus(FILEHANDLE scn);
+	void RecallStatus(void);
 
 	void menuSaveState();
 	bool SaveState(char *filename);
@@ -139,14 +146,14 @@ public:
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
 	bool delete_OMPManeuver(unsigned num);
-	bool modify_OMPManeuver(unsigned num, char *type, char *name);
-	bool add_OMPManeuverThreshold(unsigned num, char *type, char * str);
-	bool add_OMPManeuverSecondary(unsigned num, char * str, double val);
-	bool modify_OMPManeuverSecondary(unsigned man, unsigned sec, char * str, double val);
+	bool modify_OMPManeuver(char *type, char *name);
+	bool add_OMPManeuverThreshold(char *type, char * str);
+	bool add_OMPManeuverSecondary(char * str, double val);
+	bool modify_OMPManeuverSecondary(unsigned sec, char * str, double val);
 	bool set_MTTManeuverSlot(unsigned mnvr, int slot);
 	void set_DMTManeuver(unsigned mnvr);
-	bool delete_OMPSecondary(unsigned num, unsigned sec);
-	bool insert_OMPManeuver(unsigned ins, char *type, char *name);
+	bool delete_OMPSecondary(unsigned sec);
+	bool insert_OMPManeuver(char *type, char *name);
 	void set_LaunchDay();
 	void set_LaunchDay(int YY, int DD);
 	void set_LiftoffTime(int HH, int MM, double SS);
@@ -174,6 +181,7 @@ public:
 	void set_LTPLiftoffTime(double gmt);
 	void set_LWP_OMS_C1_C2(bool OMS1, double C1, double C2);
 
+	void Text(oapi::Sketchpad* skp, int x, int y, std::string val);
 	void MET2String(char *buf, double MET);
 	void MET2String2(char *buf, double MET);
 	void DMTMET2String(char *buf, double MET);
@@ -194,17 +202,22 @@ public:
 	void GetLWPError(char *buf, int err);
 
 protected:
+	void SaveState();
+	void LoadState();
 
 	void GenericIntInput(int *val, char* message);
 	void GenericMETInput(double *get, char *message);
 	void GenericDoubleInput(double *val, char* message, double factor = 1.0);
 	void GenericStringInput(std::string *val, char* message);
 
-	oapi::Font *font;
-	oapi::Font *font2;
+	oapi::Font* font;
+	oapi::Font* font2;
+	oapi::Font* font3;
+	oapi::Pen* pen1;
 
 	int screen;
 
+	UINT ID;
 	ShuttleFDOMFDButtons coreButtons;
 	ShuttleFDOCore* G;
 	ShuttleFDOMFDInputBoxData tempData;
@@ -212,6 +225,9 @@ protected:
 	char Buffer[100];
 
 	bool MTTFlag;
+	unsigned MCTSelectedManeuver;
 	unsigned MCTScroll;
 	unsigned METScroll;
+	// Temporary variables for display formatting
+	int x, dx, y, xmax, ymax;
 };
