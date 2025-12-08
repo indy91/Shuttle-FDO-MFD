@@ -56,7 +56,7 @@ ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 	ID = im;
 	font = oapiCreateFont(w / 20, true, "Courier", FONT_NORMAL, 0);
 	font2 = oapiCreateFont(w / 30, true, "Courier", FONT_NORMAL, 0);
-	font3 = oapiCreateFont(w / 32, false, "Fixed", FONT_NORMAL);
+	font3 = oapiCreateFont(w / 36, false, "Fixed", FONT_NORMAL);
 	pen1 = oapiCreatePen(1, 1, 0x00FFFFFF);
 	// Add MFD initialisation here
 	G = NULL;
@@ -312,88 +312,132 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		unsigned ii;
 
 		skp->SetFont(font2);
+		skp->SetPen(pen1);
 
 		double hh, mm, ss;
 
+		xmax = 80;
 		y = 2;
-		sprintf_s(Buffer, "MANEUVER EVALUATION TABLE %s", G->ManeuverEvaluationTable.Name.c_str());
-		Text(skp, 8 * W / 32, y* H / 32, Buffer);
-		y += 2;
-		sprintf_s(Buffer, "%2d MNVRS", G->ManeuverEvaluationTable.Maneuvers.size());
-		Text(skp, 25 * W / 32, y* H / 32, Buffer);
-		y += 2;
-		Text(skp, 1 * W / 32, y* H / 32, "MNVR  NAME");
-		Text(skp, 8 * W / 32, y* H / 32, "GMTIG  IMP");
-		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
-		Text(skp, 16 * W / 32, y* H / 32, "DVX");
-		Text(skp, 18 * W / 32, y* H / 32, "HA");
-		Text(skp, 24 * W / 32, y* H / 32, "RANGE");
-		Text(skp, 29 * W / 32, y* H / 32, "Y");
-		y++;
-		skp->SetTextAlign(oapi::Sketchpad::LEFT);
-		Text(skp, 2 * W / 32, y* H / 32, "COMMENT");
-		Text(skp, 8 * W / 32, y* H / 32, "METIG");
-		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
-		Text(skp, 16 * W / 32, y* H / 32, "DVY");
-		Text(skp, 18 * W / 32, y* H / 32, "HP");
-		Text(skp, 24 * W / 32, y* H / 32, "PHASE");
-		Text(skp, 30 * W / 32, y* H / 32, "YDOT");
-		y++;
-		skp->SetTextAlign(oapi::Sketchpad::LEFT);
-		Text(skp, 2 * W / 32, y* H / 32, "DVMAG");
-		Text(skp, 9 * W / 32, y* H / 32, "DT");
-		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
-		Text(skp, 16 * W / 32, y* H / 32, "DVZ");
-		Text(skp, 18 * W / 32, y* H / 32, "DH");
-		Text(skp, 24 * W / 32, y* H / 32, "Noon/Mid");
-		Text(skp, 29 * W / 32, y* H / 32, "SR/SS");
-		y += 2;
-		skp->SetTextAlign(oapi::Sketchpad::LEFT);
-		if (G->subThreadStatus != 0) return true;
+		ymax = 36;
 
-		for (unsigned i = METScroll;i < G->ManeuverEvaluationTable.Maneuvers.size();i++)
+		sprintf_s(Buffer, "MANEUVER EVALUATION TABLE %s", G->ManeuverEvaluationTable.Name.c_str());
+		Text(skp, 16 * W / xmax, y* H / ymax, Buffer);
+		y += 2;
+		sprintf_s(Buffer, "GMTR :");
+		Text(skp, 16 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%04d:%03d:%02d:%02d:%06.3lf", G->sescnst.Year, G->sescnst.DayOfYear, G->sescnst.Hours, G->sescnst.Minutes, G->sescnst.launchdateSec);
+		Text(skp, 24 * W / xmax, y* H / ymax, Buffer);
+		y++;
+		Text(skp, 2 * W / xmax, y* H / ymax, "Chaser");
+		Text(skp, 10 * W / xmax, y* H / ymax, "DVtot =");
+		Text(skp, 27 * W / xmax, y* H / ymax, "DVx =");
+		Text(skp, 42 * W / xmax, y* H / ymax, "DVy =");
+		Text(skp, 57 * W / xmax, y* H / ymax, "DVz =");
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		sprintf_s(Buffer, "%.2lf", length(G->ManeuverEvaluationTable.dv_C));
+		Text(skp, 26 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_C.x);
+		Text(skp, 41 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_C.y);
+		Text(skp, 56 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_C.z);
+		Text(skp, 71 * W / xmax, y* H / ymax, Buffer);
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+		y++;
+		Text(skp, 2 * W / xmax, y* H / ymax, "Target");
+		Text(skp, 10 * W / xmax, y* H / ymax, "DVtot =");
+		Text(skp, 27 * W / xmax, y* H / ymax, "DVx =");
+		Text(skp, 42 * W / xmax, y* H / ymax, "DVy =");
+		Text(skp, 57 * W / xmax, y* H / ymax, "DVz =");
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		sprintf_s(Buffer, "%.2lf", length(G->ManeuverEvaluationTable.dv_T));
+		Text(skp, 26 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_T.x);
+		Text(skp, 41 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_T.y);
+		Text(skp, 56 * W / xmax, y* H / ymax, Buffer);
+		sprintf_s(Buffer, "%.2lf", G->ManeuverEvaluationTable.dv_T.z);
+		Text(skp, 71 * W / xmax, y* H / ymax, Buffer);
+		skp->SetTextAlign(oapi::Sketchpad::LEFT);
+		y++;
+		for (ii = 0; ii < 8; ii++)
+		{
+			skp->Line(1 * W / (xmax * 2), (y * 2 + ii * 8 + 1)* H / (ymax * 2), 159 * W / (xmax * 2), (y * 2 + ii * 8 + 1)* H / (ymax * 2));
+		}
+		skp->Line(1 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 1 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(27 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 27 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(65 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 65 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(85 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 85 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(105 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 105 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(131 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 131 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		skp->Line(159 * W / (xmax * 2), (y * 2 + 1)* H / (ymax * 2), 159 * W / (xmax * 2), (y * 2 + 1 + 8 * 7)* H / (ymax * 2));
+		y++;
+		Text(skp, 2 * W / xmax, y* H / ymax, "Mnvr Name");
+		Text(skp, 20 * W / xmax, y* H / ymax, "GMTIG  IMP");
+		Text(skp, 36 * W / xmax, y* H / ymax, "DVX");
+		Text(skp, 47 * W / xmax, y* H / ymax, "HA");
+		Text(skp, 57 * W / xmax, y* H / ymax, "RANGE");
+		Text(skp, 73 * W / xmax, y* H / ymax, "Y");
+		y++;
+		Text(skp, 3 * W / xmax, y* H / ymax, "Comment");
+		Text(skp, 20 * W / xmax, y* H / ymax, "METIG");
+		Text(skp, 36 * W / xmax, y* H / ymax, "DVY");
+		Text(skp, 47 * W / xmax, y* H / ymax, "HP");
+		Text(skp, 57 * W / xmax, y* H / ymax, "PHASE");
+		Text(skp, 72 * W / xmax, y* H / ymax, "Ydot");
+		y++;
+		Text(skp, 3 * W / xmax, y* H / ymax, "DVMag");
+		Text(skp, 21 * W / xmax, y* H / ymax, "DT");
+		Text(skp, 36 * W / xmax, y* H / ymax, "DVZ");
+		Text(skp, 47 * W / xmax, y* H / ymax, "DH");
+		Text(skp, 54 * W / xmax, y* H / ymax, "Noon/Mid -");
+		Text(skp, 70 * W / xmax, y* H / ymax, "SR/SS -");
+		y += 2;
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		for (unsigned i = METScroll; i < G->ManeuverEvaluationTable.Maneuvers.size(); i++)
 		{
 			ii = i - METScroll;
 
 			sprintf_s(Buffer, "%d", i + 1);
-			skp->Text(1 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 4 * W / xmax, (y + ii * 4)* H / ymax, Buffer);
+
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].type.c_str());
-			skp->Text(3 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 5 * W / xmax, (y + ii * 4)* H / ymax, Buffer);
 
 			sprintf_s(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].name.c_str());
-			skp->Text(1 * W / 32, (ii * 5)* H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
-
-			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].DVMag);
-			skp->Text(1 * W / 32, (ii * 5)* H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
-
-			GMT2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].GMTIG);
-			skp->Text(6 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
-			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].METIG);
-			skp->Text(6 * W / 32, (ii * 5)* H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
-			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].DT);
-			skp->Text(6 * W / 32, (ii * 5)* H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
-
+			Text(skp, 2 * W / xmax, (y + ii * 4 + 1)* H / ymax, Buffer);
 			skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 
+			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].DVMag);
+			Text(skp, 9 * W / xmax, (y + ii * 4 + 2)* H / ymax, Buffer);
+
+			GMT2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].GMTIG);
+			Text(skp, 31 * W / xmax, (y + ii * 4)* H / ymax, Buffer);
+			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].METIG);
+			Text(skp, 31 * W / xmax, (y + ii * 4 + 1)* H / ymax, Buffer);
+			MET2String(Buffer, G->ManeuverEvaluationTable.Maneuvers[i].DT);
+			Text(skp, 31 * W / xmax, (y + ii * 4 + 2)* H / ymax, Buffer);
+
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.x);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 41 * W / xmax, (y + ii * 4 + 0)* H / ymax, Buffer);
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.y);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 41 * W / xmax, (y + ii * 4 + 1)* H / ymax, Buffer);
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DV.z);
-			skp->Text(16 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 41 * W / xmax, (y + ii * 4 + 2)* H / ymax, Buffer);
 
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].HA);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 51 * W / xmax, (y + ii * 4)* H / ymax, Buffer);
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].HP);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 51 * W / xmax, (y + ii * 4 + 1)* H / ymax, Buffer);
 			sprintf_s(Buffer, "%.2f", G->ManeuverEvaluationTable.Maneuvers[i].DH);
-			skp->Text(19 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 51 * W / xmax, (y + ii * 4 + 2)* H / ymax, Buffer);
 
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable.Maneuvers[i].RANGE);
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 64 * W / xmax, (y + ii * 4)* H / ymax, Buffer);
 			sprintf_s(Buffer, "%.4f", G->ManeuverEvaluationTable.Maneuvers[i].PHASE);
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 64 * W / xmax, (y + ii * 4 + 1) * H / ymax, Buffer);
 			SS2HHMMSS(G->ManeuverEvaluationTable.Maneuvers[i].TTN, hh, mm, ss);
 			if (G->ManeuverEvaluationTable.Maneuvers[i].noon)
 			{
@@ -403,12 +447,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "M-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(24 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 64 * W / xmax, (y + ii * 4 + 2) * H / ymax, Buffer);
 
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].Y);
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + y * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 78 * W / xmax, (y + ii * 4) * H / ymax, Buffer);
 			sprintf_s(Buffer, "%.1f", G->ManeuverEvaluationTable.Maneuvers[i].Ydot);
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + (y + 1) * H / 32, Buffer, strlen(Buffer));
+			Text(skp, 78 * W / xmax, (y + ii * 4 + 1) * H / ymax, Buffer);
 			SS2HHMMSS(G->ManeuverEvaluationTable.Maneuvers[i].TTS, hh, mm, ss);
 			if (G->ManeuverEvaluationTable.Maneuvers[i].sunrise)
 			{
@@ -418,9 +462,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			{
 				sprintf_s(Buffer, "SS-%02.0f:%02.0f:%02.0f", hh, mm, ss);
 			}
-			skp->Text(30 * W / 32, (ii * 5) * H / 48 + (y + 2) * H / 32, Buffer, strlen(Buffer));
-
-			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+			Text(skp, 78 * W / xmax, (y + ii * 4 + 2) * H / ymax, Buffer);
 
 			//Only display 6 maneuvers at once
 			if (i >= (FDOMFD_MET_MAX_MANEUVERS - 1) + METScroll) break;

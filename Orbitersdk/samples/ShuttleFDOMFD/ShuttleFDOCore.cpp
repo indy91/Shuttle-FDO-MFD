@@ -356,6 +356,7 @@ void ShuttleFDOCore::CalculateOMPPlan()
 	OMPIn.OMPTargetFile.assign(target->GetName());
 	OMPIn.useNonSphericalGravity = useNonSphericalGravity;
 	OMPIn.MCT = MCT;
+	OMPIn.PRINT = false;
 
 	// Run calculation
 	omp.Calculate(OMPIn, OMPOut);
@@ -864,11 +865,12 @@ void ShuttleFDOCore::CalcDMT()
 	}
 	else
 	{
+		// RCS
 		DMT.TRIMS_P = 0.0;
 		DMT.TRIMS_LY = 0.0;
 		DMT.TRIMS_RY = 0.0;
 
-		p_T = 0.0;
+		p_T = -10.0 * RAD;
 		y_T = 0.0;
 	}
 	DMT.WEIGHT = input.sv_tig.mass / LBM2KG;

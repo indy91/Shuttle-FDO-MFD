@@ -94,8 +94,8 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu2[] =
 	{
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -104,25 +104,25 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Transfer to MTT", 0, 'T' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
-		{ "Scroll up", 0, 'G' },
-		{ "Scroll down", 0, 'H' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
 		{ "Back to menu", 0, ' ' },
 	};
 
 	RegisterPage(mnu2, sizeof(mnu2) / sizeof(MFDBUTTONMENU));
 
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMETUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMETDown);
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 
 	RegisterFunction("TRA", OAPI_KEY_T, &ShuttleFDOMFD::menuTransferToMTT);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMETUp);
-	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMETDown);
+	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 

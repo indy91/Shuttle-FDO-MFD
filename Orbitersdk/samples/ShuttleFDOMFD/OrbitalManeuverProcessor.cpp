@@ -1419,7 +1419,7 @@ namespace OMP
 	{
 		switch (err)
 		{
-		case 0:		buf = "";														break;
+		case 0:		buf = "Calculation successful!";								break;
 		case 1:		buf = "Error: No maneuvers in constraint table";				break;
 		case 2:		buf = "Error: First maneuver needs a T as threshold";			break;
 		case 3:		buf = "Error: Not enough DV components specified";				break;
