@@ -28,13 +28,13 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	{
 		{ "Config Menu", 0, 'S' },
 		{ "Launch Window Processor", 0, 'L' },
-		{ "Constraints Page", 0, 'C' },
-		{ "Evaluation Page", 0, 'E' },
-		{ "Transfer Page", 0, 'M' },
-		{ "Detailed Maneuver Table" , 0, 'D' },
-
-		{ "Deorb Opport", 0, 'B' },
+		{ "Orbital Maneuver Processor", 0, 'O' },
+		{ "Deorb Opportunities", 0, 'B' },
 		{ "Deorb Plan", 0, 'T' },
+		{ "", 0, ' ' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -45,13 +45,13 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("CFG", OAPI_KEY_S, &ShuttleFDOMFD::menuSetConfigurationMenu);
 	RegisterFunction("LWP", OAPI_KEY_A, &ShuttleFDOMFD::menuSetLWPPage);
-	RegisterFunction("MCT", OAPI_KEY_C, &ShuttleFDOMFD::menuSetMCTPage);
-	RegisterFunction("MET", OAPI_KEY_E, &ShuttleFDOMFD::menuSetMETPage);
-	RegisterFunction("MTT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetMTTPage);
-	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
-
+	RegisterFunction("OMP", OAPI_KEY_O, &ShuttleFDOMFD::menuSetOMPMenuPage);
 	RegisterFunction("DOP", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDOPSPage);
 	RegisterFunction("DMP", OAPI_KEY_T, &ShuttleFDOMFD::menuSetDMPPage);
+	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
@@ -60,42 +60,42 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu1[] =
 	{
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "Add Maneuver", 0, 'A' },
 		{ "Add Threshold", 0, 'T' },
 		{ "Add Secondary", 0, 'S' },
 		{ "Delete maneuver", 0, 'D' },
-		{ "Modify maneuver", 0, 'M' },
-		{ "Delete secondary", 0, 'E' },
 
 		{ "Calculate plan", 0, 'C' },
+		{ "Modify maneuver", 0, 'M' },
+		{ "Delete secondary", 0, 'E' },
 		{ "Insert maneuver", 0, 'I' },
 		{ "Modify secondary", 0, 'F' },
-		{ "Scroll up", 0, 'G' },
-		{ "Scroll down", 0, 'H' },
 		{ "Back to menu", 0, 'B' },
 	};
 
 	RegisterPage(mnu1, sizeof(mnu1) / sizeof(MFDBUTTONMENU));
 
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMCTUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMCTDown);
 	RegisterFunction("ADD", OAPI_KEY_A, &ShuttleFDOMFD::menuAddOMPManeuver);
 	RegisterFunction("THR", OAPI_KEY_T, &ShuttleFDOMFD::menuAddOMPThreshold);
 	RegisterFunction("SEC", OAPI_KEY_S, &ShuttleFDOMFD::menuAddOMPSecondary);
 	RegisterFunction("DEL", OAPI_KEY_D, &ShuttleFDOMFD::menuDeleteOMPManeuver);
-	RegisterFunction("MOD", OAPI_KEY_M, &ShuttleFDOMFD::menuModifyOMPManeuver);
-	RegisterFunction("DES", OAPI_KEY_E, &ShuttleFDOMFD::menuDeleteOMPSecondary);
 
 	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::menuCalculateOMPPlan);
+	RegisterFunction("MOD", OAPI_KEY_M, &ShuttleFDOMFD::menuModifyOMPManeuver);
+	RegisterFunction("DES", OAPI_KEY_E, &ShuttleFDOMFD::menuDeleteOMPSecondary);
 	RegisterFunction("INS", OAPI_KEY_I, &ShuttleFDOMFD::menuInsertOMPManeuver);
 	RegisterFunction("MOS", OAPI_KEY_F, &ShuttleFDOMFD::menuModifySecondary);
-	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMCTUp);
-	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMCTDown);
-	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 
 	static const MFDBUTTONMENU mnu2[] =
 	{
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Scroll up", 0, 'G' },
+		{ "Scroll down", 0, 'H' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -104,26 +104,26 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Transfer to MTT", 0, 'T' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
-		{ "Scroll up", 0, 'G' },
-		{ "Scroll down", 0, 'H' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
 		{ "Back to menu", 0, ' ' },
 	};
 
 	RegisterPage(mnu2, sizeof(mnu2) / sizeof(MFDBUTTONMENU));
 
+	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMETUp);
+	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMETDown);
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
 
 	RegisterFunction("TRA", OAPI_KEY_T, &ShuttleFDOMFD::menuTransferToMTT);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("UP", OAPI_KEY_G, &ShuttleFDOMFD::menuScrollMETUp);
-	RegisterFunction("DN", OAPI_KEY_H, &ShuttleFDOMFD::menuScrollMETDown);
-	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetMainMenu);
+	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 
 	static const MFDBUTTONMENU mnu3[] =
@@ -191,7 +191,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetMainMenu);
+	RegisterFunction("BCK", OAPI_KEY_I, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 
 	static const MFDBUTTONMENU mnu5[] =
@@ -225,7 +225,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetOMPMenuPage);
 
 
 	static const MFDBUTTONMENU mnu6[] =
@@ -499,6 +499,40 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDMPPage);
+
+
+	static const MFDBUTTONMENU mnu14[] =
+	{
+		{ "Constraints Page", 0, 'C' },
+		{ "Evaluation Page", 0, 'E' },
+		{ "Transfer Page", 0, 'M' },
+		{ "Detailed Maneuver Table" , 0, 'D' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu14, sizeof(mnu14) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("MCT", OAPI_KEY_C, &ShuttleFDOMFD::menuSetMCTPage);
+	RegisterFunction("MET", OAPI_KEY_E, &ShuttleFDOMFD::menuSetMETPage);
+	RegisterFunction("MTT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetMTTPage);
+	RegisterFunction("DMT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetDMTPage);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 }
 
 bool ShuttleFDOMFDButtons::SearchForKeysInOtherPages() const

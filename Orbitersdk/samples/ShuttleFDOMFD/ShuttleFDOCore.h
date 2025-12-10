@@ -25,6 +25,7 @@
 #include "LWP.h"
 #include "DeorbitOpportunities.h"
 #include "DMP.h"
+#include "OrbitalManeuverProcessor.h"
 #include "OrbMech.h"
 
 using namespace OrbMech;
@@ -33,98 +34,26 @@ const double OMS_THRUST = 26700.0;
 const double OMS_ISP0 = 316 * 9.80665;
 const double RCS_THRUST = 7740.0;
 const double RCS_ISP0 = OMS_ISP0;
-const unsigned MAXSECONDARIES = 4;
-
-class OMPDefs
-{
-public:
-	typedef enum { NOMAN, APSO, CIRC, DVPY, DVYP, EXDV, HA, HASH, LSDV, NOSH, PC, NC, NCC, NH, NHRD, NPC, NS, NSR, SOI, SOM, SOR, TPF, TPI, TPM } MANTYPE;
-	typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T, THRES_N, THRES_WT} THRESHOLD;
-	typedef enum { NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LON, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U, HD, DV, DVLV,
-					LITI, LITM, LITO, NITI, NITM, NITO} SECONDARIES;
-	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP} THRUSTERS;
-	typedef enum { NOGUID, M50, P7} GUID;
-};
-
-struct SecData
-{
-	char type[5];
-	double value = 0.0;
-};
-
-struct TIGSecondaries
-{
-	OMPDefs::SECONDARIES type;
-	double value = 0.0;
-};
-
-struct ManeuverConstraints
-{
-	char name[64];
-	OMPDefs::MANTYPE type;
-	OMPDefs::THRESHOLD threshold;
-	double thresh_num;	//time, delta time or revs
-	std::vector<SecData> secondaries;
-};
-
-struct ITERCONSTR
-{
-	int type = 0;	//type of iterator (1 = NC, 2 = NH, 3 = NPC)
-	unsigned man = 0;	//maneuver that is applying the DV
-	unsigned constr = 0;	//maneuver for which the constraint is applied
-	double value = 0.0;		//Value of the constraint
-};
-
-struct MANEUVER
-{
-	char name[64];
-	double TIG_GMT;
-	VECTOR3 dV_LVLH;
-	OMPDefs::MANTYPE type;
-};
-
-struct MANEVALDATA
-{
-	char type[5];
-	char name[11];
-	double DVMag;
-	double GMTIG;
-	double METIG;
-	double DT;
-	VECTOR3 DV;
-	double HA;
-	double HP;
-	double DH;
-	double RANGE;
-	double PHASE;
-	bool noon;
-	double TTN;
-	double Y;
-	double Ydot;
-	bool sunrise;
-	double TTS;
-};
 
 struct MANTRANSDATA
 {
 	int MNVR;
-	char NAME[5];
-	char COMMENT[11];
+	std::string NAME;
+	std::string COMMENT;
 	int SLOT;
-	OMPDefs::THRUSTERS thrusters;
-	OMPDefs::GUID guid;
+	OMP::OMPDefs::THRUSTERS thrusters;
+	OMP::OMPDefs::GUID guid;
 	bool ITER;
 	bool IMP;
 	bool RREF;
 	double ROLL;
-
 };
 
 struct MTTSLOTDATA
 {
 	int SLOT;
-	OMPDefs::THRUSTERS thrusters;
-	OMPDefs::GUID guid;
+	OMP::OMPDefs::THRUSTERS thrusters;
+	OMP::OMPDefs::GUID guid;
 	//false = no, true = yes
 	bool ITER;
 	//false = IMP, true = OPT
@@ -139,8 +68,8 @@ struct DMTINPUT
 	SV sv_tig;
 	VECTOR3 DV_iner;
 	double TV_ROLL;
-	OMPDefs::THRUSTERS thrusters;
-	char comment[11];
+	OMP::OMPDefs::THRUSTERS thrusters;
+	std::string comment;
 };
 
 struct DetailedManeuverTable
@@ -179,7 +108,6 @@ public:
 	int startSubthread(int fcn);
 
 	void CalcMCT();
-	void CalculateManeuverEvalTable(SV sv_A0, SV sv_P0);
 	void CalcLaunchTime();
 	bool MET2MTT();
 	void LoadMTTSlotData(MANTRANSDATA &man, int slot);
@@ -190,58 +118,29 @@ public:
 	void CalcLTP();
 	void ExportLTP();
 
-	void AddManeuver(OMPDefs::MANTYPE type, char *name, unsigned ins = 0);
-	void AddManeuverThreshold(unsigned num, OMPDefs::THRESHOLD type, double time);
+	bool AddManeuver(char *type, char *name, unsigned ins = 0);
+	void AddManeuverThreshold(unsigned num, OMP::OMPDefs::THRESHOLD type, double time);
 	void AddManeuverSecondary(unsigned num, char *type, double value);
-	void ModifyManeuver(unsigned num, OMPDefs::MANTYPE type, char *name);
-	void ChangeMTTManeuverSlot(unsigned mnvr, int slot);
+	void ModifyManeuver(unsigned num, OMP::OMPDefs::MANTYPE type, char *name);
 
-	void GetOPMManeuverType(char *buf, OMPDefs::MANTYPE type);
-	OMPDefs::MANTYPE GetOPMManeuverType(char *buf);
-	void GetMTTThrusterType(char *buf, OMPDefs::THRUSTERS type);
-	void GetDMTThrusterType(char *buf, OMPDefs::THRUSTERS type);
-	void GetDMTManeuverID(char *buf, char *name);
+	void ChangeMTTManeuverSlot(unsigned mnvr, int slot);
+	void GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
+	void GetDMTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
+	void GetDMTManeuverID(char *buf, const char *name);
 
 	void SetLaunchDay();
 	void SetLaunchDay(int Y, int D);
 	void SetLaunchTime(int H, int M, double S);
-	double GETfromGMT(double GMT) { return GMT - LaunchGMT; }
-	double GMTfromGET(double GET) { return GET + LaunchGMT; }
+	double GETfromGMT(double GMT) { return GMT - sescnst.GMTLO; }
+	double GMTfromGET(double GET) { return GET + sescnst.GMTLO; }
 
 	SV StateVectorCalc(VESSEL *v, double SVGMT = 0.0);
-	SV coast_auto(SV sv0, double dt);
-	void ApsidesArgumentofLatitudeDetermination(SV sv0, double &u_x, double &u_y);
-	SV PositionMatch(SV sv_A, SV sv_P);
-	VECTOR3 LambertAuto(VECTOR3 RA, VECTOR3 VA, double GMT0, VECTOR3 RP_off, double dt, int N, bool prog);
-	VECTOR3 SOIManeuver(SV sv_A, SV sv_P, double GMT1, double dt, VECTOR3 off);
-	VECTOR3 SORManeuver(SV sv_A, SV sv_P, double GMT1, VECTOR3 off);
-	VECTOR3 NPCManeuver(SV sv_A, VECTOR3 H_P);
-	VECTOR3 NSRManeuver(SV sv_A, SV sv_P);
-	SV timetoapo_auto(SV sv_A, double revs);
-	SV AEG(SV sv0, int opt, double dval, double DN = 0.0);
-	SV DeltaOrbitsAuto(SV sv0, double M);
-	SV FindNthApsidalCrossingAuto(SV sv0, double N);
-	double CalculateYDot(VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
 	SV PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T, double v_ex, bool nonspherical);
-	SV FindOrbitalSunriseRelativeTime(SV sv0, bool sunrise, double dt1);
-	SV FindOrbitalMidnightRelativeTime(SV sv0, bool midnight, double dt1);
-	bool FindSVAtElevation(SV sv_A, SV sv_P, double t_guess, double elev_D, SV &sv_A2);
-	bool HeightManeuverAuto(SV sv_A, double r_D, bool horizontal, VECTOR3 &DV);
-	SV FindOptimumNodeShiftPoint(SV sv0, double dh);
-	VECTOR3 NodeShiftManeuver(SV sv0, double dh_D);
-	VECTOR3 PlaneChangeManeuver(SV sv0, double dw_D);
-	//Search for maneuver time routine
-	bool SEARMT(SV sv0, int opt, double val, SV &sv1);
-
-	bool FindCommonNode(SV sv_A, SV sv_P, VECTOR3 &u_d, double &dt);
 	//Calculates the OMS trim gimbal angles as a function of the Shuttle CG (in inches), either parellel or through the CG
 	void OMSTVC(VECTOR3 CG, bool parallel, double &P, double &LY, double &RY);
 
-	double GetLaunchGMT() { return LaunchGMT; }
-
-	std::vector<MANEUVER> ManeuverTable;
-	std::vector<ManeuverConstraints> ManeuverConstraintsTable;
-	std::vector<MANEVALDATA> ManeuverEvaluationTable;
+	OMP::ManeuverConstraintsTable MCT;
+	OMP::MANEVALTABLE ManeuverEvaluationTable;
 	std::vector<MANTRANSDATA> ManeuverTransferTable;
 	std::vector<DMTINPUT> DMTInputTable;
 	MTTSLOTDATA MTTSlotData[10];
@@ -260,14 +159,9 @@ public:
 	VESSEL* shuttle;
 	int shuttlenumber;
 
-	//Displayed launch time
-	//Year, Day, Hour, Minutes of launch
-	int launchdate[4];
-	//Seconds of launch
-	double launchdateSec;
+	OrbMech::SessionConstants sescnst;
 
 	bool useNonSphericalGravity;
-	int OMPErrorCode;
 	//false = vessel, true = LWP
 	bool chaserSVOption;
 	LWPSettings LWP_Settings;
@@ -275,6 +169,10 @@ public:
 	LTPOutput LTP_Output;
 	//0 = manual, 1 = LC-39A, 2 = LC-39B, 3 = SLC-6
 	int LWP_LaunchSite;
+
+	//Orbital Maneuver Processor
+	OMP::OrbitalManeuverProcessor omp;
+	std::string OMPErrorMessage;
 
 	//Deorbit Opportunities
 	double DOPS_GETS;
@@ -295,25 +193,14 @@ public:
 	OBJHANDLE hEarth;
 	double mu;
 protected:
-	int CalculateOMPPlan();
-	bool IsOMPConverged(ITERSTATE *iters, int size);
-	void GetThrusterData(OMPDefs::THRUSTERS type, double &F, double &isp);
+	void CalculateOMPPlan();
+	void GetThrusterData(OMP::OMPDefs::THRUSTERS type, double &F, double &isp);
 	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites, bool FirstThreeSites) const;
 	void ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
 
-	//MJD at midnight before launch
-	double BaseMJD;
-	//GMT of launch
-	double LaunchGMT;
-	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to Ecliptic, left handed
-	MATRIX3 M_EFTOECL_AT_EPOCH;
-	//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, right handed
-	MATRIX3 M_TEGTOECL;
-	double w_E;
-
-	SV sv_chaser, sv_target;
+	SV sv_chaser;
 
 	LaunchWindowProcessor LWP;
 };
