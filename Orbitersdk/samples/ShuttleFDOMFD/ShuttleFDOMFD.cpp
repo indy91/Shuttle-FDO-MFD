@@ -321,12 +321,12 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		ymax = 36;
 
 		sprintf_s(Buffer, "MANEUVER EVALUATION TABLE %s", G->ManeuverEvaluationTable.Name.c_str());
-		Text(skp, 16 * W / xmax, y* H / ymax, Buffer);
+		Text(skp, 21 * W / xmax, y* H / ymax, Buffer);
 		y += 2;
 		sprintf_s(Buffer, "GMTR :");
-		Text(skp, 16 * W / xmax, y* H / ymax, Buffer);
+		Text(skp, 21 * W / xmax, y* H / ymax, Buffer);
 		sprintf_s(Buffer, "%04d:%03d:%02d:%02d:%06.3lf", G->sescnst.Year, G->sescnst.DayOfYear, G->sescnst.Hours, G->sescnst.Minutes, G->sescnst.launchdateSec);
-		Text(skp, 24 * W / xmax, y* H / ymax, Buffer);
+		Text(skp, 28 * W / xmax, y* H / ymax, Buffer);
 		y++;
 		Text(skp, 2 * W / xmax, y* H / ymax, "Chaser");
 		Text(skp, 10 * W / xmax, y* H / ymax, "DVtot =");
@@ -349,6 +349,9 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		Text(skp, 27 * W / xmax, y* H / ymax, "DVx =");
 		Text(skp, 42 * W / xmax, y* H / ymax, "DVy =");
 		Text(skp, 57 * W / xmax, y* H / ymax, "DVz =");
+		Text(skp, 75 * W / xmax, y* H / ymax, "Mvrs");
+		sprintf_s(Buffer, "%d", G->ManeuverEvaluationTable.Maneuvers.size());
+		Text(skp, 72 * W / xmax, y* H / ymax, Buffer);
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 		sprintf_s(Buffer, "%.2lf", length(G->ManeuverEvaluationTable.dv_T));
 		Text(skp, 26 * W / xmax, y* H / ymax, Buffer);
