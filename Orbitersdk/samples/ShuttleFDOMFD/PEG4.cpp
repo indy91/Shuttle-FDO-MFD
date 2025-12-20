@@ -102,8 +102,7 @@ bool PEG4::OMSBurnPrediction(VECTOR3 RGD, VECTOR3 VGD, double TGD, VECTOR3 RLS_T
 	{
 		VECTOR3 R_EI;
 
-		DT = OrbMech::time_theta(RP, VD, this->THETA, EARTH_MU, true);
-		OrbMech::rv_from_r0v0(RP, VD, DT, R_EI, V_EI, EARTH_MU);
+		OrbMech::time_theta(RP, VD, this->THETA, EARTH_MU, R_EI, V_EI, DT);
 	}
 
 	VECTOR3 RJ2, VJ2, RC3, VC3;

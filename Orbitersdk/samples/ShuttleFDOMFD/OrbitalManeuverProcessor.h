@@ -25,6 +25,7 @@
 
 namespace OMP
 {
+	// CONSTANTS
 	const unsigned MAXMANEUVERS = 40U;
 	const unsigned MAXMANEUVERNAMELENGTH = 10U;
 	const unsigned MAXSECONDARIES = 9U;
@@ -41,6 +42,20 @@ namespace OMP
 		typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP } THRUSTERS;
 		typedef enum { NOGUID, M50, P7 } GUID;
 	};
+
+	// CONVERSIONS
+	// MANTYPE to string
+	std::string GetOPMManeuverType(OMPDefs::MANTYPE type);
+	// String to MANTYPE
+	OMPDefs::MANTYPE GetOPMManeuverType(std::string buf);
+	// THRESHOLD to string
+	std::string GetOPMManeuverThreshold(OMP::OMPDefs::THRESHOLD type);
+	// String to THRESHOLD
+	OMP::OMPDefs::THRESHOLD GetOPMThresholdType(std::string buf);
+	// SECONDARIES to string
+	std::string GetSecondaryName(OMP::OMPDefs::SECONDARIES sec);
+	// String to SECONDARIES
+	OMP::OMPDefs::SECONDARIES GetSecondaryType(std::string buf);
 
 	struct SecData
 	{
@@ -262,6 +277,7 @@ namespace OMP
 		double GMTfromGET(double get) const;
 		double GETfromGMT(double gmt) const;
 		OrbMech::SV ApplyLVLHManeuver(OrbMech::SV sv0, VECTOR3 DV_LVLH, int ThrustProfile, bool forwards = true) const;
+		int GetOMPThresholdValue(std::string buf, OMP::OMPDefs::THRESHOLD type, double& val) const;
 
 		// INPUTS
 		OrbMech::SV sv_chaser;
@@ -331,15 +347,5 @@ namespace OMP
 		// CONSTANTS
 		OrbMech::SessionConstants& sesconst;
 		OMPVariablesTable ompvariables;
-
-	public:
-		//Utilities
-		static std::string GetOPMManeuverType(OMPDefs::MANTYPE type);
-		static OMPDefs::MANTYPE GetOPMManeuverType(std::string buf);
-
-		static OMP::OMPDefs::THRESHOLD GetOPMThresholdType(std::string buf);
-		static int GetOMPThresholdValue(std::string buf, OMP::OMPDefs::THRESHOLD type, double& val);
-		static OMP::OMPDefs::SECONDARIES GetSecondaryType(std::string buf);
-		static std::string GetSecondaryName(OMP::OMPDefs::SECONDARIES sec);
 	};
 }

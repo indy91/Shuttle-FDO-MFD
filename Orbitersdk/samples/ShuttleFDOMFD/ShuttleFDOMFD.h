@@ -33,7 +33,10 @@ struct ShuttleFDOMFDInputBoxData
 struct RTCCMFDData
 {
 	UINT ID = 0;
-	int screen;
+	int screen = 0;
+	unsigned MCTSelectedManeuver = 0;
+	unsigned MCTScroll = 0;
+	unsigned METScroll = 0;
 };
 
 class ShuttleFDOMFD : public MFD2 {
@@ -193,8 +196,6 @@ public:
 	void SS2HHMMSS(double val, double &hh, double &mm, double &ss);
 	void SS2MMSS(double val, double &mm, double &ss);
 
-	void GetOPMManeuverType(char *buf, OMP::OMPDefs::MANTYPE type);
-	void GetOPMManeuverThreshold(char *buf, OMP::OMPDefs::THRESHOLD type);
 	void GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHOLD type, double num);
 	void GetOPMManeuverSecondary(char *buf, OMP::OMPDefs::SECONDARIES type, double num);
 	void GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);

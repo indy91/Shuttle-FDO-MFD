@@ -270,7 +270,7 @@ bool ShuttleFDOCore::AddManeuver(char* type, char* name, unsigned ins)
 	OMP::ManeuverConstraints man;
 
 	//Check if maneuver type is valid
-	man.type = OMP::OrbitalManeuverProcessor::GetOPMManeuverType(type);
+	man.type = OMP::GetOPMManeuverType(type);
 	if (man.type == OMP::OMPDefs::MANTYPE::NOMAN) return false;
 
 	//Maneuver name/comment exceeds maximum?
@@ -316,7 +316,7 @@ void ShuttleFDOCore::AddManeuverSecondary(unsigned num, char *type, double value
 {
 	OMP::SecData sec;
 
-	OMP::OMPDefs::SECONDARIES typ = OMP::OrbitalManeuverProcessor::GetSecondaryType(type);
+	OMP::OMPDefs::SECONDARIES typ = OMP::GetSecondaryType(type);
 	if (typ == OMP::OMPDefs::SECONDARIES::NOSEC) return;
 
 	sec.type = typ;

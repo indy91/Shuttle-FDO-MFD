@@ -146,13 +146,12 @@ namespace OrbMech
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu);
 	void fDot_and_gDot(double x, double r, double ro, double a, double &fdot, double &gdot, double mu);
 	double kepler_E(double e, double M, double error2 = 1.e-8);
-	double time_theta(VECTOR3 R, VECTOR3 V, double dtheta, double mu, bool future = true);
+	int time_theta(VECTOR3 R1, VECTOR3 V1, double dtheta, double mu, double& dt);
+	int time_theta(VECTOR3 R1, VECTOR3 V1, double dtheta, double mu, VECTOR3& R2, VECTOR3& V2, double& dt);
 	void f_and_g_ta(VECTOR3 R0, VECTOR3 V0, double dt, double &f, double &g, double mu);
 	void fDot_and_gDot_ta(VECTOR3 R0, VECTOR3 V0, double dt, double &fdot, double &gdot, double mu);
 	double period(VECTOR3 R, VECTOR3 V, double mu);
 	double timetoapo(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
-	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double GMT);
-	double timetoapo_integ(VECTOR3 R, VECTOR3 V, double GMT, VECTOR3 &R2, VECTOR3 &V2);
 	double timetoperi(VECTOR3 R, VECTOR3 V, double mu, int s = 0);
 	double kepler_U_equation(double x, double ro, double vro, double a, double mu);
 	void RADUP(VECTOR3 R_W, VECTOR3 V_W, VECTOR3 R_C, double mu, VECTOR3 &R_W1, VECTOR3 &V_W1);
@@ -202,6 +201,8 @@ namespace OrbMech
 	double MJDToDate(double MJD);
 	//Rotation matrix from inertial to LVLH
 	MATRIX3 LVLH_Matrix(VECTOR3 R, VECTOR3 V);
+	//Rotation matrix from inertial to LOS
+	MATRIX3 LOS_Matrix(VECTOR3 R_A, VECTOR3 V_A, VECTOR3 R_P, VECTOR3 V_P);
 	int Date2JD(int Y, int M, int D);
 	//Convert date to MJD
 	double Date2MJD(int Y, int D, int H, int M, double S);

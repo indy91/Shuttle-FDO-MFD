@@ -111,6 +111,9 @@ void ShuttleFDOMFD::SaveState()
 
 	temp.ID = ID;
 	temp.screen = screen;
+	temp.MCTSelectedManeuver = MCTSelectedManeuver;
+	temp.MCTScroll = MCTScroll;
+	temp.METScroll = METScroll;
 
 	bool found = false;
 
@@ -142,6 +145,9 @@ void ShuttleFDOMFD::LoadState()
 		if (g_MFDData[i].ID == ID)
 		{
 			screen = g_MFDData[i].screen;
+			MCTSelectedManeuver = g_MFDData[i].MCTSelectedManeuver;
+			MCTScroll = g_MFDData[i].MCTScroll;
+			METScroll = g_MFDData[i].METScroll;
 		}
 	}
 }
@@ -261,15 +267,13 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			sprintf_s(Buffer, "%2d", i + 1);
 			skp->Text(2 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
 
-			GetOPMManeuverType(Buffer, G->MCT.Table[i].type);
-			skp->Text(5 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
+			Text(skp, 5 * W / xmax, (ii * 4 + y) * H / ymax, OMP::GetOPMManeuverType(G->MCT.Table[i].type));
 
 			sprintf_s(Buffer, 100, G->MCT.Table[i].name.c_str());
 			skp->Text(2 * W / xmax, (ii * 4 + y + 1) * H / ymax, Buffer, strlen(Buffer));
 			skp->SetTextColor(GetDefaultColour(2));
 			//THRESHOLD
-			GetOPMManeuverThreshold(Buffer, G->MCT.Table[i].threshold);
-			skp->Text(22 * W / xmax, (ii * 4 + y) * H / ymax, Buffer, strlen(Buffer));
+			Text(skp, 22 * W / xmax, (ii * 4 + y) * H / ymax, OMP::GetOPMManeuverThreshold(G->MCT.Table[i].threshold));
 
 			skp->SetTextAlign(oapi::Sketchpad::CENTER);
 
@@ -1543,7 +1547,7 @@ bool ShuttleFDOMFD::modify_OMPManeuverSecondary(unsigned sec, char * str, double
 	{
 		if (sec <= G->MCT.Table[man - 1].secondaries.size() && sec >= 1)
 		{
-			OMP::OMPDefs::SECONDARIES type = OMP::OrbitalManeuverProcessor::GetSecondaryType(str);
+			OMP::OMPDefs::SECONDARIES type = OMP::GetSecondaryType(str);
 			if (type == OMP::OMPDefs::NOSEC) return false;
 
 			G->MCT.Table[man - 1].secondaries[sec - 1].type = type;
@@ -1561,7 +1565,7 @@ void ShuttleFDOMFD::menuModifyOMPManeuver()
 
 	char Buff1[64], Buff2[64];
 
-	GetOPMManeuverType(Buff1, G->MCT.Table[MCTSelectedManeuver].type);
+	sprintf_s(Buff1, 64, OMP::GetOPMManeuverType(G->MCT.Table[MCTSelectedManeuver].type).c_str());
 	sprintf_s(Buff2, 64, G->MCT.Table[MCTSelectedManeuver].name.c_str());
 	sprintf_s(Buffer, "%s %s", Buff1, Buff2);
 
@@ -1583,7 +1587,7 @@ bool ModifyOMPManeuverInput(void *id, char *str, void *data)
 bool ShuttleFDOMFD::modify_OMPManeuver(char *type, char *name)
 {
 	unsigned num = MCTSelectedManeuver + 1;
-	OMP::OMPDefs::MANTYPE man = OMP::OrbitalManeuverProcessor::GetOPMManeuverType(type);
+	OMP::OMPDefs::MANTYPE man = OMP::GetOPMManeuverType(type);
 	if (man == OMP::OMPDefs::MANTYPE::NOMAN)
 	{
 		return false;
@@ -1597,11 +1601,18 @@ void ShuttleFDOMFD::menuAddOMPThreshold()
 {
 	if (G->MCT.Table.size() == 0U) return;
 
-	char Buff1[64], Buff2[63];
+	if (G->MCT.Table[MCTSelectedManeuver].threshold == OMP::OMPDefs::THRESHOLD::NOTHR)
+	{
+		sprintf(Buffer, "");
+	}
+	else
+	{
+		char Buff1[64], Buff2[63];
 
-	GetOPMManeuverThreshold(Buff1, G->MCT.Table[MCTSelectedManeuver].threshold);
-	GetOPMManeuverThresholdTime(Buff2, G->MCT.Table[MCTSelectedManeuver].threshold, G->MCT.Table[MCTSelectedManeuver].thresh_num);
-	sprintf(Buffer, "%s %s", Buff1, Buff2);
+		sprintf_s(Buff1, 64, OMP::GetOPMManeuverThreshold(G->MCT.Table[MCTSelectedManeuver].threshold).c_str());
+		GetOPMManeuverThresholdTime(Buff2, G->MCT.Table[MCTSelectedManeuver].threshold, G->MCT.Table[MCTSelectedManeuver].thresh_num);
+		sprintf(Buffer, "%s %s", Buff1, Buff2);
+	}
 
 	bool AddOMPThresholdInput(void *id, char *str, void *data);
 	oapiOpenInputBox("Set Maneuver Threshold (format: Type Value)", AddOMPThresholdInput, Buffer, 25, (void*)this);
@@ -1623,79 +1634,45 @@ bool ShuttleFDOMFD::add_OMPManeuverThreshold(char *type, char * str)
 	unsigned num = MCTSelectedManeuver + 1;
 	if (num <= G->MCT.Table.size() && num >= 1)
 	{
-		if (strcmp(type, "T") == 0)
+		OMP::OMPDefs::THRESHOLD thres = OMP::GetOPMThresholdType(type);
+
+		switch (thres)
+		{
+		case OMP::OMPDefs::THRESHOLD::THRES_APS:
+		case OMP::OMPDefs::THRESHOLD::THRES_CAN:
+		case OMP::OMPDefs::THRESHOLD::THRES_M:
+		case OMP::OMPDefs::THRESHOLD::THRES_N:
+		case OMP::OMPDefs::THRESHOLD::THRES_REV:
+		case OMP::OMPDefs::THRESHOLD::THRES_WT:
+		{
+			double val;
+
+			if (sscanf_s(str, "%lf", &val) == 1)
+			{
+				if (thres == OMP::OMPDefs::THRESHOLD::THRES_CAN || thres == OMP::OMPDefs::THRESHOLD::THRES_WT)
+				{
+					val *= RAD;
+				}
+
+				G->AddManeuverThreshold(num - 1, thres, val);
+				return true;
+			}
+		}
+		break;
+		case OMP::OMPDefs::THRESHOLD::THRES_DLT:
+		case OMP::OMPDefs::THRESHOLD::THRES_DT:
+		case OMP::OMPDefs::THRESHOLD::THRES_DTL:
+		case OMP::OMPDefs::THRESHOLD::THRES_T:
 		{
 			int dd, hh, mm;
 			double ss;
 			if (sscanf_s(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
 			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_T, DDDHHHMMSS2MET(dd, hh, mm, ss));
+				G->AddManeuverThreshold(num - 1, thres, DDDHHHMMSS2MET(dd, hh, mm, ss));
 				return true;
 			}
 		}
-		else if (strcmp(type, "M") == 0)
-		{
-			double m;
-			if (sscanf_s(str, "%lf", &m) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_M, m);
-				return true;
-			}
-		}
-		else if (strcmp(type, "DT") == 0)
-		{
-			int dd, hh, mm;
-			double ss;
-			if (sscanf_s(str, "%d:%d:%d:%lf", &dd, &hh, &mm, &ss) == 4)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_DT, DDDHHHMMSS2MET(dd, hh, mm, ss));
-				return true;
-			}
-		}
-		else if (strcmp(type, "APS") == 0)
-		{
-			double aps;
-			if (sscanf_s(str, "%lf", &aps) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_APS, aps);
-				return true;
-			}
-		}
-		else if (strcmp(type, "CAN") == 0)
-		{
-			double ang;
-			if (sscanf_s(str, "%lf", &ang) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_CAN, ang*RAD);
-				return true;
-			}
-		}
-		else if (strcmp(type, "N") == 0)
-		{
-			double aps;
-			if (sscanf_s(str, "%lf", &aps) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_N, aps);
-				return true;
-			}
-		}
-		else if (strcmp(type, "REV") == 0)
-		{
-			double aps;
-			if (sscanf_s(str, "%lf", &aps) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_REV, aps);
-				return true;
-			}
-		}
-		else if (strcmp(type, "WT") == 0)
-		{
-			double ang;
-			if (sscanf_s(str, "%lf", &ang) == 1)
-			{
-				G->AddManeuverThreshold(num - 1, OMP::OMPDefs::THRESHOLD::THRES_WT, ang*RAD);
-				return true;
-			}
+		break;
 		}
 
 		return false;
@@ -1738,60 +1715,13 @@ bool ShuttleFDOMFD::add_OMPManeuverSecondary(char * str, double val)
 	return false;
 }
 
-void ShuttleFDOMFD::GetOPMManeuverType(char *buf, OMP::OMPDefs::MANTYPE type)
-{
-	std::string temp = OMP::OrbitalManeuverProcessor::GetOPMManeuverType(type);
-	sprintf_s(buf, 100, temp.c_str());
-}
-
-void ShuttleFDOMFD::GetOPMManeuverThreshold(char *buf, OMP::OMPDefs::THRESHOLD type)
-{
-	if (type == OMP::OMPDefs::THRESHOLD::THRES_T)
-	{
-		sprintf_s(buf, 100, "T");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_DT)
-	{
-		sprintf_s(buf, 100, "DT");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_M)
-	{
-		sprintf_s(buf, 100, "M");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_APS)
-	{
-		sprintf_s(buf, 100, "APS");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_CAN)
-	{
-		sprintf_s(buf, 100, "CAN");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_N)
-	{
-		sprintf_s(buf, 100, "N");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_REV)
-	{
-		sprintf_s(buf, 100, "REV");
-	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_WT)
-	{
-		sprintf_s(buf, 100, "WT");
-	}
-	else
-	{
-		sprintf_s(buf, 100, "");
-	}
-
-}
-
 void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHOLD type, double num)
 {
 	if (type == OMP::OMPDefs::THRESHOLD::THRES_T)
 	{
 		MET2String(buf, num);
 	}
-	else if (type == OMP::OMPDefs::THRESHOLD::THRES_DT)
+	else if (type == OMP::OMPDefs::THRESHOLD::THRES_DT || type == OMP::OMPDefs::THRESHOLD::THRES_DLT || type == OMP::OMPDefs::THRESHOLD::THRES_DTL)
 	{
 		MET2String(buf, num);
 	}
@@ -1805,7 +1735,7 @@ void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHO
 	}
 	else if (type == OMP::OMPDefs::THRESHOLD::THRES_CAN)
 	{
-		sprintf_s(buf, 100, "%.1f°", num*DEG);
+		sprintf_s(buf, 100, "%.1f", num*DEG);
 	}
 	else if (type == OMP::OMPDefs::THRESHOLD::THRES_N)
 	{
@@ -1817,7 +1747,7 @@ void ShuttleFDOMFD::GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHO
 	}
 	else if (type == OMP::OMPDefs::THRESHOLD::THRES_WT)
 	{
-		sprintf_s(buf, 100, "%.1f°", num*DEG);
+		sprintf_s(buf, 100, "%.1f", num*DEG);
 	}
 	else
 	{
@@ -1831,11 +1761,11 @@ void ShuttleFDOMFD::GetOPMManeuverSecondary(char *buf, OMP::OMPDefs::SECONDARIES
 	{
 		if (type == OMP::OMPDefs::SECONDARIES::CXYZ)
 		{
-			sprintf_s(buf, 100, "%s =%.4f", OMP::OrbitalManeuverProcessor::GetSecondaryName(type).c_str(), num);
+			sprintf_s(buf, 100, "%s =%.4f", OMP::GetSecondaryName(type).c_str(), num);
 		}
 		else
 		{
-			sprintf_s(buf, 100, "%s =%.1f", OMP::OrbitalManeuverProcessor::GetSecondaryName(type).c_str(), num);
+			sprintf_s(buf, 100, "%s =%.1f", OMP::GetSecondaryName(type).c_str(), num);
 		}
 	}
 	else
@@ -2326,7 +2256,7 @@ void ShuttleFDOMFD::WriteMCTLine(std::ofstream &file, OMP::ManeuverConstraints &
 	}
 	for (unsigned i = 0;i < constr.secondaries.size();i++)
 	{
-		sectype[i] = OMP::OrbitalManeuverProcessor::GetSecondaryName(constr.secondaries[i].type);
+		sectype[i] = OMP::GetSecondaryName(constr.secondaries[i].type);
 		secnum[i] = constr.secondaries[i].value;
 	}
 
@@ -2342,12 +2272,16 @@ void ShuttleFDOMFD::ReadMCTLine(const char *line)
 	char name[64];
 	char sectype[OMP::MAXSECONDARIES][5];
 	double secnum[OMP::MAXSECONDARIES];
+	OMP::ManeuverConstraints temp;
+
+	sprintf(name, "");
 	for (i = 0;i < OMP::MAXSECONDARIES;i++)
 	{
 		sprintf_s(sectype[i], 5, "NSEC");
 		secnum[i] = 0.0;
 	}
-	OMP::ManeuverConstraints temp;
+	
+
 	if (sscanf_s(line, "%s %d %d %lf %s %lf %s %lf %s %lf %s %lf", name, 64, &temp.type, &temp.threshold, &temp.thresh_num,
 		sectype[0], 5, &secnum[0], sectype[1], 5, &secnum[1], sectype[2], 5, &secnum[2], sectype[3], 5, &secnum[3]) == 12)
 	{
@@ -2356,7 +2290,7 @@ void ShuttleFDOMFD::ReadMCTLine(const char *line)
 		G->MCT.Table.push_back(temp);
 		while (strcmp(sectype[i], "NSEC") && i < OMP::MAXSECONDARIES)
 		{
-			sec.type = OMP::OrbitalManeuverProcessor::GetSecondaryType(sectype[i]);
+			sec.type = OMP::GetSecondaryType(sectype[i]);
 			sec.value = secnum[i];
 			G->MCT.Table.back().secondaries.push_back(sec);
 			i++;
