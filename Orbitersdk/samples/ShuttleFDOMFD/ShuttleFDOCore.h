@@ -35,14 +35,21 @@ const double OMS_ISP0 = 316 * 9.80665;
 const double RCS_THRUST = 7740.0;
 const double RCS_ISP0 = OMS_ISP0;
 
+class FDODefs
+{
+public:
+	typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP } THRUSTERS;
+	typedef enum { NOGUID, M50, P7 } GUID;
+};
+
 struct MANTRANSDATA
 {
 	int MNVR;
 	std::string NAME;
 	std::string COMMENT;
 	int SLOT;
-	OMP::OMPDefs::THRUSTERS thrusters;
-	OMP::OMPDefs::GUID guid;
+	FDODefs::THRUSTERS thrusters;
+	FDODefs::GUID guid;
 	bool ITER;
 	bool IMP;
 	bool RREF;
@@ -52,8 +59,8 @@ struct MANTRANSDATA
 struct MTTSLOTDATA
 {
 	int SLOT;
-	OMP::OMPDefs::THRUSTERS thrusters;
-	OMP::OMPDefs::GUID guid;
+	FDODefs::THRUSTERS thrusters;
+	FDODefs::GUID guid;
 	//false = no, true = yes
 	bool ITER;
 	//false = IMP, true = OPT
@@ -68,7 +75,7 @@ struct DMTINPUT
 	SV sv_tig;
 	VECTOR3 DV_iner;
 	double TV_ROLL;
-	OMP::OMPDefs::THRUSTERS thrusters;
+	FDODefs::THRUSTERS thrusters;
 	std::string comment;
 };
 
@@ -111,6 +118,7 @@ public:
 	void CalcLaunchTime();
 	bool MET2MTT();
 	void LoadMTTSlotData(MANTRANSDATA &man, int slot);
+	bool ModifyMTTManeuverData(unsigned mnvr, const std::string& type, const std::string& value);
 	void ExecuteMTT();
 	void CalcDMT();
 	void CalcDeorbitOpportunities();
@@ -124,8 +132,13 @@ public:
 	void ModifyManeuver(unsigned num, OMP::OMPDefs::MANTYPE type, char *name);
 
 	void ChangeMTTManeuverSlot(unsigned mnvr, int slot);
-	void GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
-	void GetDMTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
+
+	void GetMTTThrusterType(char *buf, FDODefs::THRUSTERS type);
+	FDODefs::THRUSTERS GetMTTThrusterType(const std::string &type) const;
+	void GetMTTGuidanceType(char* buf, FDODefs::GUID type) const;
+	FDODefs::GUID GetMTTGuidanceType(const std::string& type) const;
+
+	void GetDMTThrusterType(char *buf, FDODefs::THRUSTERS type);
 	void GetDMTManeuverID(char *buf, const char *name);
 
 	void SetLaunchDay();
@@ -194,11 +207,12 @@ public:
 	double mu;
 protected:
 	void CalculateOMPPlan();
-	void GetThrusterData(OMP::OMPDefs::THRUSTERS type, double &F, double &isp);
+	void GetThrusterData(FDODefs::THRUSTERS type, double &F, double &isp);
 	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites, bool FirstThreeSites) const;
 	void ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
+	MATRIX3 TEG_to_EF_Matrix(double gmt) const;
 
 	SV sv_chaser;
 

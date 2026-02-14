@@ -70,6 +70,7 @@ public:
 	void menuExportLTP();
 	void menuTransferToMTT();
 	void menuMTTChangeSlot();
+	void menuMTTModify();
 	void menuExecuteMTT();
 	void menuDMTChooseManeuver();
 	void menuCalcDMT();
@@ -154,6 +155,7 @@ public:
 	bool add_OMPManeuverSecondary(char * str, double val);
 	bool modify_OMPManeuverSecondary(unsigned sec, char * str, double val);
 	bool set_MTTManeuverSlot(unsigned mnvr, int slot);
+	bool set_MTTManeuverData(unsigned mnvr, const std::string &type, const std::string &value);
 	void set_DMTManeuver(unsigned mnvr);
 	bool delete_OMPSecondary(unsigned sec);
 	bool insert_OMPManeuver(char *type, char *name);
@@ -198,8 +200,7 @@ public:
 
 	void GetOPMManeuverThresholdTime(char *buf, OMP::OMPDefs::THRESHOLD type, double num);
 	void GetOPMManeuverSecondary(char *buf, OMP::OMPDefs::SECONDARIES type, double num);
-	void GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type);
-	void GetMTTGuidanceType(char *buf, OMP::OMPDefs::GUID type);
+	void GetMTTThrusterType(char *buf, FDODefs::THRUSTERS type);
 	void GetLWPError(char *buf, int err);
 
 protected:

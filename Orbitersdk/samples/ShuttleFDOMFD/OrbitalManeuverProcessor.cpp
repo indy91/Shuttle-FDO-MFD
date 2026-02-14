@@ -261,6 +261,7 @@ namespace OMP
 		TAB = 0U;
 		CurMan = 0;
 		recycle = false;
+		DEBUG = false;
 		useNonSphericalGravity = false;
 	}
 
@@ -273,6 +274,7 @@ namespace OMP
 		OMPChaserFile = in.OMPChaserFile;
 		OMPTargetFile = in.OMPTargetFile;
 		OMPMCTFile = in.OMPMCTFile;
+		DEBUG = in.DEBUG;
 
 		Error = 0;
 		recycle = false;
@@ -286,6 +288,7 @@ namespace OMP
 		ManeuverData.resize(TAB);
 
 		OutputPrint.clear();
+		DebugOutput.clear();
 	}
 
 	bool OrbitalManeuverProcessor::ParseManeuverConstraintsTable(const std::vector<ManeuverConstraintsInput>& tab_in, std::vector <ManeuverConstraints>& tab_out, std::string& errormessage) const
@@ -370,6 +373,7 @@ namespace OMP
 		out.Error = Error;
 		out.ErrorMessage = Buffer;
 		out.OutputPrint = OutputPrint;
+		out.DebugOutput = DebugOutput;
 	}
 
 	int OrbitalManeuverProcessor::CalculateOMPPlan(const OMPInputs& in)
@@ -1150,6 +1154,13 @@ namespace OMP
 						iterstate[l].dv = ManeuverData[iterators[l].man].dv_table.x;
 						OrbMech::ITER(iterstate[l].c_I, iterstate[l].s_F, iterstate[l].err, iterstate[l].p_H, iterstate[l].dv, iterstate[l].erro, iterstate[l].dvo);
 
+						if (DEBUG)
+						{
+							sprintf_s(Buffer, "NC iterator: maneuver %d, iteration %d, old DV %.1lf ft/s, new DV %.1lf ft/s",
+								CurMan + 1, (int)(iterstate[l].c_I), iterstate[l].dvo / 0.3048, iterstate[l].dv / 0.3048);
+							DebugOutput.push_back(Buffer);
+						}
+
 						if (iterstate[l].s_F) return 20;	//Error 20: Too many iterations
 
 						ManeuverData[iterators[l].man].dv_table.x = iterstate[l].dv;
@@ -1184,6 +1195,13 @@ namespace OMP
 						iterstate[l].converged = false;
 						iterstate[l].dv = ManeuverData[iterators[l].man].dv_table.x;
 						OrbMech::ITER(iterstate[l].c_I, iterstate[l].s_F, iterstate[l].err, iterstate[l].p_H, iterstate[l].dv, iterstate[l].erro, iterstate[l].dvo);
+
+						if (DEBUG)
+						{
+							sprintf_s(Buffer, "NH iterator: maneuver %d, iteration %d, old DV %.1lf ft/s, new DV %.1lf ft/s",
+								CurMan + 1, (int)(iterstate[l].c_I), iterstate[l].dvo / 0.3048, iterstate[l].dv / 0.3048);
+							DebugOutput.push_back(Buffer);
+						}
 
 						if (iterstate[l].s_F) return 20;	//Error 20: Too many iterations
 
@@ -1274,7 +1292,7 @@ namespace OMP
 		if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::HA)
 		{
 			VECTOR3 DV;
-			if (HeightManeuverAuto(ManeuverData[CurMan].sv_A_bef_table, OrbMech::EARTH_RADIUS_EQUATOR + ManeuverData[CurMan].add_constraint.x, true, DV, ManeuverData[CurMan].dv_table.x))
+			if (HeightManeuverAuto(ManeuverData[CurMan].sv_A_bef_table, OrbMech::EARTH_RADIUS_EQUATOR + ManeuverData[CurMan].add_constraint.x, true, DV))
 			{
 				return 28;	//HA maneuver failed to converge
 			}
@@ -1481,6 +1499,14 @@ namespace OMP
 			ManeuverData[CurMan].sv_A_aft_table = ManeuverData[CurMan].sv_A_bef_table;
 		}
 
+		// Error checks
+		double a_test = OrbMech::GetSemiMajorAxis(sv_maneuver.R, sv_maneuver.V, OrbMech::mu_Earth);
+		if (a_test <= 0.0)
+		{
+			// Error: Trajectory became hyperbolic
+			return 1003;
+		}
+
 		return 0;
 	}
 
@@ -1508,6 +1534,7 @@ namespace OMP
 		sv_P_cur = sv_P0;
 
 		ManeuverEvaluationTable.Maneuvers.clear();
+		ManeuverEvaluationTable.DVtot_C = ManeuverEvaluationTable.DVtot_T = 0.0;
 		ManeuverEvaluationTable.dv_C = ManeuverEvaluationTable.dv_T = _V(0, 0, 0);
 
 		ManeuverEvaluationTable.GMT_C = sv_A0.GMT;
@@ -1532,6 +1559,7 @@ namespace OMP
 				ManeuverEvaluationTable.dv_C.x += abs(ManeuverTable[i].dV_LVLH.x);
 				ManeuverEvaluationTable.dv_C.y += abs(ManeuverTable[i].dV_LVLH.y);
 				ManeuverEvaluationTable.dv_C.z += abs(ManeuverTable[i].dV_LVLH.z);
+				ManeuverEvaluationTable.DVtot_C += length(ManeuverTable[i].dV_LVLH);
 			}
 			else
 			{
@@ -1543,6 +1571,7 @@ namespace OMP
 				ManeuverEvaluationTable.dv_T.x += abs(ManeuverTable[i].dV_LVLH.x);
 				ManeuverEvaluationTable.dv_T.y += abs(ManeuverTable[i].dV_LVLH.y);
 				ManeuverEvaluationTable.dv_T.z += abs(ManeuverTable[i].dV_LVLH.z);
+				ManeuverEvaluationTable.DVtot_T += length(ManeuverTable[i].dV_LVLH);
 			}
 
 			//Calculate maneuver parameters
@@ -1649,6 +1678,8 @@ namespace OMP
 			ManeuverEvaluationTable.Maneuvers.push_back(man);
 		}
 
+		ManeuverEvaluationTable.DVtot_C /= 0.3048;
+		ManeuverEvaluationTable.DVtot_T /= 0.3048;
 		ManeuverEvaluationTable.dv_C /= 0.3048;
 		ManeuverEvaluationTable.dv_T /= 0.3048;
 	}
@@ -1688,6 +1719,7 @@ namespace OMP
 		case 100:	buf = "Error: No target vessel.";								break;
 		case 1001:	buf = "Error: Trajectory became reentrant.";					break;
 		case 1002:	buf = "Error: Kepler error in integrator.";						break;
+		case 1003:	buf = "Error: Trajectory became hyperbolic.";					break;
 		case 2003:	buf = "Error parsing MCT, threshold type of maneuver " + std::to_string(i + 1) + " illegal";		break;
 		default:	buf = "Error: unknown error";									break;
 		}
@@ -1713,8 +1745,7 @@ namespace OMP
 
 	int OrbitalManeuverProcessor::GeneralTrajectoryPropagation(OrbMech::SV sv0, int opt, double param, double DN, OrbMech::SV& sv1) const
 	{
-		sv1 = OrbMech::GeneralTrajectoryPropagation(sv0, opt, param, DN, useNonSphericalGravity);
-		return 0;
+		return OrbMech::GeneralTrajectoryPropagation(sv0, opt, param, DN, useNonSphericalGravity, sv1);
 	}
 
 	int OrbitalManeuverProcessor::timetoapo_auto(OrbMech::SV sv_A, double revs, OrbMech::SV& sv_out) const
@@ -2315,7 +2346,7 @@ namespace OMP
 		return 0;
 	}
 
-	bool OrbitalManeuverProcessor::HeightManeuverAuto(OrbMech::SV sv_A, double r_D, bool horizontal, VECTOR3& DV, double dv_guess)
+	bool OrbitalManeuverProcessor::HeightManeuverAuto(OrbMech::SV sv_A, double r_D, bool horizontal, VECTOR3& DV)
 	{
 		OrbMech::SV sv_A_apo, sv_D;
 		OrbMech::OELEMENTS coe;
@@ -2350,13 +2381,10 @@ namespace OMP
 		}
 
 		//Initial guess
+		v_H = sqrt(2.0 * OrbMech::mu_Earth / (length(sv_A.R) * (1.0 + length(sv_A.R) / r_D)));
 		if (horizontal)
 		{
-			v_H = dv_guess;
-		}
-		else
-		{
-			v_H = sqrt(2.0 * OrbMech::mu_Earth / (length(sv_A.R) * (1.0 + length(sv_A.R) / r_D)));
+			v_H -= length(sv_A.V);
 		}
 
 		do
@@ -2733,11 +2761,11 @@ namespace OMP
 		sprintf_s(Buffer, "TARGET   %s   %s", Buffer2, OMPTargetFile.c_str());
 		outarray.push_back(Buffer);
 		outarray.push_back("");
-		sprintf_s(Buffer, "  CHASER  DVtot = %7.2lf  DVx = %7.2lf  DVy = %7.2lf  DVz = %7.2lf", length(ManeuverEvaluationTable.dv_C),
+		sprintf_s(Buffer, "  CHASER  DVtot = %7.2lf  DVx = %7.2lf  DVy = %7.2lf  DVz = %7.2lf", ManeuverEvaluationTable.DVtot_C,
 			ManeuverEvaluationTable.dv_C.x, ManeuverEvaluationTable.dv_C.y, ManeuverEvaluationTable.dv_C.z);
 		outarray.push_back(Buffer);
 
-		sprintf_s(Buffer, "  TARGET  DVtot = %7.2lf  DVx = %7.2lf  DVy = %7.2lf  DVz = %7.2lf", length(ManeuverEvaluationTable.dv_T),
+		sprintf_s(Buffer, "  TARGET  DVtot = %7.2lf  DVx = %7.2lf  DVy = %7.2lf  DVz = %7.2lf", ManeuverEvaluationTable.DVtot_T,
 			ManeuverEvaluationTable.dv_T.x, ManeuverEvaluationTable.dv_T.y, ManeuverEvaluationTable.dv_T.z);
 		outarray.push_back(Buffer);
 

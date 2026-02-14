@@ -39,8 +39,6 @@ namespace OMP
 			NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LON, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U,
 			LITI, LITM, LITO, NITI, NITM, NITO, CXYZ, DH, DNOD, DPC, DR, DV, DVLS, DVLV, HD, ITSR, MREV, SEC_NULL, PHA, PIT, VFIL, WEDG, YAW
 		} SECONDARIES;
-		typedef enum { NOTHRU, PX4, PX3, PX2, MXL, YL, MYL, ZH, ZL, MZH, MZL, M1, M2, OL, OR, OBP } THRUSTERS;
-		typedef enum { NOGUID, M50, P7 } GUID;
 	};
 
 	// CONVERSIONS
@@ -161,13 +159,17 @@ namespace OMP
 		std::string Name;		
 		// Comment about MET
 		std::string Comment;
-		//Chaser state vector GMT
+		// Chaser state vector GMT
 		double GMT_C;
-		//Targer state vector GMT
+		// Targer state vector GMT
 		double GMT_T;
-		//Total accumulated chaser DV
+		// Total plan DV magnitude for the chaser
+		double DVtot_C;
+		// Total plan DV magnitude for the target
+		double DVtot_T;
+		// Total accumulated chaser DV
 		VECTOR3 dv_C;
-		//Total accumulated chaser DV
+		// Total accumulated target DV
 		VECTOR3 dv_T;
 
 		std::vector<MANEVALDATA> Maneuvers;
@@ -188,6 +190,8 @@ namespace OMP
 		bool PRINT = true;
 		//Write output plot
 		bool PLOT = false;
+		// Write debug output
+		bool DEBUG = false;
 	};
 
 	struct OMPOutputs
@@ -196,6 +200,7 @@ namespace OMP
 		int Error = 0;
 		std::string ErrorMessage;
 		std::vector<std::vector<std::string>> OutputPrint;
+		std::vector<std::string> DebugOutput;
 	};
 
 	struct OMPVariablesTable
@@ -263,7 +268,7 @@ namespace OMP
 		int FindOrbitalMidnightRelativeTime(OrbMech::SV sv0, bool midnight, double dt1, OrbMech::SV& sv_out);
 
 		//Maneuvers
-		bool HeightManeuverAuto(OrbMech::SV sv_A, double r_D, bool horizontal, VECTOR3& DV, double dv_guess = 0.0);
+		bool HeightManeuverAuto(OrbMech::SV sv_A, double r_D, bool horizontal, VECTOR3& DV);
 		int Lambert(OrbMech::SV sv_A1, VECTOR3 RP2_off, double dt, VECTOR3& V_A1_apo);
 		int SOIManeuver(OrbMech::SV sv_A1, OrbMech::SV sv_P, double dt, VECTOR3 off, VECTOR3& DV);
 		int SORManeuver(OrbMech::SV sv_A1, OrbMech::SV sv_P, VECTOR3 off, VECTOR3& DV);
@@ -340,6 +345,12 @@ namespace OMP
 		//Table of maneuver definitions for generating the evaluation table
 		std::vector<MANEUVER> ManeuverTable;
 		std::vector<std::vector<std::string>> OutputPrint;
+		// Write debug output
+		bool DEBUG;
+		// Debug data
+		std::vector<std::string> DebugOutput;
+		// Char buffer
+		char Buffer[256];
 
 		// OUTPUTS
 		MANEVALTABLE ManeuverEvaluationTable;

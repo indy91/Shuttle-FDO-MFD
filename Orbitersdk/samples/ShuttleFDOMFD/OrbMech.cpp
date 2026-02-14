@@ -1271,7 +1271,7 @@ namespace OrbMech
 		return sv1;
 	}
 
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision)
+	int GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision, SV& sv1)
 	{
 		//Update to the given time
 		if (opt == 0)
@@ -1280,12 +1280,12 @@ namespace OrbMech
 
 			GMT1 = param;
 			dt = GMT1 - sv0.GMT;
-			return coast_auto(sv0, dt, precision);
+			sv1 = coast_auto(sv0, dt, precision);
+			return 0;
 		}
 		//Update to the given mean anomaly
 		else
 		{
-			SV sv1;
 			OrbMech::CELEMENTS osc0, osc1;
 			double DX_L, X_L, X_L_dot, dt, ddt, L_D, ll_dot, n0, g_dot;
 			int LINE, COUNT;
@@ -1405,10 +1405,10 @@ namespace OrbMech
 
 			} while (abs(DX_L) > 1e-4 && COUNT > 0);
 
-			return sv1;
+			return 0;
 		}
 
-		return sv0;
+		return 1;
 	}
 
 	InvariantElements CalculateInvariantElementsBlock(SV sv, double mu, double Area, bool precision)

@@ -177,7 +177,7 @@ namespace OrbMech
 	SV coast_auto(SV sv0, double dt, bool precision);
 	SV coast(SV sv0, double dt);
 	SV coast_osc(SV sv0, double dt, double mu);
-	SV GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision);
+	int GeneralTrajectoryPropagation(SV sv0, int opt, double param, double DN, bool precision, SV &sv1);
 	InvariantElements CalculateInvariantElementsBlock(SV sv, double mu, double Area, bool precision);
 	VECTOR3 PROJCT(VECTOR3 U1, VECTOR3 U2, VECTOR3 X);
 	double PHSANG(VECTOR3 R, VECTOR3 V, VECTOR3 RD);

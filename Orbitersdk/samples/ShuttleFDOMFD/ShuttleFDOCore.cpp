@@ -75,80 +75,80 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	subThreadStatus = 0;
 
 	MTTSlotData[0].SLOT = 1;
-	MTTSlotData[0].thrusters = OMP::OMPDefs::THRUSTERS::OBP;
-	MTTSlotData[0].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[0].thrusters = FDODefs::THRUSTERS::OBP;
+	MTTSlotData[0].guid = FDODefs::GUID::P7;
 	MTTSlotData[0].ITER = false;
 	MTTSlotData[0].IMP = true;
 	MTTSlotData[0].RREF = true;
 	MTTSlotData[0].ROLL = 0;
 
 	MTTSlotData[1].SLOT = 2;
-	MTTSlotData[1].thrusters = OMP::OMPDefs::THRUSTERS::OBP;
-	MTTSlotData[1].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[1].thrusters = FDODefs::THRUSTERS::OBP;
+	MTTSlotData[1].guid = FDODefs::GUID::P7;
 	MTTSlotData[1].ITER = false;
 	MTTSlotData[1].IMP = true;
 	MTTSlotData[1].RREF = true;
 	MTTSlotData[1].ROLL = PI;
 
 	MTTSlotData[2].SLOT = 3;
-	MTTSlotData[2].thrusters = OMP::OMPDefs::THRUSTERS::OL;
-	MTTSlotData[2].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[2].thrusters = FDODefs::THRUSTERS::OL;
+	MTTSlotData[2].guid = FDODefs::GUID::P7;
 	MTTSlotData[2].ITER = false;
 	MTTSlotData[2].IMP = true;
 	MTTSlotData[2].RREF = true;
 	MTTSlotData[2].ROLL = 0;
 
 	MTTSlotData[3].SLOT = 4;
-	MTTSlotData[3].thrusters = OMP::OMPDefs::THRUSTERS::OL;
-	MTTSlotData[3].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[3].thrusters = FDODefs::THRUSTERS::OL;
+	MTTSlotData[3].guid = FDODefs::GUID::P7;
 	MTTSlotData[3].ITER = false;
 	MTTSlotData[3].IMP = true;
 	MTTSlotData[3].RREF = true;
 	MTTSlotData[3].ROLL = PI;
 
 	MTTSlotData[4].SLOT = 5;
-	MTTSlotData[4].thrusters = OMP::OMPDefs::THRUSTERS::OR;
-	MTTSlotData[4].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[4].thrusters = FDODefs::THRUSTERS::OR;
+	MTTSlotData[4].guid = FDODefs::GUID::P7;
 	MTTSlotData[4].ITER = false;
 	MTTSlotData[4].IMP = true;
 	MTTSlotData[4].RREF = true;
 	MTTSlotData[4].ROLL = 0;
 
 	MTTSlotData[5].SLOT = 6;
-	MTTSlotData[5].thrusters = OMP::OMPDefs::THRUSTERS::OR;
-	MTTSlotData[5].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[5].thrusters = FDODefs::THRUSTERS::OR;
+	MTTSlotData[5].guid = FDODefs::GUID::P7;
 	MTTSlotData[5].ITER = false;
 	MTTSlotData[5].IMP = true;
 	MTTSlotData[5].RREF = true;
 	MTTSlotData[5].ROLL = PI;
 
 	MTTSlotData[6].SLOT = 7;
-	MTTSlotData[6].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[6].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[6].thrusters = FDODefs::THRUSTERS::PX2;
+	MTTSlotData[6].guid = FDODefs::GUID::P7;
 	MTTSlotData[6].ITER = false;
 	MTTSlotData[6].IMP = true;
 	MTTSlotData[6].RREF = true;
 	MTTSlotData[6].ROLL = 0;
 
 	MTTSlotData[7].SLOT = 8;
-	MTTSlotData[7].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[7].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[7].thrusters = FDODefs::THRUSTERS::PX2;
+	MTTSlotData[7].guid = FDODefs::GUID::P7;
 	MTTSlotData[7].ITER = false;
 	MTTSlotData[7].IMP = true;
 	MTTSlotData[7].RREF = true;
 	MTTSlotData[7].ROLL = PI;
 
 	MTTSlotData[8].SLOT = 9;
-	MTTSlotData[8].thrusters = OMP::OMPDefs::THRUSTERS::PX2;
-	MTTSlotData[8].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[8].thrusters = FDODefs::THRUSTERS::PX2;
+	MTTSlotData[8].guid = FDODefs::GUID::P7;
 	MTTSlotData[8].ITER = false;
 	MTTSlotData[8].IMP = false;
 	MTTSlotData[8].RREF = true;
 	MTTSlotData[8].ROLL = 0;
 
 	MTTSlotData[9].SLOT = 10;
-	MTTSlotData[9].thrusters = OMP::OMPDefs::THRUSTERS::OL;
-	MTTSlotData[9].guid = OMP::OMPDefs::GUID::P7;
+	MTTSlotData[9].thrusters = FDODefs::THRUSTERS::OL;
+	MTTSlotData[9].guid = FDODefs::GUID::P7;
 	MTTSlotData[9].ITER = false;
 	MTTSlotData[9].IMP = false;
 	MTTSlotData[9].RREF = true;
@@ -357,6 +357,7 @@ void ShuttleFDOCore::CalculateOMPPlan()
 	OMPIn.useNonSphericalGravity = useNonSphericalGravity;
 	OMPIn.MCT = MCT;
 	OMPIn.PRINT = false;
+	OMPIn.DEBUG = false; // TBD
 
 	// Run calculation
 	omp.Calculate(OMPIn, OMPOut);
@@ -364,6 +365,13 @@ void ShuttleFDOCore::CalculateOMPPlan()
 	OMPErrorMessage = OMPOut.ErrorMessage;
 
 	ManeuverEvaluationTable = OMPOut.ManeuverEvaluationTable;
+
+	char Buffer[256];
+	for (unsigned i = 0; i < OMPOut.DebugOutput.size(); i++)
+	{
+		sprintf_s(Buffer, OMPOut.DebugOutput[i].c_str());
+		oapiWriteLog(Buffer);
+	}
 }
 
 void ShuttleFDOCore::CalcLaunchTime()
@@ -388,17 +396,122 @@ void ShuttleFDOCore::CalcLTP()
 
 void ShuttleFDOCore::ExportLTP()
 {
-	VECTOR3 IYD;
-	double T_GMTLO_REF;
+	VECTOR3 IYD, IYD_OMS1, IYD_OMS2;
+	double T_GMTLO_REF, T_ET_SEP;
 
 	T_GMTLO_REF = LTP_Output.GMTLO + sescnst.DayOfYear * 24.0*3600.0;
+	T_ET_SEP = LTP_Output.MET_MECO + 12.0;
+
 	IYD = mul(sescnst.M_TEG_TO_M50, LTP_Output.IY_MECO);
+	IYD_OMS1 = mul(sescnst.M_TEG_TO_M50, LTP_Output.IY_OMS1);
+	IYD_OMS2 = mul(sescnst.M_TEG_TO_M50, LTP_Output.IY_OMS2);
 
 	//LAUNCH TARGETING LOAD
 	//T_GMTLO_REF, IY_MIN_EF, IYD, IYD_NOM, DELTA_PSI, DELTA_NODE_PHASE, T_GMTLO_PHASE
 
 	//LAUNCH TARGETING LOAD OMS TGT
 	//IYD_OMS1, IYD_OMS2, DTIG_OMS1, HTGT_OMS1, THETA_OMS1, C1_OMS1, C2_OMS1, DTIG_OMS2, HTGT_OMS2, THETA_OMS2, C1_OMS2, C2_OMS2
+
+	std::ofstream file;
+
+	file.open("FDOLaunchTargeting.txt");
+
+	if (file.is_open() == false) return;
+
+	char Buffer[256];
+
+	sprintf_s(Buffer,"Shuttle launch targeting for %04d-%02d-%02d", sescnst.Year, sescnst.Month, sescnst.Day);
+	file << Buffer << std::endl;
+	OrbMech::MET2String(Buffer, LTP_Output.GMTLO);
+	file << "GMTLO = " << Buffer << std::endl;
+	file << std::endl;
+
+	//Target vectors at T-9min and T-31sec
+	OrbMech::SV sv_T_t9min, sv_T_t31sec, sv_T_t9min_J2000_lh, sv_T_t31sec_J2000_lh;
+	double gmt_t9min, gmt_t31sec;
+
+	gmt_t9min = LTP_Output.GMTLO - (9.0 * 60.0 + 0.1);
+	gmt_t31sec = LTP_Output.GMTLO - 31.0;
+
+	sv_T_t9min = OrbMech::coast(LTP_Output.sv_T, gmt_t9min - LTP_Output.sv_T.GMT);
+	sv_T_t31sec = OrbMech::coast(LTP_Output.sv_T, gmt_t31sec - LTP_Output.sv_T.GMT);
+
+	sv_T_t9min_J2000_lh = sv_T_t9min;
+	sv_T_t31sec_J2000_lh = sv_T_t31sec;
+
+	sv_T_t9min_J2000_lh.R = mul(sescnst.M_TEG_TO_J2000, sv_T_t9min.R);
+	sv_T_t9min_J2000_lh.V = mul(sescnst.M_TEG_TO_J2000, sv_T_t9min.V);
+	sv_T_t31sec_J2000_lh.R = mul(sescnst.M_TEG_TO_J2000, sv_T_t31sec.R);
+	sv_T_t31sec_J2000_lh.V = mul(sescnst.M_TEG_TO_J2000, sv_T_t31sec.V);
+
+	sv_T_t9min_J2000_lh.R = _V(sv_T_t9min_J2000_lh.R.x, sv_T_t9min_J2000_lh.R.z, sv_T_t9min_J2000_lh.R.y);
+	sv_T_t9min_J2000_lh.V = _V(sv_T_t9min_J2000_lh.V.x, sv_T_t9min_J2000_lh.V.z, sv_T_t9min_J2000_lh.V.y);
+
+	sv_T_t31sec_J2000_lh.R = _V(sv_T_t31sec_J2000_lh.R.x, sv_T_t31sec_J2000_lh.R.z, sv_T_t31sec_J2000_lh.R.y);
+	sv_T_t31sec_J2000_lh.V = _V(sv_T_t31sec_J2000_lh.V.x, sv_T_t31sec_J2000_lh.V.z, sv_T_t31sec_J2000_lh.V.y);
+
+	file << "Target state vector for scenario (T-9min):" << std::endl;
+	sprintf_s(Buffer, "RPOS %lf %lf %lf", sv_T_t9min_J2000_lh.R.x, sv_T_t9min_J2000_lh.R.y, sv_T_t9min_J2000_lh.R.z);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "RVEL %lf %lf %lf", sv_T_t9min_J2000_lh.V.x, sv_T_t9min_J2000_lh.V.y, sv_T_t9min_J2000_lh.V.z);
+	file << Buffer << std::endl;
+	file << std::endl;
+
+	file << "Target state vector for scenario (T-31sec):" << std::endl;
+	sprintf_s(Buffer, "RPOS %lf %lf %lf", sv_T_t31sec_J2000_lh.R.x, sv_T_t31sec_J2000_lh.R.y, sv_T_t31sec_J2000_lh.R.z);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "RVEL %lf %lf %lf", sv_T_t31sec_J2000_lh.V.x, sv_T_t31sec_J2000_lh.V.y, sv_T_t31sec_J2000_lh.V.z);
+	file << Buffer << std::endl;
+	file << std::endl;
+
+	file << "I-Loads:" << std::endl;
+	file << "DELTA_NODE_PHASE = 0.013526" << std::endl; //TBD
+	file << "DELTA_PSI = 0.0" << std::endl; //TBD
+	file << "EFPSW = FALSE" << std::endl;
+	file << "GAMD = " << LTP_Output.G_MECO * RAD << std::endl;
+	file << "GAMDN = " << LTP_Output.G_MECO * RAD << std::endl;
+	file << "IYD = " << IYD.x << " " << IYD.y << " " << IYD.z << std::endl;
+	file << "IYD_NOM = " << IYD.x << " " << IYD.y << " " << IYD.z << std::endl;
+	sprintf_s(Buffer, "IYD_OMS1 = %lf %lf %lf", IYD_OMS1.x, IYD_OMS1.y, IYD_OMS1.z);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "IYD_OMS2 = %lf %lf %lf", IYD_OMS2.x, IYD_OMS2.y, IYD_OMS2.z);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "DTIG_OMS1 = %lf", LTP_Output.TIG_MPS - T_ET_SEP);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "HTGT_OMS1 = %lf", LTP_Output.OMS1.HTGT / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "THETA_OMS1 = %lf", LTP_Output.OMS1.THETA);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "C1_OMS1 = %lf", LTP_Output.OMS1.C1 / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "C2_OMS1 = %lf", LTP_Output.OMS1.C2);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "DTIG_OMS2 = %lf", LTP_Output.TIG_OMS2 - T_ET_SEP);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "HTGT_OMS2 = %lf", LTP_Output.OMS2.HTGT / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "THETA_OMS2 = %lf", LTP_Output.OMS2.THETA);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "C1_OMS2 = %lf", LTP_Output.OMS2.C1 / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "C2_OMS2 = %lf", LTP_Output.OMS2.C2);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "RDMAG = %lf", LTP_Output.R_MECO * 1852.0 / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "RDNOM = %lf", LTP_Output.R_MECO * 1852.0 / 0.3048);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "T_GMTLO_PHASE = %lf", 365.0*24.0*3600.0);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "T_GMTLO_REF = %lf", T_GMTLO_REF);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "VDMAG = %lf", LTP_Output.V_MECO);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "VDNOM = %lf", LTP_Output.V_MECO);
+	file << Buffer << std::endl;
+	sprintf_s(Buffer, "NODE_SLOPE = 0.0");
+	file << Buffer << std::endl;
+
+	file.close();
 }
 
 int ShuttleFDOCore::subThread()
@@ -751,6 +864,84 @@ void ShuttleFDOCore::ChangeMTTManeuverSlot(unsigned mnvr, int slot)
 	LoadMTTSlotData(ManeuverTransferTable[mnvr], slot);
 }
 
+bool ShuttleFDOCore::ModifyMTTManeuverData(unsigned mnvr, const std::string& type, const std::string& value)
+{
+	if (mnvr < 1 || mnvr > ManeuverTransferTable.size()) return false;
+
+	MANTRANSDATA* data = &ManeuverTransferTable[mnvr - 1];
+
+	if (type == "THR")
+	{
+		FDODefs::THRUSTERS thr = GetMTTThrusterType(value);
+		if (thr == FDODefs::THRUSTERS::NOTHRU) return false;
+
+		data->SLOT = 0;
+		data->thrusters = thr;
+		return true;
+	}
+	else if (type == "GUID")
+	{
+		FDODefs::GUID guid = GetMTTGuidanceType(value);
+		if (guid == FDODefs::GUID::NOGUID) return false;
+
+		data->SLOT = 0;
+		data->guid = guid;
+		return true;
+	}
+	else if (type == "ITER")
+	{
+		bool iter;
+
+		if (value == "YES") iter = true;
+		else if (value == "NO") iter = false;
+		else return false;
+
+		data->SLOT = 0;
+		data->ITER = iter;
+		return true;
+	}
+	else if (type == "IMP")
+	{
+		bool IMP;
+
+		if (value == "OPT") IMP = true;
+		else if (value == "IMP") IMP = false;
+		else return false;
+
+		data->SLOT = 0;
+		data->IMP = IMP;
+		return true;
+	}
+	else if (type == "RREF")
+	{
+		bool RREF;
+
+		if (value == "TVR") RREF = true;
+		else if (value == "ADI") RREF = false;
+		else return false;
+
+		data->SLOT = 0;
+		data->RREF = RREF;
+		return true;
+	}
+	else if (type == "ROLL")
+	{
+		double roll;
+
+		if (sscanf_s(value.c_str(), "%lf", &roll) == 1)
+		{
+			if (roll >= 0.0 && roll <= 360.0)
+			{
+				data->SLOT = 0;
+				data->ROLL = roll * RAD;
+				return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
 void ShuttleFDOCore::ExecuteMTT()
 {
 	//Sanity checks
@@ -833,7 +1024,7 @@ void ShuttleFDOCore::CalcDMT()
 
 	sprintf_s(DMT.CODE, "%sE%02d%s", Buffer, DMT_MNVR, Buffer2);
 	DMT.TV_ROLL = input.TV_ROLL*DEG;
-	if (input.thrusters == OMP::OMPDefs::THRUSTERS::OBP)
+	if (input.thrusters == FDODefs::THRUSTERS::OBP)
 	{
 		OMSTVC(_V(1071.75429, 0.0, 364.71665), true, P, LY, RY);
 
@@ -844,7 +1035,7 @@ void ShuttleFDOCore::CalcDMT()
 		p_T = P - PITCH_BIAS;
 		y_T = 0.0;
 	}
-	else if (input.thrusters == OMP::OMPDefs::THRUSTERS::OL || input.thrusters == OMP::OMPDefs::THRUSTERS::OR)
+	else if (input.thrusters == FDODefs::THRUSTERS::OL || input.thrusters == FDODefs::THRUSTERS::OR)
 	{
 		OMSTVC(_V(1071.75429, 0.0, 364.71665), false, P, LY, RY);
 
@@ -852,7 +1043,7 @@ void ShuttleFDOCore::CalcDMT()
 		DMT.TRIMS_LY = LY * DEG;
 		DMT.TRIMS_RY = RY * DEG;
 
-		if (input.thrusters == OMP::OMPDefs::THRUSTERS::OL)
+		if (input.thrusters == FDODefs::THRUSTERS::OL)
 		{
 			p_T = P - PITCH_BIAS;
 			y_T = LY + YAW_BIAS;
@@ -963,14 +1154,14 @@ void ShuttleFDOCore::CalcDMT()
 	DMT.TGT_HP = (peri - OrbMech::EARTH_RADIUS_EQUATOR) / 1852.0;
 }
 
-void ShuttleFDOCore::GetThrusterData(OMP::OMPDefs::THRUSTERS type, double &F, double &isp)
+void ShuttleFDOCore::GetThrusterData(FDODefs::THRUSTERS type, double &F, double &isp)
 {
-	if (type == OMP::OMPDefs::THRUSTERS::OBP)
+	if (type == FDODefs::THRUSTERS::OBP)
 	{
 		F = 2.0*OMS_THRUST;
 		isp = OMS_ISP0;
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OL || type == OMP::OMPDefs::THRUSTERS::OR)
+	else if (type == FDODefs::THRUSTERS::OL || type == FDODefs::THRUSTERS::OR)
 	{
 		F = OMS_THRUST;
 		isp = OMS_ISP0;
@@ -978,75 +1169,75 @@ void ShuttleFDOCore::GetThrusterData(OMP::OMPDefs::THRUSTERS type, double &F, do
 	else
 	{
 		isp = RCS_ISP0;
-		if (type == OMP::OMPDefs::THRUSTERS::PX2) F = 2.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::PX3) F = 3.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::PX3) F = 4.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::MXL) F = 2.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::YL) F = 2.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::MYL) F = 2.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::ZH) F = 3.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::ZL) F = 4.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::MZL) F = 6.0*RCS_THRUST;
-		else if (type == OMP::OMPDefs::THRUSTERS::MZH) F = 2.0*RCS_THRUST;
+		if (type == FDODefs::THRUSTERS::PX2) F = 2.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::PX3) F = 3.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::PX3) F = 4.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::MXL) F = 2.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::YL) F = 2.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::MYL) F = 2.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::ZH) F = 3.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::ZL) F = 4.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::MZL) F = 6.0*RCS_THRUST;
+		else if (type == FDODefs::THRUSTERS::MZH) F = 2.0*RCS_THRUST;
 		else F = 2.0*RCS_THRUST;
 	}
 }
 
-void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
+void ShuttleFDOCore::GetMTTThrusterType(char *buf, FDODefs::THRUSTERS type)
 {
-	if (type == OMP::OMPDefs::THRUSTERS::PX4)
+	if (type == FDODefs::THRUSTERS::PX4)
 	{
 		sprintf_s(buf, 100, "PX4");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::PX3)
+	else if (type == FDODefs::THRUSTERS::PX3)
 	{
 		sprintf_s(buf, 100, "PX3");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::PX2)
+	else if (type == FDODefs::THRUSTERS::PX2)
 	{
 		sprintf_s(buf, 100, "PX2");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MXL)
+	else if (type == FDODefs::THRUSTERS::MXL)
 	{
 		sprintf_s(buf, 100, "MXL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::YL)
+	else if (type == FDODefs::THRUSTERS::YL)
 	{
 		sprintf_s(buf, 100, "YL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MYL)
+	else if (type == FDODefs::THRUSTERS::MYL)
 	{
 		sprintf_s(buf, 100, "MYL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::ZH)
+	else if (type == FDODefs::THRUSTERS::ZH)
 	{
 		sprintf_s(buf, 100, "ZH");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::ZL)
+	else if (type == FDODefs::THRUSTERS::ZL)
 	{
 		sprintf_s(buf, 100, "ZL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MZH)
+	else if (type == FDODefs::THRUSTERS::MZH)
 	{
 		sprintf_s(buf, 100, "MZH");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::M1)
+	else if (type == FDODefs::THRUSTERS::M1)
 	{
 		sprintf_s(buf, 100, "M1");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::M2)
+	else if (type == FDODefs::THRUSTERS::M2)
 	{
 		sprintf_s(buf, 100, "M2");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OL)
+	else if (type == FDODefs::THRUSTERS::OL)
 	{
 		sprintf_s(buf, 100, "OL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OR)
+	else if (type == FDODefs::THRUSTERS::OR)
 	{
 		sprintf_s(buf, 100, "OR");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OBP)
+	else if (type == FDODefs::THRUSTERS::OBP)
 	{
 		sprintf_s(buf, 100, "OBP");
 	}
@@ -1056,57 +1247,99 @@ void ShuttleFDOCore::GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
 	}
 }
 
-void ShuttleFDOCore::GetDMTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
+FDODefs::THRUSTERS ShuttleFDOCore::GetMTTThrusterType(const std::string& type) const
 {
-	if (type == OMP::OMPDefs::THRUSTERS::PX4 || type == OMP::OMPDefs::THRUSTERS::PX3)
+	if (type == "PX4") return FDODefs::THRUSTERS::PX4;
+	else if (type == "PX3") return FDODefs::THRUSTERS::PX3;
+	else if (type == "PX2") return FDODefs::THRUSTERS::PX2;
+	else if (type == "MXL") return FDODefs::THRUSTERS::MXL;
+	else if (type == "YL") return FDODefs::THRUSTERS::YL;
+	else if (type == "MYL") return FDODefs::THRUSTERS::MYL;
+	else if (type == "ZH") return FDODefs::THRUSTERS::ZH;
+	else if (type == "ZL") return FDODefs::THRUSTERS::ZL;
+	else if (type == "MZH") return FDODefs::THRUSTERS::MZH;
+	else if (type == "MZL") return FDODefs::THRUSTERS::MZL;
+	else if (type == "M1") return FDODefs::THRUSTERS::M1;
+	else if (type == "OL") return FDODefs::THRUSTERS::OL;
+	else if (type == "OR") return FDODefs::THRUSTERS::OR;
+	else if (type == "OBP") return FDODefs::THRUSTERS::OBP;
+	else return FDODefs::THRUSTERS::NOTHRU;
+}
+
+void ShuttleFDOCore::GetMTTGuidanceType(char* buf, FDODefs::GUID type) const
+{
+	if (type == FDODefs::GUID::M50)
+	{
+		sprintf_s(buf, 100, "M50");
+	}
+	else if (type == FDODefs::GUID::P7)
+	{
+		sprintf_s(buf, 100, "P7");
+	}
+	else
+	{
+		sprintf_s(buf, 100, "");
+	}
+}
+
+FDODefs::GUID ShuttleFDOCore::GetMTTGuidanceType(const std::string& type) const
+{
+	if (type == "M50") return FDODefs::GUID::M50;
+	else if (type == "P7") return FDODefs::GUID::P7;
+	else return FDODefs::GUID::NOGUID;
+}
+
+void ShuttleFDOCore::GetDMTThrusterType(char *buf, FDODefs::THRUSTERS type)
+{
+	if (type == FDODefs::THRUSTERS::PX4 || type == FDODefs::THRUSTERS::PX3)
 	{
 		sprintf_s(buf, 100, "XH");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::PX2)
+	else if (type == FDODefs::THRUSTERS::PX2)
 	{
 		sprintf_s(buf, 100, "XL");
 	}
-	else  if (type == OMP::OMPDefs::THRUSTERS::ZL)
+	else  if (type == FDODefs::THRUSTERS::ZL)
 	{
 		sprintf_s(buf, 100, "ZL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MXL)
+	else if (type == FDODefs::THRUSTERS::MXL)
 	{
 		sprintf_s(buf, 100, "MX");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::YL)
+	else if (type == FDODefs::THRUSTERS::YL)
 	{
 		sprintf_s(buf, 100, "YL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MYL)
+	else if (type == FDODefs::THRUSTERS::MYL)
 	{
 		sprintf_s(buf, 100, "MY");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::ZH)
+	else if (type == FDODefs::THRUSTERS::ZH)
 	{
 		sprintf_s(buf, 100, "ZH");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::MZH)
+	else if (type == FDODefs::THRUSTERS::MZH)
 	{
 		sprintf_s(buf, 100, "ZM");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::M1)
+	else if (type == FDODefs::THRUSTERS::M1)
 	{
 		sprintf_s(buf, 100, "M1");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::M2)
+	else if (type == FDODefs::THRUSTERS::M2)
 	{
 		sprintf_s(buf, 100, "M2");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OL)
+	else if (type == FDODefs::THRUSTERS::OL)
 	{
 		sprintf_s(buf, 100, "OL");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OR)
+	else if (type == FDODefs::THRUSTERS::OR)
 	{
 		sprintf_s(buf, 100, "OR");
 	}
-	else if (type == OMP::OMPDefs::THRUSTERS::OBP)
+	else if (type == FDODefs::THRUSTERS::OBP)
 	{
 		sprintf_s(buf, 100, "BP");
 	}
@@ -1150,8 +1383,13 @@ void ShuttleFDOCore::SetLaunchDay()
 
 void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 {
+	double stemp;
+	int Ytemp, htemp, mtemp;
+
 	// Calculate base MJD
 	sescnst.GMTBASE = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
+	// Calculate month and day of month
+	OrbMech::mjd2date(sescnst.GMTBASE, Ytemp, sescnst.Month, sescnst.Day, htemp, mtemp, stemp);
 	// Reset launch time to zero
 	sescnst.GMTLO = 0.0;
 
@@ -1224,4 +1462,14 @@ SV ShuttleFDOCore::PoweredFlightProcessor(SV sv_tig, VECTOR3 DV_iner, double f_T
 VECTOR3 ShuttleFDOCore::TEG2M50(VECTOR3 v_TEG)
 {
 	return mul(sescnst.M_TEG_TO_M50, v_TEG);
+}
+
+MATRIX3 ShuttleFDOCore::TEG_to_EF_Matrix(double gmt) const
+{
+	double CL, SL;
+
+	CL = cos(gmt * OrbMech::w_Earth);
+	SL = sin(gmt * OrbMech::w_Earth);
+
+	return _M(CL, SL, 0.0, -SL, CL, 0.0, 0.0, 0.0, 1.0);
 }

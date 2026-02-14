@@ -840,5 +840,9 @@ void LaunchWindowProcessor::LTPOut()
 	ltp_table->IY_OMS1 = unit(crossp(LWPSV.sv_P_MPS_Dump.V, LWPSV.sv_P_MPS_Dump.R));
 	ltp_table->IY_OMS2 = unit(crossp(LWPSV.sv_P_OMS2_after.V, LWPSV.sv_P_OMS2_after.R));
 
+	ltp_table->sv_T = inp.TRGVEC;
+	ltp_table->OMS1 = inp.OMS1;
+	ltp_table->OMS2 = inp.OMS2;
+
 	ltp_table->LWPERROR = error;
 }

@@ -567,10 +567,14 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		sprintf_s(Buffer, "ROLL");
 		skp->Text(29 * W / 32, 2 * H / 32, Buffer, strlen(Buffer));
 
-		for (unsigned i = 0;i < G->ManeuverTransferTable.size();i++)
+		for (unsigned i = 0; i < 21; i++)
 		{
 			sprintf_s(Buffer, "%d", i + 1);
 			skp->Text(1 * W / 32, (i + 4) * H / 32, Buffer, strlen(Buffer));
+		}
+
+		for (unsigned i = 0;i < G->ManeuverTransferTable.size();i++)
+		{
 			sprintf_s(Buffer, G->ManeuverTransferTable[i].NAME.c_str());
 			skp->Text(3 * W / 32, (i + 4) * H / 32, Buffer, strlen(Buffer));
 			sprintf_s(Buffer, G->ManeuverTransferTable[i].COMMENT.c_str());
@@ -579,7 +583,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			skp->Text(12 * W / 32, (i + 4) * H / 32, Buffer, strlen(Buffer));
 			GetMTTThrusterType(Buffer, G->ManeuverTransferTable[i].thrusters);
 			skp->Text(14 * W / 32, (i + 4) * H / 32, Buffer, strlen(Buffer));
-			GetMTTGuidanceType(Buffer, G->ManeuverTransferTable[i].guid);
+			G->GetMTTGuidanceType(Buffer, G->ManeuverTransferTable[i].guid);
 			skp->Text(17 * W / 32, (i + 4) * H / 32, Buffer, strlen(Buffer));
 			if (G->ManeuverTransferTable[i].ITER)
 			{
@@ -637,7 +641,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			skp->Text((2 * i + 8) * W / 32, 25 * H / 32, Buffer, strlen(Buffer));
 			GetMTTThrusterType(Buffer, G->MTTSlotData[i].thrusters);
 			skp->Text((2 * i + 8) * W / 32, 26 * H / 32, Buffer, strlen(Buffer));
-			GetMTTGuidanceType(Buffer, G->MTTSlotData[i].guid);
+			G->GetMTTGuidanceType(Buffer, G->MTTSlotData[i].guid);
 			skp->Text((2 * i + 8) * W / 32, 27 * H / 32, Buffer, strlen(Buffer));
 			if (G->MTTSlotData[i].ITER)
 			{
@@ -1845,25 +1849,9 @@ void ShuttleFDOMFD::menuTransferToMTT()
 	}
 }
 
-void ShuttleFDOMFD::GetMTTThrusterType(char *buf, OMP::OMPDefs::THRUSTERS type)
+void ShuttleFDOMFD::GetMTTThrusterType(char *buf, FDODefs::THRUSTERS type)
 {
 	G->GetMTTThrusterType(buf, type);
-}
-
-void ShuttleFDOMFD::GetMTTGuidanceType(char *buf, OMP::OMPDefs::GUID type)
-{
-	if (type == OMP::OMPDefs::GUID::M50)
-	{
-		sprintf_s(buf, 100, "M50");
-	}
-	else if (type == OMP::OMPDefs::GUID::P7)
-	{
-		sprintf_s(buf, 100, "P7");
-	}
-	else
-	{
-		sprintf_s(buf, 100, "");
-	}
 }
 
 void ShuttleFDOMFD::menuMTTChangeSlot()
@@ -1893,6 +1881,33 @@ bool ShuttleFDOMFD::set_MTTManeuverSlot(unsigned mnvr, int slot)
 	}
 
 	return false;
+}
+
+void ShuttleFDOMFD::menuMTTModify()
+{
+	bool MTTChangeManeuverInput(void* id, char* str, void* data);
+	oapiOpenInputBox("Change maneuver data (format: MNVR TYPE VALUE)", MTTChangeManeuverInput, 0, 20, (void*)this);
+}
+
+bool MTTChangeManeuverInput(void* id, char* str, void* data)
+{
+	unsigned mnvr;
+	char type[128];
+	char value[128];
+
+	sprintf_s(type, "");
+	sprintf_s(value, "");
+
+	if (sscanf_s(str, "%d %s %s", &mnvr, type, 128, value, 128) == 3)
+	{
+		return ((ShuttleFDOMFD*)data)->set_MTTManeuverData(mnvr, type, value);
+	}
+	return false;
+}
+
+bool ShuttleFDOMFD::set_MTTManeuverData(unsigned mnvr, const std::string& type, const std::string& value)
+{
+	return G->ModifyMTTManeuverData(mnvr, type, value);
 }
 
 void ShuttleFDOMFD::menuExecuteMTT()

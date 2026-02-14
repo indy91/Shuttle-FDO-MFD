@@ -163,7 +163,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	static const MFDBUTTONMENU mnu4[] =
 	{
 		{ "Choose slot", 0, 'C' },
-		{ "", 0, ' ' },
+		{ "Modify data", 0, 'E' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -180,7 +180,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
 
 	RegisterFunction("SLO", OAPI_KEY_C, &ShuttleFDOMFD::menuMTTChangeSlot);
-	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("MOD", OAPI_KEY_E, &ShuttleFDOMFD::menuMTTModify);
 	RegisterFunction("", OAPI_KEY_S, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_B, &ShuttleFDOMFD::menuVoid);

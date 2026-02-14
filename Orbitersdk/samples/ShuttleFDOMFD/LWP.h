@@ -48,6 +48,15 @@ struct LWPOutput
 	int LWPERROR = 0;
 };
 
+struct OMSTargetSet
+{
+	double DTIG;
+	double C1;
+	double C2;
+	double HTGT;
+	double THETA;
+};
+
 struct LTPOutput
 {
 	double GMTLO = 0.0;
@@ -86,6 +95,11 @@ struct LTPOutput
 	VECTOR3 IY_OMS1 = _V(0, 0, 1);
 	VECTOR3 IY_OMS2 = _V(0, 0, 1);
 
+	//Additional outputs
+	double NODE_SLOPE = 0.0;
+	OrbMech::SV sv_T;
+	OMSTargetSet OMS1, OMS2;
+
 	int LWPERROR = 0;
 };
 
@@ -95,15 +109,6 @@ struct LWPStateVectorTable
 	OrbMech::SV sv_T0, sv_T_MECO;
 	//Chaser state vectors
 	OrbMech::SV sv_P_MECO, sv_P_ET_Sep, sv_P_MPS_Dump, sv_P_OMS2_before, sv_P_OMS2_after;
-};
-
-struct OMSTargetSet
-{
-	double DTIG;
-	double C1;
-	double C2;
-	double HTGT;
-	double THETA;
 };
 
 struct LWPSettings
