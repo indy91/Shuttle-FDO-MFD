@@ -25,15 +25,21 @@
 struct ShuttleFDOMFDInputBoxData
 {
 	double *dVal = NULL;
+	double* dVal2 = NULL;
 	int *iVal = NULL;
 	VECTOR3 *vVal = NULL;
 	double factor = 0.0;
+	double factor2 = 0.0;
 };
 
 struct RTCCMFDData
 {
 	UINT ID = 0;
 	int screen = 0;
+	int subscreen = 0;
+	int subscreenmax = 0;
+	int marker = 0;
+	int markermax = 0;
 	unsigned MCTSelectedManeuver = 0;
 	unsigned MCTScroll = 0;
 	unsigned METScroll = 0;
@@ -131,6 +137,18 @@ public:
 	void menuDMPCycleBackupThruster();
 	void menuDMPLandingSite();
 
+	void menuSetSupersighterInputs();
+	void CalcSupersighter();
+
+	void menuSetIDTInputs();
+	void IDTCalc();
+
+	void menuSetGroundTargetInputs();
+	void GroundTargetCalc();
+
+	void menuSetCheckoutMonitorTime();
+	void CalcCheckoutMonitor();
+
 	void menuSetMainMenu();
 	void menuSetMCTPage();
 	void menuSetMETPage();
@@ -146,7 +164,15 @@ public:
 	void menuLWPOMSTargetSetsPage();
 	void menuSetDMPSolutionPage();
 	void menuSetOMPMenuPage();
+	void menuSetAttitudeAndPointingPage();
+	void menuSetSupersighterDisplayPage();
+	void menuSetInstrumentDefinitionPage();
+	void menuSetCheckoutMonitorPage();
+	void menuSetGroundTargetPage();
 	void SetScreen(int s);
+	void menuCycleSubscreen();
+	void menuCycleMarkerUp();
+	void menuCycleMarkerDown();
 
 	bool add_OMPManeuver(char *type, char *name, unsigned ins);
 	bool delete_OMPManeuver(unsigned num);
@@ -187,8 +213,12 @@ public:
 	void set_LWP_OMS_C1_C2(bool OMS1, double C1, double C2);
 
 	void Text(oapi::Sketchpad* skp, int x, int y, std::string val);
+	void Text(oapi::Sketchpad* skp, int x, int xmax, int y, int ymax, std::string val);
+	void Text2(oapi::Sketchpad* skp, int x, int y, std::string val);
+	void Line2(oapi::Sketchpad* skp, int x0, int y0, int x1, int y1);
 	void MET2String(char *buf, double MET);
 	void MET2String2(char *buf, double MET);
+	void MET2String3(char* buf, double MET);
 	void DMTMET2String(char *buf, double MET);
 	void GMT2String(char *buf, double GMT);
 	void GMT2String2(char *buf, double GMT);
@@ -207,17 +237,29 @@ protected:
 	void SaveState();
 	void LoadState();
 
+	void GetCharSize(oapi::Sketchpad* skp, int& CW, int& CH);
+
 	void GenericIntInput(int *val, char* message);
 	void GenericMETInput(double *get, char *message);
 	void GenericDoubleInput(double *val, char* message, double factor = 1.0);
+	void GenericDouble2Input(double* val1, double* val2, char* message, double factor1 = 1.0, double factor2 = 1.0);
 	void GenericStringInput(std::string *val, char* message);
+	void GenericVectorInput(VECTOR3* val, char* message, double factor = 1.0);
 
 	oapi::Font* font;
 	oapi::Font* font2;
 	oapi::Font* font3;
+	oapi::Font* font4;
 	oapi::Pen* pen1;
 
 	int screen;
+	int subscreen;
+	int subscreenmax;
+	int marker;
+	int markermax;
+
+	int CW; //Character width
+	int CH; //Character height
 
 	UINT ID;
 	ShuttleFDOMFDButtons coreButtons;

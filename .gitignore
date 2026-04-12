@@ -31,6 +31,10 @@
 *.out
 *.app
 
+# Other Visual Studio files
+.log
+.tlog
+
 # SVN files
 .svn/
 
@@ -46,8 +50,14 @@
 !/Script
 /Script/*
 /Missions/
-/Orbitersdk/
+/Orbitersdk/*
+!/Orbitersdk/samples/
+/Orbitersdk/samples/*
 !/Orbitersdk/samples/ShuttleFDOMFD/
+/Orbitersdk/samples/ShuttleFDOMFD/ShuttleFDOMFD/
+/Orbitersdk/samples/ShuttleFDOMFD/Debug/
+/Orbitersdk/samples/ShuttleFDOMFD/Release/
+/Orbitersdk/samples/ShuttleFDOMFD/out/
 /Scenarios
 !/Sound
 /Sound/*
@@ -82,3 +92,10 @@
 SSUAnimation.log
 SSU Readme First.txt
 /readme.txt
+/CMakeFiles
+
+# Other repos
+.gitnassp
+.gitfdo
+.gitssv
+.vs

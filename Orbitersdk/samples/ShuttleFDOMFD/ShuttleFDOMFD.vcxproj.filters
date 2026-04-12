@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="DeorbitOpportunities.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="DMP.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="LWP.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="OrbMech.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PEG4.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ShuttleFDOCore.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ShuttleFDOMFD.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ShuttleFDOMFDButtons.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ShuttleFDOoapiModule.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="OrbitalManeuverProcessor.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Supersighter.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="InstrumentDefinitionTable.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckoutMonitor.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="brent\brent.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DeorbitOpportunities.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DMP.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="LWP.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MFDButtonPage.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OrbMech.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="papi.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PEG4.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ShuttleFDOoapiModule.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ShuttleFDOMFDButtons.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ShuttleFDOMFD.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ShuttleFDOCore.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OrbitalManeuverProcessor.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Supersighter.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="InstrumentDefinitionTable.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckoutMonitor.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="brent\brent.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="APIHeaders">
+      <UniqueIdentifier>{46F05E07-6412-3D01-9809-BB6DEE81A7EC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{549CBC8C-8CE0-3B76-94B5-73CC3884C0F3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sources">
+      <UniqueIdentifier>{443BA9E8-647B-3309-B64C-745D646ADEAD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

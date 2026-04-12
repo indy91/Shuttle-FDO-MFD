@@ -35,6 +35,8 @@
 #define FDOMFD_MCT_MAX_MANEUVERS 7
 // Maximum number of maneuvers shown on the Maneuver Evaluation Table display
 #define FDOMFD_MET_MAX_MANEUVERS 6
+// Cyan
+#define COLOR_CYAN 0xffff00
 
 // ==============================================================
 // Global variables
@@ -54,13 +56,21 @@ ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 : MFD2 (w, h, v)
 {
 	ID = im;
+
+	int hh = h;
+
 	font = oapiCreateFont(w / 20, true, "Courier", FONT_NORMAL, 0);
 	font2 = oapiCreateFont(w / 30, true, "Courier", FONT_NORMAL, 0);
-	font3 = oapiCreateFont(w / 36, false, "Fixed", FONT_NORMAL);
+	font3 = oapiCreateFont(w / 36, false, "fixed", FONT_NORMAL);
+	font4 = oapiCreateFont(-(hh / 32), false, "fixed", FONT_NORMAL, 0);
 	pen1 = oapiCreatePen(1, 1, 0x00FFFFFF);
+
 	// Add MFD initialisation here
 	G = NULL;
 	screen = 0;
+	subscreen = 0;
+	marker = 0;
+	markermax = 0;
 	MTTFlag = false;
 	MCTSelectedManeuver = 0;
 	MCTScroll = 0;
@@ -100,6 +110,7 @@ ShuttleFDOMFD::~ShuttleFDOMFD()
 	oapiReleaseFont(font);
 	oapiReleaseFont(font2);
 	oapiReleaseFont(font3);
+	oapiReleaseFont(font4);
 	oapiReleasePen(pen1);
 
 	SaveState();
@@ -111,6 +122,10 @@ void ShuttleFDOMFD::SaveState()
 
 	temp.ID = ID;
 	temp.screen = screen;
+	temp.subscreen = subscreen;
+	temp.subscreenmax = subscreenmax;
+	temp.marker = marker;
+	temp.markermax = markermax;
 	temp.MCTSelectedManeuver = MCTSelectedManeuver;
 	temp.MCTScroll = MCTScroll;
 	temp.METScroll = METScroll;
@@ -145,6 +160,10 @@ void ShuttleFDOMFD::LoadState()
 		if (g_MFDData[i].ID == ID)
 		{
 			screen = g_MFDData[i].screen;
+			subscreen = g_MFDData[i].subscreen;
+			subscreenmax = g_MFDData[i].subscreenmax;
+			marker = g_MFDData[i].marker;
+			markermax = g_MFDData[i].markermax;
 			MCTSelectedManeuver = g_MFDData[i].MCTSelectedManeuver;
 			MCTScroll = g_MFDData[i].MCTScroll;
 			METScroll = g_MFDData[i].METScroll;
@@ -195,10 +214,14 @@ void ShuttleFDOMFD::ReadStatus(FILEHANDLE scn)
 // Repaint the MFD
 bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 {
-	Title(skp, "Shuttle FDO MFD");
 	// Draws the MFD title
-
+	if (screen == 0)
+	{
+		Title(skp, "Shuttle FDO MFD");
+	}
+	skp->SetTextColor(GetDefaultColour(2)); //White
 	skp->SetFont(font);
+	GetCharSize(skp, CW, CH);
 	//skp->SetTextAlign (oapi::Sketchpad::CENTER, oapi::Sketchpad::BASELINE);
 	//skp->SetTextColor (0x00FFFF);
 
@@ -219,6 +242,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 16, 6 * H / 14, "Orbital Maneuver Processor", 26);
 		skp->Text(1 * W / 16, 8 * H / 14, "Deorbit Opportunities", 21);
 		skp->Text(1 * W / 16, 10 * H / 14, "Deorbit Planning", 16);
+		skp->Text(1 * W / 16, 12 * H / 14, "MCC Displays", 12);
 	}
 	else if (screen == 1)
 	{
@@ -1346,6 +1370,730 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 16, 6 * H / 14, "Maneuver Transfer Table", 23);
 		skp->Text(1 * W / 16, 8 * H / 14, "Detailed Maneuver Table", 23);
 	}
+	else if (screen == 15)
+	{
+		skp->Text(1 * W / 16, 2 * H / 14, "Supersighter Display", 20);
+		skp->Text(1 * W / 16, 4 * H / 14, "Instrument Definition Table", 27);
+		skp->Text(1 * W / 16, 6 * H / 14, "Ground Targets", 14);
+		skp->Text(1 * W / 16, 12 * H / 14, "Checkout Monitor", 16);
+	}
+	else if (screen == 16)
+	{
+		// Supersighter
+		if (subscreen == 0)
+		{
+			skp->SetFont(font2);
+
+			skp->SetTextAlign(oapi::Sketchpad::CENTER);
+			skp->Text(W / 2, 2 * H / 36, "Supersighter Inputs", 19);
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+			x = 1;  y = 3; dx = 9;
+			xmax = 32;
+			ymax = 28;
+
+			Text(skp, x, xmax, marker + y, ymax, "*");
+			x++;
+			Text(skp, x, xmax, y, ymax, "Mode:");
+			switch (G->SSInputs.Mode)
+			{
+			case 1: sprintf_s(Buffer, "1: Moveable line-of-sight"); break;
+			case 2: sprintf_s(Buffer, "2: Fixed attitude/fixed line-of-sight"); break;
+			case 3: sprintf_s(Buffer, "3: Fixed line-of-sight rotation"); break;
+			case 4: sprintf_s(Buffer, "4: Minimum maneuver"); break;
+			case 5: sprintf_s(Buffer, "5: Fixed line-of-sight/MGA"); break;
+			case 6: sprintf_s(Buffer, "6: Dual line-of-sight"); break;
+			case 7: sprintf_s(Buffer, "7: Fixed line-of-sight/omicron"); break;
+			}
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Source matrix:");
+			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			y++;
+			Text(skp, x, xmax, y, ymax, "Desired matrix:");
+			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			y++;
+			Text(skp, x, xmax, y, ymax, "Ephemeris ID:");
+			if (G->shuttle)
+			{
+				sprintf_s(Buffer, G->shuttle->GetName());
+			}
+			else
+			{
+				sprintf_s(Buffer, "No Shuttle!");
+			}
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Elevation angle:");
+			sprintf_s(Buffer, "%+.2lf", G->SSInputs.ELV);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			if (G->SSInputs.Mode == 1 || G->SSInputs.Mode >= 4)
+			{
+				Text(skp, x, xmax, y, ymax, "Target 1 ID:");
+				Text(skp, x + dx, xmax, y, ymax, G->SSInputs.TGT1);
+				y++;
+				Text(skp, x, xmax, y, ymax, "Target 2 ID:");
+				Text(skp, x + dx, xmax, y, ymax, G->SSInputs.TGT2);
+				y++;
+			}
+			else y += 2;
+			if (G->SSInputs.Mode != 3)
+			{
+				Text(skp, x, xmax, y, ymax, "Instrument IA1:");
+				Text(skp, x + dx, xmax, y, ymax, G->SSInputs.IA1);
+				y++;
+				Text(skp, x, xmax, y, ymax, "Instrument IA2:");
+				Text(skp, x + dx, xmax, y, ymax, G->SSInputs.IA2);
+				y++;
+				if (G->SSInputs.Mode == 5)
+				{
+					Text(skp, x, xmax, y, ymax, "Instrument IB1:");
+					Text(skp, x + dx, xmax, y, ymax, G->SSInputs.IB1);
+				}
+				y++;
+				if (G->SSInputs.Mode == 5)
+				{
+					Text(skp, x, xmax, y, ymax, "Instrument IB2:");
+					Text(skp, x + dx, xmax, y, ymax, G->SSInputs.IB2);
+				}
+				y++;
+			}
+			else y += 4;
+			if (G->SSInputs.Mode < 6)
+			{
+				Text(skp, x, xmax, y, ymax, "Att Sense:");
+				if (G->SSInputs.ATTSense == 0) Text(skp, x + dx, xmax, y, ymax, "+X");
+				else if (G->SSInputs.ATTSense == 1) Text(skp, x + dx, xmax, y, ymax, "-X");
+				else Text(skp, x + dx, xmax, y, ymax, "-Z");
+			}
+			y++;
+			if (G->SSInputs.Mode <= 4)
+			{
+				Text(skp, x, xmax, y, ymax, "Attitude:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf %06.2lf", G->SSInputs.ATT.x, G->SSInputs.ATT.y, G->SSInputs.ATT.z);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 2 || G->SSInputs.Mode >= 4)
+			{
+				Text(skp, x, xmax, y, ymax, "IA1 Angles:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf", G->SSInputs.IA1_A1, G->SSInputs.IA1_A2);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 6 || (G->SSInputs.IA2 != ""))
+			{
+				Text(skp, x, xmax, y, ymax, "IA2 Angles:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf", G->SSInputs.IA2_A1, G->SSInputs.IA2_A2);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 5 && G->SSInputs.IB1 != "")
+			{
+				Text(skp, x, xmax, y, ymax, "IB1 Angles:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf", G->SSInputs.IB1_A1, G->SSInputs.IB1_A2);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 5 && G->SSInputs.IB2 != "")
+			{
+				Text(skp, x, xmax, y, ymax, "IB2 Angles:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf", G->SSInputs.IB2_A1, G->SSInputs.IB2_A2);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 5)
+			{
+				Text(skp, x, xmax, y, ymax, "MGA:");
+				sprintf_s(Buffer, "%06.2lf", G->SSInputs.MGA);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 7)
+			{
+				Text(skp, x, xmax, y, ymax, "OMI:");
+				sprintf_s(Buffer, "%06.2lf", G->SSInputs.OMI);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			if (G->SSInputs.Mode == 3)
+			{
+				Text(skp, x, xmax, y, ymax, "Eigen Vector:");
+				sprintf_s(Buffer, "%06.2lf %06.2lf %06.2lf", G->SSInputs.EIG.x, G->SSInputs.EIG.y, G->SSInputs.EIG.z);
+				Text(skp, x + dx, xmax, y, ymax, Buffer);
+			}
+			y++;
+			Text(skp, x, xmax, y, ymax, "Start time:");
+			MET2String(Buffer, G->SSInputs.StartTime);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Source bias matrix:");
+			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			y++;
+			Text(skp, x, xmax, y, ymax, "Desired bias matrix:");
+			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			y++;
+		}
+		else
+		{
+			skp->SetFont(font3);
+			GetCharSize(skp, CW, CH);
+			skp->SetPen(pen1);
+
+			Line2(skp, 0, 7, 74, 7);
+			Line2(skp, 15, 16, 56, 16);
+			Line2(skp, 15, 16, 15, 36);
+			Line2(skp, 56, 16, 56, 36);
+			Line2(skp, 0, 36, 74, 36);
+
+			Text2(skp, 26, 3, "SUPERSIGHTER");
+			Text2(skp, 0, 5, "INPUT MATRIX");
+			Text2(skp, 26, 5, "ATT SOURCE");
+			Text2(skp, 47, 5, "I/P LVLH BIAS");
+			Text2(skp, 0, 6, "OUTPUT MATRIX");
+			Text2(skp, 26, 6, "EPH");
+			Text2(skp, 35, 6, "VID");
+			Text2(skp, 47, 6, "O/P LVLH BIAS");
+			Text2(skp, 33, 8, "MODE");
+			Text2(skp, 56, 9, "EIGEN VECTOR");
+			Text2(skp, 57, 10, "P");
+			Text2(skp, 1, 11, "ELV");
+			Text2(skp, 27, 11, "INPUT ATT SENSE");
+			Text2(skp, 57, 11, "Y");
+			Text2(skp, 1, 12, "VEH");
+			Text2(skp, 56, 12, "EIGEN ANG");
+			Text2(skp, 1, 13, "RANGE");
+			Text2(skp, 32, 13, "R");
+			Text2(skp, 42, 13, "MGA");
+			Text2(skp, 1, 14, "MODE 2");
+			Text2(skp, 32, 14, "P");
+			Text2(skp, 2, 15, "LAT");
+			Text2(skp, 32, 15, "Y");
+			Text2(skp, 2, 16, "LON");
+			Text2(skp, 57, 16, "IA1");
+			Text2(skp, 30, 17, "OUTPUT A");
+			Text2(skp, 58, 17, "A1");
+			Text2(skp, 0, 18, "TARGET 1");
+			Text2(skp, 20, 18, "+X");
+			Text2(skp, 32, 18, "-X");
+			Text2(skp, 44, 18, "-Z");
+			Text2(skp, 58, 18, "A2");
+			Text2(skp, 1, 19, "RA");
+			Text2(skp, 17, 19, "R");
+			Text2(skp, 29, 19, "R");
+			Text2(skp, 41, 19, "R");
+			Text2(skp, 58, 19, "A3");
+			Text2(skp, 1, 20, "DEC");
+			Text2(skp, 17, 20, "P");
+			Text2(skp, 29, 20, "P");
+			Text2(skp, 41, 20, "P");
+			Text2(skp, 1, 21, "LAT");
+			Text2(skp, 17, 21, "Y");
+			Text2(skp, 29, 21, "Y");
+			Text2(skp, 41, 21, "Y");
+			Text2(skp, 57, 21, "IA2");
+			Text2(skp, 1, 22, "LON");
+			Text2(skp, 58, 22, "A1");
+			Text2(skp, 1, 23, "ALT");
+			Text2(skp, 17, 23, "R");
+			Text2(skp, 29, 23, "R");
+			Text2(skp, 41, 23, "R");
+			Text2(skp, 58, 23, "A2");
+			Text2(skp, 1, 24, "RNG");
+			Text2(skp, 17, 24, "P");
+			Text2(skp, 29, 24, "P");
+			Text2(skp, 41, 24, "P");
+			Text2(skp, 52, 24, "LVLH");
+			Text2(skp, 17, 25, "Y");
+			Text2(skp, 29, 25, "Y");
+			Text2(skp, 41, 25, "Y");
+			Text2(skp, 57, 26, "IB1");
+			Text2(skp, 30, 27, "OUTPUT B");
+			Text2(skp, 58, 27, "A1");
+			Text2(skp, 20, 28, "+X");
+			Text2(skp, 32, 28, "-X");
+			Text2(skp, 44, 28, "-Z");
+			Text2(skp, 58, 28, "A2");
+			Text2(skp, 0, 29, "TARGET 2");
+			Text2(skp, 17, 29, "R");
+			Text2(skp, 29, 29, "R");
+			Text2(skp, 41, 29, "R");
+			Text2(skp, 1, 30, "RA");
+			Text2(skp, 17, 30, "P");
+			Text2(skp, 29, 30, "P");
+			Text2(skp, 41, 30, "P");
+			Text2(skp, 1, 31, "DEC");
+			Text2(skp, 17, 31, "Y");
+			Text2(skp, 29, 31, "Y");
+			Text2(skp, 41, 31, "Y");
+			Text2(skp, 57, 31, "IB2");
+			Text2(skp, 58, 32, "A1");
+			Text2(skp, 17, 33, "R");
+			Text2(skp, 29, 33, "R");
+			Text2(skp, 41, 33, "R");
+			Text2(skp, 58, 33, "A2");
+			Text2(skp, 17, 34, "P");
+			Text2(skp, 29, 34, "P");
+			Text2(skp, 41, 34, "P");
+			Text2(skp, 52, 34, "LVLH");
+			Text2(skp, 17, 35, "Y");
+			Text2(skp, 29, 35, "Y");
+			Text2(skp, 41, 35, "Y");
+			Text2(skp, 7, 37, "MET");
+			Text2(skp, 23, 37, "GMT");
+			Text2(skp, 1, 38, "ST");
+			Text2(skp, 36, 38, "+X RA");
+			Text2(skp, 56, 38, "E    M    S");
+			Text2(skp, 0, 39, "AOS");
+			Text2(skp, 39, 39, "DEC");
+			Text2(skp, 52, 39, "P");
+			Text2(skp, 0, 40, "TCA");
+			Text2(skp, 36, 40, "-Z RA");
+			Text2(skp, 52, 40, "Y");
+			Text2(skp, 0, 41, "LOS");
+			Text2(skp, 39, 41, "DEC");
+			Text2(skp, 52, 41, "TH");
+			Text2(skp, 52, 42, "PH");
+
+			Text2(skp, 1, 42, G->SSOutputs.ErrorMessage);
+
+			skp->SetTextAlign(oapi::Sketchpad::TAlign_horizontal::RIGHT);
+			Text2(skp, 21, 5, G->SSOutputs.INMAT);
+			Text2(skp, 42, 5, G->SSOutputs.ATT_SOURCE);
+			Text2(skp, 68, 5, G->SSOutputs.IN_LVLH_BIAS);
+			Text2(skp, 21, 6, G->SSOutputs.OUTMAT);
+			Text2(skp, 68, 6, G->SSOutputs.OUT_LVLH_BIAS);
+			Text2(skp, 43, 8, G->SSOutputs.MODE);
+			Text2(skp, 65, 10, G->SSOutputs.EIGEN_VECTOR_P);
+			Text2(skp, 12, 11, G->SSOutputs.ELV);
+			Text2(skp, 47, 11, G->SSOutputs.ATT_SENSE);
+			Text2(skp, 65, 11, G->SSOutputs.EIGEN_VECTOR_Y);
+			Text2(skp, 72, 12, G->SSOutputs.EIGEN_ANG);
+			Text2(skp, 14, 13, G->SSOutputs.VEH_RANGE);
+			Text2(skp, 40, 13, G->SSOutputs.INPUT_ATT[0]);
+			Text2(skp, 52, 13, G->SSOutputs.MGA);
+			Text2(skp, 40, 14, G->SSOutputs.INPUT_ATT[1]);
+			Text2(skp, 12, 15, G->SSOutputs.MODE2_LAT);
+			Text2(skp, 40, 15, G->SSOutputs.INPUT_ATT[2]);
+			Text2(skp, 13, 16, G->SSOutputs.MODE2_LON);
+			Text2(skp, 64, 16, G->SSOutputs.IA1);
+			Text2(skp, 70, 16, G->SSOutputs.IA1_OCC);
+			Text2(skp, 68, 17, G->SSOutputs.IA1_A1);
+			Text2(skp, 70, 17, G->SSOutputs.IA1_A1_LIM);
+			Text2(skp, 68, 18, G->SSOutputs.IA1_A2);
+			Text2(skp, 70, 18, G->SSOutputs.IA1_A2_LIM);
+			Text2(skp, 68, 19, G->SSOutputs.IA1_A3);
+			Text2(skp, 64, 21, G->SSOutputs.IA2);
+			Text2(skp, 70, 21, G->SSOutputs.IA2_OCC);
+			Text2(skp, 68, 22, G->SSOutputs.IA2_A1);
+			Text2(skp, 70, 22, G->SSOutputs.IA2_A1_LIM);
+			Text2(skp, 68, 23, G->SSOutputs.IA2_A2);
+			Text2(skp, 70, 23, G->SSOutputs.IA2_A2_LIM);
+			Text2(skp, 64, 26, G->SSOutputs.IB1);
+			Text2(skp, 70, 26, G->SSOutputs.IB1_OCC);
+			Text2(skp, 68, 27, G->SSOutputs.IB1_A1);
+			Text2(skp, 70, 27, G->SSOutputs.IB1_A1_LIM);
+			Text2(skp, 68, 28, G->SSOutputs.IB1_A2);
+			Text2(skp, 70, 28, G->SSOutputs.IB1_A2_LIM);
+			Text2(skp, 64, 31, G->SSOutputs.IB2);
+			Text2(skp, 70, 31, G->SSOutputs.IB2_OCC);
+			Text2(skp, 68, 32, G->SSOutputs.IB2_A1);
+			Text2(skp, 70, 32, G->SSOutputs.IB2_A1_LIM);
+			Text2(skp, 68, 33, G->SSOutputs.IB2_A2);
+			Text2(skp, 70, 33, G->SSOutputs.IB2_A2_LIM);
+
+			Text2(skp, 25, 19, G->SSOutputs.OUTPUT_A_ATT[0][0]);
+			Text2(skp, 37, 19, G->SSOutputs.OUTPUT_A_ATT[1][0]);
+			Text2(skp, 49, 19, G->SSOutputs.OUTPUT_A_ATT[2][0]);
+			Text2(skp, 25, 20, G->SSOutputs.OUTPUT_A_ATT[0][1]);
+			Text2(skp, 37, 20, G->SSOutputs.OUTPUT_A_ATT[1][1]);
+			Text2(skp, 49, 20, G->SSOutputs.OUTPUT_A_ATT[2][1]);
+			Text2(skp, 25, 21, G->SSOutputs.OUTPUT_A_ATT[0][2]);
+			Text2(skp, 37, 21, G->SSOutputs.OUTPUT_A_ATT[1][2]);
+			Text2(skp, 49, 21, G->SSOutputs.OUTPUT_A_ATT[2][2]);
+
+			Text2(skp, 25, 23, G->SSOutputs.OUTPUT_A_ATT[3][0]);
+			Text2(skp, 37, 23, G->SSOutputs.OUTPUT_A_ATT[4][0]);
+			Text2(skp, 49, 23, G->SSOutputs.OUTPUT_A_ATT[5][0]);
+			Text2(skp, 25, 24, G->SSOutputs.OUTPUT_A_ATT[3][1]);
+			Text2(skp, 37, 24, G->SSOutputs.OUTPUT_A_ATT[4][1]);
+			Text2(skp, 49, 24, G->SSOutputs.OUTPUT_A_ATT[5][1]);
+			Text2(skp, 25, 25, G->SSOutputs.OUTPUT_A_ATT[3][2]);
+			Text2(skp, 37, 25, G->SSOutputs.OUTPUT_A_ATT[4][2]);
+			Text2(skp, 49, 25, G->SSOutputs.OUTPUT_A_ATT[5][2]);
+
+			Text2(skp, 25, 29, G->SSOutputs.OUTPUT_B_ATT[0][0]);
+			Text2(skp, 37, 29, G->SSOutputs.OUTPUT_B_ATT[1][0]);
+			Text2(skp, 49, 29, G->SSOutputs.OUTPUT_B_ATT[2][0]);
+			Text2(skp, 25, 30, G->SSOutputs.OUTPUT_B_ATT[0][1]);
+			Text2(skp, 37, 30, G->SSOutputs.OUTPUT_B_ATT[1][1]);
+			Text2(skp, 49, 30, G->SSOutputs.OUTPUT_B_ATT[2][1]);
+			Text2(skp, 25, 31, G->SSOutputs.OUTPUT_B_ATT[0][2]);
+			Text2(skp, 37, 31, G->SSOutputs.OUTPUT_B_ATT[1][2]);
+			Text2(skp, 49, 31, G->SSOutputs.OUTPUT_B_ATT[2][2]);
+
+			Text2(skp, 25, 33, G->SSOutputs.OUTPUT_B_ATT[3][0]);
+			Text2(skp, 37, 33, G->SSOutputs.OUTPUT_B_ATT[4][0]);
+			Text2(skp, 49, 33, G->SSOutputs.OUTPUT_B_ATT[5][0]);
+			Text2(skp, 25, 34, G->SSOutputs.OUTPUT_B_ATT[3][1]);
+			Text2(skp, 37, 34, G->SSOutputs.OUTPUT_B_ATT[4][1]);
+			Text2(skp, 49, 34, G->SSOutputs.OUTPUT_B_ATT[5][1]);
+			Text2(skp, 25, 35, G->SSOutputs.OUTPUT_B_ATT[3][2]);
+			Text2(skp, 37, 35, G->SSOutputs.OUTPUT_B_ATT[4][2]);
+			Text2(skp, 49, 35, G->SSOutputs.OUTPUT_B_ATT[5][2]);
+
+			Text2(skp, 13, 18, G->SSOutputs.TGT1);
+			Text2(skp, 11, 19, G->SSOutputs.TGT1_RA);
+			Text2(skp, 11, 20, G->SSOutputs.TGT1_DEC);
+			Text2(skp, 11, 21, G->SSOutputs.TGT1_LAT);
+			Text2(skp, 12, 22, G->SSOutputs.TGT1_LON);
+			Text2(skp, 11, 23, G->SSOutputs.TGT1_ALT);
+			Text2(skp, 12, 24, G->SSOutputs.TGT1_RNG);
+			Text2(skp, 13, 29, G->SSOutputs.TGT2);
+			Text2(skp, 11, 30, G->SSOutputs.TGT2_RA);
+			Text2(skp, 11, 31, G->SSOutputs.TGT2_DEC);
+
+			Text2(skp, 16, 38, G->SSOutputs.ST_MET);
+			Text2(skp, 16, 39, G->SSOutputs.AOS_MET);
+			Text2(skp, 16, 40, G->SSOutputs.TCA_MET);
+			Text2(skp, 16, 41, G->SSOutputs.LOS_MET);
+
+			Text2(skp, 32, 38, G->SSOutputs.ST_GMT);
+			Text2(skp, 32, 39, G->SSOutputs.AOS_GMT);
+			Text2(skp, 32, 40, G->SSOutputs.TCA_GMT);
+			Text2(skp, 32, 41, G->SSOutputs.LOS_GMT);
+
+			Text2(skp, 49, 38, G->SSOutputs.RA_PX);
+			Text2(skp, 49, 39, G->SSOutputs.DEC_PX);
+			Text2(skp, 49, 40, G->SSOutputs.RA_MZ);
+			Text2(skp, 49, 41, G->SSOutputs.DEC_MZ);
+
+			Text2(skp, 58, 39, G->SSOutputs.Pitch_E);
+			Text2(skp, 63, 39, G->SSOutputs.Pitch_M);
+			Text2(skp, 68, 39, G->SSOutputs.Pitch_S);
+
+			Text2(skp, 58, 40, G->SSOutputs.Yaw_E);
+			Text2(skp, 63, 40, G->SSOutputs.Yaw_M);
+			Text2(skp, 68, 40, G->SSOutputs.Yaw_S);
+
+			Text2(skp, 58, 41, G->SSOutputs.Theta_E);
+			Text2(skp, 63, 41, G->SSOutputs.Theta_M);
+			Text2(skp, 68, 41, G->SSOutputs.Theta_S);
+
+			Text2(skp, 58, 42, G->SSOutputs.Phi_E);
+			Text2(skp, 63, 42, G->SSOutputs.Phi_M);
+			Text2(skp, 68, 42, G->SSOutputs.Phi_S);
+		}
+	}
+	else if (screen == 17)
+	{
+		if (subscreen == 0)
+		{
+			skp->SetFont(font3);
+			GetCharSize(skp, CW, CH);
+			skp->SetPen(pen1);
+
+			skp->SetTextAlign(oapi::Sketchpad::CENTER);
+			skp->Text(1 * W / 2, 2 * H / 36, "INSTRUMENT DEFINITION TABLE", 27);
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+			Line2(skp, 5, 5, 5, 30);
+			Line2(skp, 22, 5, 22, 30);
+			Line2(skp, 33, 5, 33, 30);
+			Line2(skp, 54, 5, 54, 30);
+
+			Text2(skp, 2, 6, "ID       COMMENT     TYPE/MT/RP   P      T      P     MIN1   MAX1   MIN2   MAX2");
+			skp->SetTextAlign(oapi::Sketchpad::TAlign_horizontal::RIGHT);
+			int j = 0;
+			InstrumentDefinitionTable::InstrumentDefinitionTableInputs inp;
+
+			for (int i = 0; i < 25; i++)
+			{
+				if (G->IDT[i].IsInitialized() == false) continue;
+				inp = G->IDT[i].GetInputs();
+				// Print, using j
+				sprintf_s(Buffer, "S%02d", i + 1);
+				Text2(skp, 5, 7 + j, Buffer);
+				sprintf_s(Buffer, "%-16s", inp.Comment.c_str());
+				Text2(skp, 22, 7 + j, Buffer);
+				sprintf_s(Buffer, "%03d  %1d  %02d", inp.INSTR_TYPE, 0, inp.RET_ID);
+				Text2(skp, 33, 7 + j, Buffer);
+				sprintf_s(Buffer, "%06.2lf %06.2lf %06.2lf", inp.Phi1, inp.Theta, inp.Phi2);
+				Text2(skp, 54, 7 + j, Buffer);
+				sprintf_s(Buffer, "%06.2lf %06.2lf %06.2lf %06.2lf", inp.A1_MIN, inp.A1_MAX, inp.A2_MIN, inp.A2_MAX);
+				Text2(skp, 82, 7 + j, Buffer);
+				j++;
+			}
+		}
+		else
+		{
+			skp->SetFont(font2);
+
+			skp->SetTextAlign(oapi::Sketchpad::CENTER);
+			skp->Text(W / 2, 2 * H / 36, "IDT Inputs", 19);
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+			x = 1;  y = 3; dx = 9;
+			xmax = 32;
+			ymax = 28;
+
+			Text(skp, x, xmax, marker + y, ymax, "*");
+			x++;
+
+			Text(skp, x, xmax, y, ymax, "Number:");
+			sprintf_s(Buffer, "%d", G->IDT_Input_Num);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Name:");
+			Text(skp, x + dx, xmax, y, ymax, G->IDT_Input.Comment);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Type:");
+			sprintf_s(Buffer, "%03d", G->IDT_Input.INSTR_TYPE);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Phi 1:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.Phi1);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Theta:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.Theta);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Phi 2:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.Phi2);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "A1 Min:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.A1_MIN);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "A1 Max:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.A1_MAX);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "A2 Min:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.A2_MIN);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "A2 Max:");
+			sprintf_s(Buffer, "%06.2lf", G->IDT_Input.A2_MAX);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "Reticle:");
+			if (G->IDT_Input.RET_ID)
+			{
+				sprintf_s(Buffer, "Yes (Horizontal, Vertical)");
+			}
+			else
+			{
+				sprintf_s(Buffer, "No Reticle");
+			}
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+		}
+	}
+	else if (screen == 18)
+	{
+		skp->SetFont(font4);
+		GetCharSize(skp, CW, CH);
+		//skp->SetTextColor(COLOR_CYAN);
+
+		xmax = 62;
+		ymax = 34;
+
+		Text2(skp, 20, 1, "CHECKOUT MONITOR");
+		Text2(skp, 1, 4, "GMT");
+		Text2(skp, 1, 5, "MET");
+		Text2(skp, 1, 9, "M50 State Vector");
+		Text2(skp, 3, 11, "POSITION (FT)");
+		Text2(skp, 2, 12, "X");
+		Text2(skp, 2, 13, "Y");
+		Text2(skp, 2, 14, "Z");
+		Text2(skp, 3, 16, "VELOCITY (FPS)");
+		Text2(skp, 1, 17, "VX");
+		Text2(skp, 1, 18, "VY");
+		Text2(skp, 1, 19, "VZ");
+		Text2(skp, 3, 22, "POSITION (M)");
+		Text2(skp, 2, 23, "X");
+		Text2(skp, 2, 24, "Y");
+		Text2(skp, 2, 25, "Z");
+		Text2(skp, 3, 27, "VELOCITY (MPS)");
+		Text2(skp, 1, 28, "VX");
+		Text2(skp, 1, 29, "VY");
+		Text2(skp, 1, 30, "VZ");
+
+		Text2(skp, 20, 4, "HA");
+		Text2(skp, 20, 5, "METHA");
+		Text2(skp, 20, 6, "HP");
+		Text2(skp, 20, 7, "METHP");
+		Text2(skp, 20, 9, "VI");
+		Text2(skp, 20, 10, "VREL");
+		Text2(skp, 20, 11, "GAMMA");
+		Text2(skp, 20, 12, "AZI REL");
+		Text2(skp, 20, 13, "AZI TEI");
+		Text2(skp, 20, 14, "LATC");
+		Text2(skp, 20, 15, "LATC");
+		Text2(skp, 20, 16, "LATD");
+		Text2(skp, 20, 17, "LATD");
+		Text2(skp, 20, 18, "LNG");
+		Text2(skp, 20, 19, "LNG");
+		Text2(skp, 20, 20, "HS");
+		Text2(skp, 20, 21, "HO");
+		Text2(skp, 20, 22, "HO");
+		Text2(skp, 20, 23, "R");
+		Text2(skp, 20, 25, "T AN");
+		Text2(skp, 20, 26, "LNG AN");
+		Text2(skp, 20, 27, "BETA ANG");
+		Text2(skp, 20, 28, "PERIOD");
+		Text2(skp, 20, 29, "RA M50");
+		Text2(skp, 20, 30, "DEC M50");
+
+		Text2(skp, 40, 12, "REFDAY");
+		Text2(skp, 52, 12, "/");
+		Text2(skp, 55, 12, "/");
+		Text2(skp, 40, 13, "LO");
+
+		Text2(skp, 40, 20, "KEPLERIAN ELEMENTS");
+		Text2(skp, 40, 22, "A");
+		Text2(skp, 40, 23, "E");
+		Text2(skp, 40, 24, "I M50");
+		Text2(skp, 40, 25, "I TEI");
+		Text2(skp, 40, 26, "WP M50");
+		Text2(skp, 40, 27, "WP TEI");
+		Text2(skp, 40, 28, "RAAN M50");
+		Text2(skp, 40, 29, "N");
+		Text2(skp, 40, 30, "M");
+
+		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
+		skp->SetTextColor(GetDefaultColour(2));
+
+		MET2String3(Buffer, G->CO_MON_Time);
+		Text2(skp, 19, 5, Buffer);
+
+		Text2(skp, 19, 4, G->CO_DISP.GMT);
+		Text2(skp, 17, 12, G->CO_DISP.M50_POS_FT[0]);
+		Text2(skp, 17, 13, G->CO_DISP.M50_POS_FT[1]);
+		Text2(skp, 17, 14, G->CO_DISP.M50_POS_FT[2]);
+		Text2(skp, 17, 17, G->CO_DISP.M50_VEL_FPS[0]);
+		Text2(skp, 17, 18, G->CO_DISP.M50_VEL_FPS[1]);
+		Text2(skp, 17, 19, G->CO_DISP.M50_VEL_FPS[2]);
+
+		Text2(skp, 17, 23, G->CO_DISP.M50_POS_M[0]);
+		Text2(skp, 17, 24, G->CO_DISP.M50_POS_M[1]);
+		Text2(skp, 17, 25, G->CO_DISP.M50_POS_M[2]);
+		Text2(skp, 17, 28, G->CO_DISP.M50_VEL_MPS[0]);
+		Text2(skp, 17, 29, G->CO_DISP.M50_VEL_MPS[1]);
+		Text2(skp, 17, 30, G->CO_DISP.M50_VEL_MPS[2]);
+
+		Text2(skp, 37, 4, G->CO_DISP.HA);
+		Text2(skp, 37, 6, G->CO_DISP.HP);
+		Text2(skp, 37, 9, G->CO_DISP.V_I);
+		Text2(skp, 37, 10, G->CO_DISP.V_REL);
+		Text2(skp, 37, 11, G->CO_DISP.GAMMA);
+		Text2(skp, 37, 12, G->CO_DISP.PSI_REL);
+		Text2(skp, 37, 13, G->CO_DISP.PSI_TEI);
+		Text2(skp, 37, 14, G->CO_DISP.PHI_C[0]);
+		Text2(skp, 37, 15, G->CO_DISP.PHI_C[1]);
+		Text2(skp, 37, 16, G->CO_DISP.PHI_D[0]);
+		Text2(skp, 37, 17, G->CO_DISP.PHI_D[1]);
+		Text2(skp, 37, 18, G->CO_DISP.LAMBDA[0]);
+		Text2(skp, 37, 19, G->CO_DISP.LAMBDA[1]);
+		Text2(skp, 37, 20, G->CO_DISP.h_s);
+		Text2(skp, 37, 21, G->CO_DISP.h_o[0]);
+		Text2(skp, 37, 22, G->CO_DISP.h_o[1]);
+		Text2(skp, 37, 23, G->CO_DISP.R);
+
+		Text2(skp, 37, 27, G->CO_DISP.BETA_ANG);
+		Text2(skp, 37, 28, G->CO_DISP.PERIOD);
+		Text2(skp, 37, 29, G->CO_DISP.RA_M50);
+		Text2(skp, 37, 30, G->CO_DISP.DEC_M50);
+
+		Text2(skp, 52, 12, G->CO_DISP.REF_DAY_D);
+		Text2(skp, 55, 12, G->CO_DISP.REF_DAY_M);
+		Text2(skp, 60, 12, G->CO_DISP.REF_DAY_Y);
+		Text2(skp, 60, 13, G->CO_DISP.LO);
+
+		Text2(skp, 58, 22, G->CO_DISP.A);
+		Text2(skp, 58, 23, G->CO_DISP.E);
+		Text2(skp, 58, 24, G->CO_DISP.I_M50);
+		Text2(skp, 58, 25, G->CO_DISP.I_TEI);
+		Text2(skp, 58, 26, G->CO_DISP.WP_M50);
+		Text2(skp, 58, 27, G->CO_DISP.WP_TEI);
+		Text2(skp, 58, 28, G->CO_DISP.RAAN_M50);
+		Text2(skp, 58, 29, G->CO_DISP.N);
+		Text2(skp, 58, 30, G->CO_DISP.M);
+	}
+	else if (screen == 19)
+	{
+		if (subscreen == 0)
+		{
+			skp->SetFont(font4);
+			GetCharSize(skp, CW, CH);
+
+			skp->SetTextAlign(oapi::Sketchpad::CENTER);
+			skp->Text(1 * W / 2, 2 * H / 36, "GROUND TARGET DISPLAY", 21);
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+			Text2(skp, 4, 5, "ID          NAME         LAT     LONG    ALT");
+
+			GroundTargetFileEntry* inp;
+			int j = 0;
+			skp->SetTextAlign(oapi::Sketchpad::TAlign_horizontal::RIGHT);
+
+			for (int i = 0; i < 25; i++)
+			{
+				if (G->GTF.targets[i].Name == "") continue;
+				inp = &G->GTF.targets[i];
+				// Print, using j
+				sprintf_s(Buffer, "G%03d", i + 1);
+				Text2(skp, 7, 7 + j, Buffer);
+				sprintf_s(Buffer, "%-20s", inp->Name.c_str());
+				Text2(skp, 28, 7 + j, Buffer);
+				sprintf_s(Buffer, "%.3lf", inp->Lat);
+				Text2(skp, 34, 7 + j, Buffer);
+				sprintf_s(Buffer, "%.3lf", inp->Lng);
+				Text2(skp, 43, 7 + j, Buffer);
+				sprintf_s(Buffer, "%.0lf", inp->Alt);
+				Text2(skp, 50, 7 + j, Buffer);
+				j++;
+			}
+		}
+		else
+		{
+			skp->SetFont(font2);
+
+			skp->SetTextAlign(oapi::Sketchpad::CENTER);
+			skp->Text(W / 2, 2 * H / 36, "Ground Target Inputs", 20);
+			skp->SetTextAlign(oapi::Sketchpad::LEFT);
+
+			x = 1;  y = 3; dx = 8;
+			xmax = 32;
+			ymax = 16;
+
+			Text(skp, x, xmax, marker + y, ymax, "*");
+			x++;
+			Text(skp, x, xmax, y, ymax, "GRD TGT:");
+			sprintf_s(Buffer, "%d", G->GTF_Input_Num);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "NAME:");
+			sprintf_s(Buffer, "%s", G->GTF_Input.Name.c_str());
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "LAT:");
+			sprintf_s(Buffer, "%.2lf", G->GTF_Input.Lat);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "LNG:");
+			sprintf_s(Buffer, "%.2lf", G->GTF_Input.Lng);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+			Text(skp, x, xmax, y, ymax, "ALT:");
+			sprintf_s(Buffer, "%.0lf", G->GTF_Input.Alt);
+			Text(skp, x + dx, xmax, y, ymax, Buffer);
+			y++;
+		}
+	}
 	return true;
 }
 
@@ -1427,10 +2175,83 @@ void ShuttleFDOMFD::menuSetOMPMenuPage()
 	SetScreen(14);
 }
 
+void ShuttleFDOMFD::menuSetAttitudeAndPointingPage()
+{
+	SetScreen(15);
+}
+
+void ShuttleFDOMFD::menuSetSupersighterDisplayPage()
+{
+	SetScreen(16);
+	subscreen = 0;
+	subscreenmax = 1;
+	marker = 0;
+	markermax = 22;
+}
+
+void ShuttleFDOMFD::menuSetInstrumentDefinitionPage()
+{
+	SetScreen(17);
+	subscreen = 0;
+	subscreenmax = 1;
+	marker = 0;
+	markermax = 10;
+}
+
+void ShuttleFDOMFD::menuSetCheckoutMonitorPage()
+{
+	SetScreen(18);
+}
+
+void ShuttleFDOMFD::menuSetGroundTargetPage()
+{
+	SetScreen(19);
+	subscreen = 0;
+	subscreenmax = 1;
+	marker = 0;
+	markermax = 4;
+}
+
 void ShuttleFDOMFD::SetScreen(int s)
 {
 	screen = s;
 	coreButtons.SelectPage(this, screen);
+}
+
+void ShuttleFDOMFD::menuCycleSubscreen()
+{
+	if (subscreen < subscreenmax)
+	{
+		subscreen++;
+	}
+	else
+	{
+		subscreen = 0;
+	}
+}
+
+void ShuttleFDOMFD::menuCycleMarkerUp()
+{
+	if (marker >= markermax)
+	{
+		marker = 0;
+	}
+	else
+	{
+		marker++;
+	}
+}
+
+void ShuttleFDOMFD::menuCycleMarkerDown()
+{
+	if (marker <= 0)
+	{
+		marker = markermax;
+	}
+	else
+	{
+		marker--;
+	}
 }
 
 void ShuttleFDOMFD::Text(oapi::Sketchpad* skp, int x, int y, std::string val)
@@ -1438,8 +2259,25 @@ void ShuttleFDOMFD::Text(oapi::Sketchpad* skp, int x, int y, std::string val)
 	skp->Text(x, y, val.c_str(), val.size());
 }
 
+void ShuttleFDOMFD::Text(oapi::Sketchpad* skp, int x, int xmax, int y, int ymax, std::string val)
+{
+	Text(skp, x * W / xmax, y * H / ymax, val);
+}
+
+void ShuttleFDOMFD::Text2(oapi::Sketchpad* skp, int x, int y, std::string val)
+{
+	// Format in terms of character width/height
+	Text(skp, CW * x, CH * y, val);
+}
+
+void ShuttleFDOMFD::Line2(oapi::Sketchpad* skp, int x0, int y0, int x1, int y1)
+{
+	skp->Line((CW * (2 * x0 + 1)) / 2 , (CH * (2 * y0 + 1)) / 2 , (CW * (2 * x1 + 1)) / 2 , (CH * (2 * y1 + 1)) / 2);
+}
+
 void ShuttleFDOMFD::MET2String(char *buf, double MET)
 {
+	// Format: DDD:HH:MM:SS.SSS
 	MET = round(MET*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
@@ -1451,6 +2289,13 @@ void ShuttleFDOMFD::MET2String2(char *buf, double MET)
 	sprintf_s(buf, 100, "%02.0f/%02.0f:%02.0f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0));
 }
 
+void ShuttleFDOMFD::MET2String3(char* buf, double MET)
+{
+	// Format: DDD:HH:MM:SS.SS
+	MET = round(MET * 100.0) / 100.0;
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%05.2f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
+}
+
 void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
 {
 	MET = round(MET*10.0) / 10.0;
@@ -1459,13 +2304,14 @@ void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
 
 void ShuttleFDOMFD::GMT2String(char *buf, double GMT)
 {
+	// Format: DDD:HH:MM:SS.SSS
 	GMT = round(GMT*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%06.3f", floor(GMT / 86400.0) + (double)G->sescnst.DayOfYear, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 }
 
 void ShuttleFDOMFD::GMT2String2(char *buf, double GMT)
 {
-	//Format:DDD/HH:MM
+	//Format: DDD:HH:MM
 	GMT = round(GMT*1000.0) / 1000.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f", floor(GMT / 86400.0) + (double)G->sescnst.DayOfYear, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0));
 }
@@ -1847,6 +2693,104 @@ void ShuttleFDOMFD::menuTransferToMTT()
 	{
 		menuSetMTTPage();
 	}
+}
+
+void ShuttleFDOMFD::CalcSupersighter()
+{
+	G->startSubthread(6);
+}
+
+void ShuttleFDOMFD::menuSetIDTInputs()
+{
+	switch (marker)
+	{
+	case 0:
+		GenericIntInput(&G->IDT_Input_Num, "Instrument identification number (1-25):");
+		break;
+	case 1:
+		GenericStringInput(&G->IDT_Input.Comment, "Instrument identifier (16 char max):");
+		break;
+	case 2:
+		GenericIntInput(&G->IDT_Input.INSTR_TYPE, "Instrument type. 3 digits: first axis of rotation, second axis of rotation, axis along center FOV:");
+		break;
+	case 3:
+		GenericDoubleInput(&G->IDT_Input.Phi1, "Euler angle of rotation about X mount axis to the X', Y', Z' coordinate system:");
+		break;
+	case 4:
+		GenericDoubleInput(&G->IDT_Input.Theta, "Euler angle of rotation about Y' axis to the X'', Y'', Z'' coordinate system:");
+		break;
+	case 5:
+		GenericDoubleInput(&G->IDT_Input.Phi2, "Euler angle of rotation about X'' axis to the instrument coordinate system:");
+		break;
+	case 6:
+		GenericDoubleInput(&G->IDT_Input.A1_MIN, "The minimum angle limit for the first instrument rotation angle:");
+		break;
+	case 7:
+		GenericDoubleInput(&G->IDT_Input.A1_MAX, "The maximum angle limit for the first instrument rotation angle:");
+		break;
+	case 8:
+		GenericDoubleInput(&G->IDT_Input.A2_MIN, "The minimum angle limit for the second instrument rotation angle:");
+		break;
+	case 9:
+		GenericDoubleInput(&G->IDT_Input.A2_MAX, "The maximum angle limit for the second instrument rotation angle:");
+		break;
+	case 10:
+		G->IDT_Input.RET_ID = !G->IDT_Input.RET_ID;
+		break;
+	}
+}
+
+void ShuttleFDOMFD::IDTCalc()
+{
+	// Checks
+	if (G->IDT_Input_Num < 1 || G->IDT_Input_Num > 25) return;
+	if (G->IDT_Input.Comment.size() > 16) return;
+
+	G->IDT[G->IDT_Input_Num - 1].BuildInstrumentData(G->IDT_Input.Comment, G->IDT_Input.INSTR_TYPE, G->IDT_Input.Phi1, G->IDT_Input.Theta, G->IDT_Input.Phi2,
+		G->IDT_Input.A1_MIN, G->IDT_Input.A1_MAX, G->IDT_Input.A2_MIN, G->IDT_Input.A2_MAX, G->IDT_Input.RET_ID, _M(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
+}
+
+void ShuttleFDOMFD::menuSetGroundTargetInputs()
+{
+	switch (marker)
+	{
+	case 0:
+		GenericIntInput(&G->GTF_Input_Num, "Ground target identification number (1-100):");
+		break;
+	case 1:
+		GenericStringInput(&G->GTF_Input.Name, "Target identifier (20 char max):");
+		break;
+	case 2:
+		GenericDoubleInput(&G->GTF_Input.Lat, "Latitude of the target in degrees (-90 to 90):");
+		break;
+	case 3:
+		GenericDoubleInput(&G->GTF_Input.Lng, "Longitude of the target in degrees (-180 to 180):");
+		break;
+	case 4:
+		GenericDoubleInput(&G->GTF_Input.Alt, "Altitude of target in feet:");
+		break;
+	}
+}
+
+void ShuttleFDOMFD::GroundTargetCalc()
+{
+	// Check if inputs are valid
+	if (G->GTF_Input_Num < 1 || G->GTF_Input_Num >100) return;
+	if (G->GTF_Input.Name == "") return;
+	if (G->GTF_Input.Lat < -90.0 || G->GTF_Input.Lat > 90.0) return;
+	if (G->GTF_Input.Lng < -180.0 || G->GTF_Input.Lat > 180.0) return;
+
+	G->GTF.targets[G->GTF_Input_Num - 1] = G->GTF_Input;
+}
+
+void ShuttleFDOMFD::menuSetCheckoutMonitorTime()
+{
+	GenericMETInput(&G->CO_MON_Time, "Enter desired time. Format: DDD:MM:SS.SSS");
+}
+
+void ShuttleFDOMFD::CalcCheckoutMonitor()
+{
+	G->startSubthread(7);
 }
 
 void ShuttleFDOMFD::GetMTTThrusterType(char *buf, FDODefs::THRUSTERS type)
@@ -2992,6 +3936,79 @@ void ShuttleFDOMFD::menuDMPLandingSite()
 	GenericStringInput(&G->DMPLandingSite, "Input landing site:");
 }
 
+void ShuttleFDOMFD::menuSetSupersighterInputs()
+{
+	switch (marker)
+	{
+	case 0: // Mode
+		if (G->SSInputs.Mode < 7) G->SSInputs.Mode++;
+		else G->SSInputs.Mode = 1;
+		break;
+	case 1: // Source matrix
+		break;
+	case 2: // Desired matrix
+		break;
+	case 3: // Ephemeris ID
+		break;
+	case 4: // Elevation angle
+		GenericDoubleInput(&G->SSInputs.ELV, "Enter elevation angle for AOS calculations in degrees:");
+		break;
+	case 5: // Target 1 ID
+		GenericStringInput(&G->SSInputs.TGT1, "Input target 1:");
+		break;
+	case 6: // Target 2 ID
+		GenericStringInput(&G->SSInputs.TGT2, "Input target 2:");
+		break;
+	case 7: // Instrument IA1
+		GenericStringInput(&G->SSInputs.IA1, "Input instrument IA1:");
+		break;
+	case 8: // Instrument IA2
+		GenericStringInput(&G->SSInputs.IA2, "Input instrument IA2:");
+		break;
+	case 9: // Instrument IB1
+		GenericStringInput(&G->SSInputs.IB1, "Input instrument IB1:");
+		break;
+	case 10: // Instrument IB2
+		GenericStringInput(&G->SSInputs.IB2, "Input instrument IB2:");
+		break;
+	case 11: // Att Sense
+		if (G->SSInputs.ATTSense < 2) G->SSInputs.ATTSense++;
+		else G->SSInputs.ATTSense = 0;
+		break;
+	case 12: // ATT
+		GenericVectorInput(&G->SSInputs.ATT, "Enter desired attitude in degrees. Format: Roll, Pitch, Yaw.");
+		break;
+	case 13: // IA1 A1, A2
+		GenericDouble2Input(&G->SSInputs.IA1_A1, &G->SSInputs.IA1_A2, "Enter angles for instrument IA1 in degrees. Format: A1 A2");
+		break;
+	case 14: // IA2 A1, A2
+		GenericDouble2Input(&G->SSInputs.IA2_A1, &G->SSInputs.IA2_A2, "Enter angles for instrument IA2 in degrees. Format: A1 A2");
+		break;
+	case 15: // IB1 A1, A2
+		GenericDouble2Input(&G->SSInputs.IB1_A1, &G->SSInputs.IB1_A2, "Enter angles for instrument IB1 in degrees. Format: A1 A2");
+		break;
+	case 16: // IB2 A1, A2
+		GenericDouble2Input(&G->SSInputs.IB2_A1, &G->SSInputs.IB2_A2, "Enter angles for instrument IB2 in degrees. Format: A1 A2");
+		break;
+	case 17: // MGA
+		GenericDoubleInput(&G->SSInputs.MGA, "Enter desired middle gimbal angle in degrees:");
+		break;
+	case 18: // OMI
+		GenericDoubleInput(&G->SSInputs.OMI, "Enter desired omicron angle in degrees:");
+		break;
+	case 19: // EIG
+		GenericVectorInput(&G->SSInputs.EIG, "Enter desired eigen axis and angle in degrees. Format: Pitch, Yaw, Eigen angle.");
+		break;
+	case 20: // Start time
+		GenericMETInput(&G->SSInputs.StartTime, "Start time for computations in MET. Format: DDD:HH:MM:SS");
+		break;
+	case 21: // Source bias matrix
+		break;
+	case 22: // Desired bias matrix
+		break;
+	}
+}
+
 void ShuttleFDOMFD::GenericStringInput(std::string *val, char* message)
 {
 	bool GenericStringInputBox(void *id, char *str, void *data);
@@ -3081,4 +4098,66 @@ bool GenericDoubleInputBox(void *id, char *str, void *data)
 		return true;
 	}
 	return false;
+}
+
+void ShuttleFDOMFD::GenericDouble2Input(double* val1, double* val2, char* message, double factor1, double factor2)
+{
+	void* data2;
+
+	tempData.dVal = val1;
+	tempData.dVal2 = val2;
+	tempData.factor = factor1;
+	tempData.factor2 = factor2;
+	data2 = &tempData;
+
+	bool GenericDouble2InputBox(void* id, char* str, void* data);
+	oapiOpenInputBox(message, GenericDouble2InputBox, 0, 30, data2);
+}
+
+bool GenericDouble2InputBox(void* id, char* str, void* data)
+{
+	ShuttleFDOMFDInputBoxData* arr = static_cast<ShuttleFDOMFDInputBoxData*>(data);
+	double val1, val2;
+
+	if (sscanf(str, "%lf %lf", &val1, &val2) == 2)
+	{
+		*arr->dVal = val1 * arr->factor;
+		*arr->dVal2 = val2 * arr->factor2;
+		return true;
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::GenericVectorInput(VECTOR3* val, char* message, double factor)
+{
+	void* data2;
+
+	tempData.vVal = val;
+	tempData.factor = factor;
+	data2 = &tempData;
+
+	bool GenericVectorInputBox(void* id, char* str, void* data);
+	oapiOpenInputBox(message, GenericVectorInputBox, 0, 25, data2);
+}
+
+bool GenericVectorInputBox(void* id, char* str, void* data)
+{
+	ShuttleFDOMFDInputBoxData* arr = static_cast<ShuttleFDOMFDInputBoxData*>(data);
+	double val1, val2, val3;
+
+	if (sscanf(str, "%lf %lf %lf", &val1, &val2, &val3) == 3)
+	{
+		arr->vVal->x = val1 * arr->factor;
+		arr->vVal->y = val2 * arr->factor;
+		arr->vVal->z = val3 * arr->factor;
+		return true;
+	}
+	return false;
+}
+
+void ShuttleFDOMFD::GetCharSize(oapi::Sketchpad* skp, int& CW, int& CH)
+{
+	DWORD charsize = skp->GetCharSize();
+	CW = HIWORD(charsize);
+	CH = LOWORD(charsize);
 }

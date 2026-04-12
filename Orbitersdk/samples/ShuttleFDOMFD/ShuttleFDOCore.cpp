@@ -216,6 +216,34 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	DMPLandingSite = "EDW22";
 
 	ErrorCode = 0;
+
+	// SUPERSIGHTER
+	IDT[0].BuildInstrumentData("+X BODY (R,P)", 121, 0.0, 0.0, 0.0, 0.0, 360.0, 0.0, 180.0, false, identity());
+	//IDT[1].BuildInstrumentData("-Z STAR TRACKER", 453, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, true, _M(-0.0056491, 0.9994101, -0.0338744, 0.9894338, 0.0006786, -0.1449833, -0.1448747, -0.0343355, - 0.988854));
+	//IDT[2].BuildInstrumentData("-Y STAR TRACKER", 453, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, true, _M(-0.9662658, -0.1833851, 0.1808317, -0.1839513, 0.0, -0.9829353, 0.1802558, -0.9830411, -0.0337339));
+	IDT[3].BuildInstrumentData("+X BODY (P,Y)", 231, 0.0, 0.0, 0.0, 0.0, 360.0, -90.0, 90.0, false, identity());
+	IDT[12].BuildInstrumentData("-Z COAS", 243, 90.0, 90.0, 90.0, -10.0, 10.0, -10.0, 10.0, true, identity());
+
+	IDT_Input_Num = 1;
+	GTF_Input_Num = 1;
+	// Ground Targets (for now just the STDN sites)
+	GTF.Set(1, "Antigua", 17.137222, -61.775833, 0.0 / OrbMech::FPS2MPS); // TBD
+	GTF.Set(2, "Ascension", -7.94354, -14.37105, 528.0 / OrbMech::FPS2MPS);
+	GTF.Set(3, "Bermuda", 32.36864, -64.68563, -33.0 / OrbMech::FPS2MPS);
+	GTF.Set(4, "Goldstone", 35.33820, -116.87421, 919.0 / OrbMech::FPS2MPS);
+	GTF.Set(5, "Grand Bahama", 26.62022, -78.35825, 0.0 / OrbMech::FPS2MPS); // TBD
+	GTF.Set(6, "Guam", 13.30929, 144.73694, 116.0 / OrbMech::FPS2MPS);
+	GTF.Set(7, "Hawaii", 21.44719, -157.76307, 1139.0 / OrbMech::FPS2MPS);
+	GTF.Set(8, "Madrid", 40.45443, -4.16990, 808.0 / OrbMech::FPS2MPS);
+	GTF.Set(9, "Merritt", 28.40433, -80.60192, -55.0 / OrbMech::FPS2MPS);
+	GTF.Set(10, "Santiago", -33.1489208, -70.6683031, 730.0 / OrbMech::FPS2MPS);
+	GTF.Set(11, "Vandenberg", 34.74007, -120.61909, 0.0 / OrbMech::FPS2MPS); // TBD
+
+	// Initialize celestial targets
+	ReadStarCatalog(CTF);
+	// Initialize ground targets
+
+	CO_MON_Time = 0.0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -745,6 +773,57 @@ int ShuttleFDOCore::subThread()
 		Result = 0;
 	}
 	break;
+	case 6: // Supersighter
+	{
+		if (shuttle == NULL)
+		{
+			Result = 0;
+			break;
+		}
+
+		Supersighter ss;
+
+		SSInputs.IDT = IDT;
+		SSInputs.CTF = &CTF;
+		SSInputs.GTF = &GTF;
+		SSInputs.sescnst = &sescnst;
+		SSInputs.sv0 = StateVectorCalc(shuttle);
+		if (target)
+		{
+			SSInputs.sv_T = StateVectorCalc(target);
+		}
+		else
+		{
+			SSInputs.sv_T.GMT = 0.0; // Signals Supersighter that target is invalid
+		}
+		SSInputs.useNonSphericalGravity = useNonSphericalGravity;
+
+		ss.RUN(SSInputs, SSOutputs);
+
+		Result = 0;
+	}
+	break;
+	case 7: // Checkout Monitor
+	{
+		if (shuttle == NULL)
+		{
+			Result = 0;
+			break;
+		}
+		OrbMech::SV sv1, sv2;
+		double dt;
+		
+		sv1 = StateVectorCalc(shuttle);
+		dt = GMTfromGET(CO_MON_Time) - sv1.GMT;
+		sv2 = coast_auto(sv1, dt, useNonSphericalGravity);
+
+		CheckoutMonitor cm(sescnst);
+
+		cm.RUN(sv2, useNonSphericalGravity, CO_DISP);
+
+		Result = 0;
+	}
+	break;
 	}
 
 	subThreadStatus = Result;
@@ -824,6 +903,39 @@ void ShuttleFDOCore::ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const
 			}
 		}
 	}
+}
+
+void ShuttleFDOCore::ReadStarCatalog(CelestialTargetFile& file) const
+{
+	std::ifstream myfile;
+	CelestialTargetFileEntry temp;
+	double RA, DEC;
+	int num;
+
+	// Null all data
+	for (int i = 0; i < 400; i++)
+	{
+		file.stars[i].MAG = 0.0;
+		sprintf_s(file.stars[i].Name, "");
+		file.stars[i].u_vec = _V(0, 0, 1);
+	}
+
+	myfile.open(".\\Config\\MFD\\ShuttleFDOMFD\\StarCatalog.txt");
+
+	if (myfile.is_open() == false) return;
+
+	std::string line;
+	while (std::getline(myfile, line))
+	{
+		if (sscanf_s(line.c_str(), "%d;%[^;];%lf;%lf;%lf", &num, temp.Name, 31, &RA, &DEC, &temp.MAG) == 5)
+		{
+			temp.u_vec = OrbMech::r_from_latlong(DEC * RAD, RA * RAD);
+			if (num < 1 || num > 400) continue;
+			file.stars[num - 1] = temp;
+		}
+	}
+
+	myfile.close();
 }
 
 bool ShuttleFDOCore::MET2MTT()

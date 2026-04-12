@@ -31,7 +31,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Orbital Maneuver Processor", 0, 'O' },
 		{ "Deorb Opportunities", 0, 'B' },
 		{ "Deorb Plan", 0, 'T' },
-		{ "", 0, ' ' },
+		{ "MCC Displays", 0, 'E' },
 
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -48,7 +48,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("OMP", OAPI_KEY_O, &ShuttleFDOMFD::menuSetOMPMenuPage);
 	RegisterFunction("DOP", OAPI_KEY_B, &ShuttleFDOMFD::menuSetDOPSPage);
 	RegisterFunction("DMP", OAPI_KEY_T, &ShuttleFDOMFD::menuSetDMPPage);
-	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("DIS", OAPI_KEY_E, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
 
 	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
@@ -533,6 +533,176 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu15[] =
+	{
+		{ "Supersighter Display", 0, 'C' },
+		{ "Instrument Defintion", 0, 'E' },
+		{ "Ground Targets", 0, 'M' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Checkout Monitor", 0, 'A' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu15, sizeof(mnu15) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("SS", OAPI_KEY_C, &ShuttleFDOMFD::menuSetSupersighterDisplayPage);
+	RegisterFunction("IDT", OAPI_KEY_E, &ShuttleFDOMFD::menuSetInstrumentDefinitionPage);
+	RegisterFunction("GT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetGroundTargetPage);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("CO", OAPI_KEY_A, &ShuttleFDOMFD::menuSetCheckoutMonitorPage);
+
+	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
+
+
+	static const MFDBUTTONMENU mnu16[] =
+	{
+		{ "Set input", 0, 'S' },
+		{ "Previous Item", 0, 'P' },
+		{ "Next Item", 0, 'N' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Cycle between inputs and display", 0, 'C' },
+		{ "Calculate", 0, 'T' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu16, sizeof(mnu16) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("SET", OAPI_KEY_C, &ShuttleFDOMFD::menuSetSupersighterInputs);
+	RegisterFunction("<<", OAPI_KEY_P, &ShuttleFDOMFD::menuCycleMarkerDown);
+	RegisterFunction(">>", OAPI_KEY_N, &ShuttleFDOMFD::menuCycleMarkerUp);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("PAG", OAPI_KEY_C, &ShuttleFDOMFD::menuCycleSubscreen);
+	RegisterFunction("CLC", OAPI_KEY_T, &ShuttleFDOMFD::CalcSupersighter);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
+
+
+	static const MFDBUTTONMENU mnu17[] =
+	{
+		{ "Set input", 0, 'S' },
+		{ "Previous Item", 0, 'P' },
+		{ "Next Item", 0, 'N' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Cycle between inputs and display", 0, 'C' },
+		{ "Calculate", 0, 'T' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu17, sizeof(mnu17) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("SET", OAPI_KEY_C, &ShuttleFDOMFD::menuSetIDTInputs);
+	RegisterFunction("<<", OAPI_KEY_P, &ShuttleFDOMFD::menuCycleMarkerDown);
+	RegisterFunction(">>", OAPI_KEY_N, &ShuttleFDOMFD::menuCycleMarkerUp);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("PAG", OAPI_KEY_C, &ShuttleFDOMFD::menuCycleSubscreen);
+	RegisterFunction("CLC", OAPI_KEY_T, &ShuttleFDOMFD::IDTCalc);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
+
+
+	static const MFDBUTTONMENU mnu18[] =
+	{
+		{ "Desired time", 0, 'I' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Calculate display", 0, 'C' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu18, sizeof(mnu18) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("MET", OAPI_KEY_I, &ShuttleFDOMFD::menuSetCheckoutMonitorTime);
+	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("CLC", OAPI_KEY_C, &ShuttleFDOMFD::CalcCheckoutMonitor);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
+
+
+	static const MFDBUTTONMENU mnu19[] =
+	{
+		{ "Set input", 0, 'S' },
+		{ "Previous Item", 0, 'P' },
+		{ "Next Item", 0, 'N' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "Cycle between inputs and display", 0, 'C' },
+		{ "Calculate", 0, 'T' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu19, sizeof(mnu19) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("SET", OAPI_KEY_C, &ShuttleFDOMFD::menuSetGroundTargetInputs);
+	RegisterFunction("<<", OAPI_KEY_P, &ShuttleFDOMFD::menuCycleMarkerDown);
+	RegisterFunction(">>", OAPI_KEY_N, &ShuttleFDOMFD::menuCycleMarkerUp);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("PAG", OAPI_KEY_C, &ShuttleFDOMFD::menuCycleSubscreen);
+	RegisterFunction("CLC", OAPI_KEY_T, &ShuttleFDOMFD::GroundTargetCalc);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
 }
 
 bool ShuttleFDOMFDButtons::SearchForKeysInOtherPages() const

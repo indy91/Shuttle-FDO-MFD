@@ -279,6 +279,34 @@ namespace OrbMech
 		return _V(r_dot*cos(lat)*cos(lng) - lat_dot * r*sin(lat)*cos(lng) - r * lng_dot*cos(lat)*sin(lng), r_dot*cos(lat)*sin(lng) - r * lat_dot*sin(lat)*sin(lng) + r * lng_dot*cos(lat)*cos(lng), r_dot*sin(lat) + r * lat_dot*cos(lat));
 	}
 
+	void PICSSC(bool vecinp, VECTOR3& R, VECTOR3& V, double& r, double& v, double& lat, double& lng, double& gamma, double& azi)
+	{
+		// gamma definition: -90 degrees < gamma < 90 degrees
+		if (vecinp)
+		{
+			r = length(R);
+			lat = asin(R.z / r);
+			lng = atan2(R.y, R.x);
+			if (lng < 0)
+			{
+				lng += PI2;
+			}
+			VECTOR3 TEMP = mul(_M(cos(lng) * cos(lat), sin(lng) * cos(lat), sin(lat), -sin(lng), cos(lng), 0, -sin(lat) * cos(lng), -sin(lat) * sin(lng), cos(lat)), V);
+			v = length(TEMP);
+			gamma = asin(TEMP.x / v);
+			azi = atan2(TEMP.y, TEMP.z);
+			if (azi < 0)
+			{
+				azi += PI2;
+			}
+		}
+		else
+		{
+			R = _V(cos(lat) * cos(lng), cos(lat) * sin(lng), sin(lat)) * r;
+			V = mul(_M(cos(lat) * cos(lng), -sin(lng), -sin(lat) * cos(lng), cos(lat) * sin(lng), cos(lng), -sin(lat) * sin(lng), sin(lat), 0, cos(lat)), _V(sin(gamma), cos(gamma) * sin(azi), cos(gamma) * cos(azi)) * v);
+		}
+	}
+
 	template <typename T> int sign(T val) {
 		return (T(0) < val) - (val < T(0));
 	}
@@ -511,6 +539,26 @@ namespace OrbMech
 		u = unit(R);
 		lat = atan2(u.z, sqrt(u.x*u.x + u.y*u.y));
 		lng = atan2(u.y, u.x);
+	}
+
+	VECTOR3 r_from_latlong(double lat, double lng)
+	{
+		return unit(_V(cos(lng) * cos(lat), sin(lng) * cos(lat), sin(lat)));
+	}
+
+	VECTOR3 r_from_latlong(double lat, double lng, double r)
+	{
+		return r_from_latlong(lat, lng) * r;
+	}
+
+	MATRIX3 TEG_to_EF_Matrix(double w_E, double gmt)
+	{
+		double CL, SL;
+
+		CL = cos(gmt * w_E);
+		SL = sin(gmt * w_E);
+
+		return _M(CL, SL, 0.0, -SL, CL, 0.0, 0.0, 0.0, 1.0);
 	}
 
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu)	//calculates the Lagrange f and g coefficients
@@ -993,6 +1041,58 @@ namespace OrbMech
 		R_Sun = SUN(MJD);
 
 		return tmul(RM, mul(M_J2000_to_M50, R_Sun));
+	}
+
+	VECTOR3 MOON(double MJD)
+	{
+		// Input MJD in TDB
+		// Coordinate system is geocentric equatorial
+		VECTOR3 R_Moon;
+		double T_TDB, lng_ecl, lat_ecl, dist, r, obl;
+
+		T_TDB = (MJD - 51544.5) / 36525.0;
+		lng_ecl = 218.32 + 481267.8813 * T_TDB
+			+ 6.29 * sin((134.9 + 477198.85 * T_TDB) * RAD)
+			- 1.27 * sin((259.2 - 413335.38 * T_TDB) * RAD)
+			+ 0.66 * sin((235.7 + 890534.23 * T_TDB) * RAD)
+			+ 0.21 * sin((269.9 + 954397.70 * T_TDB) * RAD)
+			- 0.19 * sin((357.5 + 35999.05 * T_TDB) * RAD)
+			- 0.11 * sin((186.6 + 966404.05 * T_TDB) * RAD);
+		lat_ecl = 5.13 * sin((93.3 + 483202.03 * T_TDB) * RAD)
+			+ 0.28 * sin((228.2 + 960400.87 * T_TDB) * RAD)
+			- 0.28 * sin((318.3 + 6003.18 * T_TDB) * RAD)
+			- 0.17 * sin((217.6 - 407332.20 * T_TDB) * RAD);
+		dist = 0.9508 + 0.0518 * cos((134.9 + 477198.85 * T_TDB)
+			* RAD)
+			+ 0.0095 * cos((259.2 - 413335.38 * T_TDB) * RAD)
+			+ 0.0078 * cos((235.7 + 890534.23 * T_TDB) * RAD)
+			+ 0.0028 * cos((269.9 + 954397.70 * T_TDB) * RAD);
+
+		// Convert to radians
+		lng_ecl = fmod(lng_ecl * RAD, PI2);
+		lat_ecl = fmod(lat_ecl * RAD, PI2);
+		dist = fmod(dist * RAD, PI2);
+
+		obl = 0.0;// 23.439291 - 0.0130042 * T_TDB; //Is this the best way to deal with this?
+		obl = obl * RAD;
+
+		r = 6378136.3 / sin(dist);
+		R_Moon = _V(cos(lat_ecl) * cos(lng_ecl), cos(obl) * cos(lat_ecl) * sin(lng_ecl) - sin(obl) * sin(lat_ecl), sin(obl) * cos(lat_ecl) * sin(lng_ecl) + cos(obl) * sin(lat_ecl)) * r;
+		return R_Moon;
+	}
+
+	VECTOR3 MOON(double GMTBASE, double GMT, const MATRIX3& RM)
+	{
+		//Return moon vector in TEG coordinates
+		//RM: TEG to M50 rotation matrix
+
+		VECTOR3 R_Moon;
+		double MJD;
+
+		MJD = GMTBASE + GMT / 24.0 / 3600.0;
+		R_Moon = MOON(MJD);
+
+		return tmul(RM, mul(M_J2000_to_M50, R_Moon));
 	}
 
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go)
@@ -1497,6 +1597,37 @@ namespace OrbMech
 		}
 		eta = sqrt(mu_Earth*pow(AINV, 3));
 		return PI2 / eta;
+	}
+
+	bool LineOfSight(VECTOR3 R, VECTOR3 u_star, double R_E)
+	{
+		// Line-of-sight with unit direction vector
+		// INPUTS:
+		// R: Position vector of spacecraft
+		// u_star: unit direction vector
+		// OUTPUTS:
+		// return value: true = line-of-sight exists, false = no line-of-sight
+
+		double cos_theta;
+
+		cos_theta = dotp(unit(R), u_star);
+
+		// In AOS?
+		if (cos_theta > 0.0) return true;
+
+		double cos_beta;
+
+		cos_beta = sqrt(1.0 - pow(cos_theta, 2));
+		if (length(R) * cos_beta >= R_E)
+		{
+			//In AOS
+			return true;
+		}
+		else
+		{
+			//Not AOS
+			return false;
+		}
 	}
 
 	double calculateDifferenceBetweenAngles(double firstAngle, double secondAngle)
@@ -2565,8 +2696,17 @@ namespace OrbMech
 		sprintf_s(buf, 100, "%03.0lf:%02.0lf:%02.0lf:%06.3lf", floor(GMT / 86400.0) + (double)Day, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
 	}
 
+	void GMT2String2(char* buf, double GMT, int Day)
+	{
+		//Format: DDD:HH:MM:SS.SS
+		GMT = round(GMT * 100.0) / 100.0;
+		sprintf_s(buf, 100, "%03.0lf:%02.0lf:%02.0lf:%05.2lf", floor(GMT / 86400.0) + (double)Day, floor(fmod(GMT, 86400.0) / 3600.0), floor(fmod(GMT, 3600.0) / 60.0), fmod(GMT, 60.0));
+	}
+
 	void MET2String(char* buf, double MET)
 	{
+		// Format: DDD:HH:MM:SS.SSS
+
 		bool neg = (MET < 0.0);
 
 		MET = round(abs(MET) * 1000.0) / 1000.0;
@@ -2579,6 +2719,15 @@ namespace OrbMech
 		{
 			sprintf_s(buf, 100, "-%03.0f:%02.0f:%02.0f:%06.3f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 		}
+	}
+
+	void MET2String2(char* buf, double MET)
+	{
+		// Format: HHH:MM:SS
+
+		MET = round(MET);
+
+		sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f", floor(MET / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 	}
 
 	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double deltat)

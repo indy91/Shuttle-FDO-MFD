@@ -51,6 +51,14 @@ namespace OrbMech
 		double mass = 0.0;
 	};
 
+	struct GlobalConstants
+	{
+		GlobalConstants()
+		{
+
+		}
+	};
+
 	struct SessionConstants
 	{
 		SessionConstants()
@@ -163,6 +171,10 @@ namespace OrbMech
 	VECTOR3 SUN(double MJD);
 	VECTOR3 SUN(double GMTBASE, double GMT, const MATRIX3& RM);
 
+	//Analytical moon ephemeris
+	VECTOR3 MOON(double MJD);
+	VECTOR3 MOON(double GMTBASE, double GMT, const MATRIX3& RM);
+
 	void BrouwerSecularRates(CELEMENTS coe_osc, CELEMENTS coe_mean, double &l_dot, double &g_dot, double &h_dot);
 	void poweredflight(VECTOR3 R, VECTOR3 V, double f_T, double v_ex, double m, VECTOR3 V_G, bool nonspherical, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &m_cutoff, double &t_go);
 	VECTOR3 gravityroutine(VECTOR3 R, bool nonspherical);
@@ -182,6 +194,8 @@ namespace OrbMech
 	VECTOR3 PROJCT(VECTOR3 U1, VECTOR3 U2, VECTOR3 X);
 	double PHSANG(VECTOR3 R, VECTOR3 V, VECTOR3 RD);
 	double REVTIM(VECTOR3 R, VECTOR3 V, bool SPERT);
+	// Line-of-sight with star
+	bool LineOfSight(VECTOR3 R, VECTOR3 u_star, double R_E);
 
 	//Conversions
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu);
@@ -193,6 +207,7 @@ namespace OrbMech
 	MATRIX3 GetObliquityMatrix(double t, bool earth = true);
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng);
 	VECTOR3 Polar2CartesianVel(double r, double lat, double lng, double r_dot, double lat_dot, double lng_dot);
+	void PICSSC(bool vecinp, VECTOR3& R, VECTOR3& V, double& r, double& v, double& lat, double& lng, double& gamma, double& azi);
 	VECTOR3 rhmul(const MATRIX3 &A, const VECTOR3 &b);
 	VECTOR3 rhtmul(const MATRIX3 &A, const VECTOR3 &b);
 	MATRIX3 MatrixRH_LH(MATRIX3 A);
@@ -221,6 +236,9 @@ namespace OrbMech
 	double TrueToMeanAnomaly(double ta, double eccdp);
 	double TrueToEccentricAnomaly(double ta, double ecc);
 	void latlong_from_r(VECTOR3 R, double &lat, double &lng);
+	VECTOR3 r_from_latlong(double lat, double lng);
+	VECTOR3 r_from_latlong(double lat, double lng, double r);
+	MATRIX3 TEG_to_EF_Matrix(double w_E, double gmt);
 
 	//Math
 	double stumpS(double z);
@@ -246,7 +264,9 @@ namespace OrbMech
 	//Output formatting
 	void SS2HHMMSS(double val, double& hh, double& mm, double& ss);
 	void GMT2String(char* buf, double GMT, int Day);
+	void GMT2String2(char* buf, double GMT, int Day);
 	void MET2String(char* buf, double MET);
+	void MET2String2(char* buf, double MET);
 
 	class CoastIntegrator
 	{

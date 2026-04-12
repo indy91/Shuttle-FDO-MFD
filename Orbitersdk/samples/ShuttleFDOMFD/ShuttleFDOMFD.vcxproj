@@ -105,7 +105,7 @@
       <DataExecutionPrevention />
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>..\..\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Orbiter.lib;Orbitersdk.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbiterD.lib;OrbitersdkD.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -113,8 +113,11 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="brent\brent.cpp" />
+    <ClCompile Include="CheckoutMonitor.cpp" />
     <ClCompile Include="DeorbitOpportunities.cpp" />
     <ClCompile Include="DMP.cpp" />
+    <ClCompile Include="InstrumentDefinitionTable.cpp" />
     <ClCompile Include="LWP.cpp" />
     <ClCompile Include="OrbitalManeuverProcessor.cpp" />
     <ClCompile Include="PEG4.cpp" />
@@ -123,10 +126,14 @@
     <ClCompile Include="ShuttleFDOMFD.cpp" />
     <ClCompile Include="ShuttleFDOMFDButtons.cpp" />
     <ClCompile Include="OrbMech.cpp" />
+    <ClCompile Include="Supersighter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="brent\brent.h" />
+    <ClInclude Include="CheckoutMonitor.h" />
     <ClInclude Include="DeorbitOpportunities.h" />
     <ClInclude Include="DMP.h" />
+    <ClInclude Include="InstrumentDefinitionTable.h" />
     <ClInclude Include="LWP.h" />
     <ClInclude Include="OrbitalManeuverProcessor.h" />
     <ClInclude Include="PEG4.h" />
@@ -137,6 +144,7 @@
     <ClInclude Include="ShuttleFDOMFDButtons.h" />
     <ClInclude Include="OrbMech.h" />
     <ClInclude Include="papi.h" />
+    <ClInclude Include="Supersighter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

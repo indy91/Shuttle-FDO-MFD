@@ -27,6 +27,9 @@
 #include "DMP.h"
 #include "OrbitalManeuverProcessor.h"
 #include "OrbMech.h"
+#include "InstrumentDefinitionTable.h"
+#include "Supersighter.h"
+#include "CheckoutMonitor.h"
 
 using namespace OrbMech;
 
@@ -161,6 +164,22 @@ public:
 
 	unsigned DMT_MNVR;
 
+	// SUPERSIGHTER
+	int IDT_Input_Num;
+	InstrumentDefinitionTable::InstrumentDefinitionTableInputs IDT_Input;
+	InstrumentDefinitionTable IDT[25];
+	CelestialTargetFile CTF;
+	CelestialTargetFileEntry CTF_Input;
+	GroundTargetFile GTF;
+	int GTF_Input_Num;
+	GroundTargetFileEntry GTF_Input;
+	SupersighterInputs SSInputs;
+	SupersighterOutputs SSOutputs;
+
+	// CHECKOUT MONITOR
+	double CO_MON_Time;
+	CheckoutMonitorDisplay CO_DISP;
+
 	// SUBTHREAD MANAGEMENT
 	HANDLE hThread;
 	int subThreadMode;										// What should the subthread do?
@@ -210,6 +229,7 @@ protected:
 	void GetThrusterData(FDODefs::THRUSTERS type, double &F, double &isp);
 	void ReadDOPSLandingSiteData(std::vector<LOPTSite> &sites, bool FirstThreeSites) const;
 	void ReadDMPLandingSiteData(std::vector<DMPSite> &sites) const;
+	void ReadStarCatalog(CelestialTargetFile& file) const;
 
 	VECTOR3 TEG2M50(VECTOR3 v_TEG);
 	MATRIX3 TEG_to_EF_Matrix(double gmt) const;
