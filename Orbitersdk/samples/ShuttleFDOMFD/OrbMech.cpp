@@ -377,55 +377,6 @@ namespace OrbMech
 		V1 = R0 * fdot + V0 * gdot;
 	}
 
-	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2)
-	{
-		OELEMENTS coe, coe2;
-		double h, e, Omega_0, i, omega_0, theta0, a, T, n, E_0, t_0, t_f, n_p, t_n, M_n, E_n, theta_n, Omega_dot, omega_dot, Omega_n, omega_n, mu, JCoeff, R_E;
-
-		R_E = EARTH_RADIUS_GRAV;
-		mu = mu_Earth;
-		JCoeff = J2_Earth;
-
-		coe = coe_from_sv(R1, V1, mu);
-		h = coe.h;
-		e = coe.e;
-		Omega_0 = coe.RA;
-		i = coe.i;
-		omega_0 = coe.w;
-		theta0 = coe.TA;
-
-		a = h * h / mu * 1.0 / (1.0 - e * e);
-		T = 2.0 * PI / sqrt(mu)*OrbMech::power(a, 3.0 / 2.0);
-		n = 2.0 * PI / T;
-		E_0 = 2.0 * atan(sqrt((1.0 - e) / (1.0 + e))*tan(theta0 / 2.0));
-		t_0 = (E_0 - e * sin(E_0)) / n;
-		t_f = t_0 + dt;
-		n_p = t_f / T;
-		t_n = (n_p - floor(n_p))*T;
-		M_n = n * t_n;
-		E_n = kepler_E(e, M_n);
-		theta_n = 2.0 * atan(sqrt((1.0 + e) / (1.0 - e))*tan(E_n / 2.0));
-		if (theta_n < 0)
-		{
-			theta_n += 2 * PI;
-		}
-
-		Omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(R_E, 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*cos(i);
-		omega_dot = -(3.0 / 2.0 * sqrt(mu)*JCoeff * OrbMech::power(R_E, 2.0) / (OrbMech::power(1.0 - OrbMech::power(e, 2.0), 2.0) * OrbMech::power(a, 7.0 / 2.0)))*(5.0 / 2.0 * sin(i)*sin(i) - 2.0);
-
-		Omega_n = Omega_0 + Omega_dot * dt;
-		omega_n = omega_0 + omega_dot * dt;
-
-		coe2.h = h;
-		coe2.e = e;
-		coe2.RA = Omega_n;
-		coe2.i = i;
-		coe2.w = omega_n;
-		coe2.TA = theta_n;
-
-		sv_from_coe(coe2, mu, R2, V2);
-	}
-
 	double kepler_U(double dt, double ro, double vro, double a, double mu, double x0) //This function uses Newton's method to solve the universal Kepler equation for the universal anomaly.
 	{
 		double error2, ratio, C, S, F, dFdx, x;
@@ -566,8 +517,8 @@ namespace OrbMech
 		double z;
 
 		z = a * x*x;
-		f = 1 - x * x / ro * stumpC(z);
-		g = t - 1 / sqrt(mu)*OrbMech::power(x, 3)*stumpS(z);
+		f = 1.0 - x * x / ro * stumpC(z);
+		g = t - 1.0 / sqrt(mu)*OrbMech::power(x, 3)*stumpS(z);
 	}
 
 	void fDot_and_gDot(double x, double r, double ro, double a, double &fdot, double &gdot, double mu)	//calculates the time derivatives of the Lagrange f and g coefficients
@@ -855,20 +806,17 @@ namespace OrbMech
 		return PI2 * sqrt(power(a, 3.0) / mu);
 	}
 
-	void oneclickcoast(VECTOR3 R0, VECTOR3 V0, double dt, VECTOR3 &R1, VECTOR3 &V1)
+	void EnckeIntegrator(VECTOR3 R0, VECTOR3 V0, double T0, double dt, VECTOR3 &R1, VECTOR3 &V1)
 	{
-		OBJHANDLE gravout = NULL;
 		bool stop;
-		CoastIntegrator* coast;
-		coast = new CoastIntegrator(R0, V0, dt);
+		CoastIntegrator coast(R0, V0, T0, dt);
 		stop = false;
 		while (stop == false)
 		{
-			stop = coast->iteration();
+			stop = coast.iteration();
 		}
-		R1 = coast->R2;
-		V1 = coast->V2;
-		delete coast;
+		R1 = coast.R2;
+		V1 = coast.V2;
 	}
 
 	VECTOR3 elegant_lambert(VECTOR3 R1, VECTOR3 V1, VECTOR3 R2, double dt, int N, bool prog, double mu)
@@ -1165,58 +1113,6 @@ namespace OrbMech
 		return g;
 	}
 
-	bool impulsive(VECTOR3 R, VECTOR3 V, double GMT, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &GMT_cutoff, double &m_cutoff)
-	{
-		VECTOR3 R_ig, V_ig, V_go, R_ref, V_ref, dV_go, R_d, V_d, R_p, V_p, i_z, i_y;
-		double t_slip_old, t_go, v_goz, dr_z, dt_go, m_p;
-		int n, nmax;
-
-		n = 0;
-		nmax = 100;
-		t_slip = 0;
-		t_slip_old = 1;
-		dt_go = 1;
-		V_go = DV;
-		R_ref = R;
-		V_ref = V + DV;
-		i_y = -unit(crossp(R_ref, V_ref));
-		R_p = V_p = _V(0, 0, 0);
-		m_p = t_go = 0.0;
-
-		while (abs(t_slip - t_slip_old) > 0.01)
-		{
-			n = 0;
-			oneclickcoast(R, V, t_slip, R_ig, V_ig);
-			while ((length(dV_go) > 0.01 || n < 2) && n <= nmax)
-			{
-				poweredflight(R_ig, V_ig, f_av, isp, m, V_go, nonspherical, R_p, V_p, m_p, t_go);
-				oneclickcoast(R_ref, V_ref, t_go + t_slip, R_d, V_d);
-				i_z = unit(crossp(R_d, i_y));
-				dr_z = dotp(i_z, R_d - R_p);
-				v_goz = dotp(i_z, V_go);
-				dt_go = -2.0 * dr_z / v_goz;
-				dV_go = V_d - V_p;
-				V_go = V_go + dV_go;
-				n++;
-			}
-			t_slip_old = t_slip;
-			t_slip += dt_go * 0.1;
-		}
-		if (n >= nmax)
-		{
-			sprintf(oapiDebugString(), "Iteration failed!");
-			return false;
-		}
-
-		Llambda = V_go;
-
-		R_cutoff = R_p;
-		V_cutoff = V_p;
-		m_cutoff = m_p;
-		GMT_cutoff = GMT + t_go + t_slip;
-		return true;
-	}
-
 	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu)
 	{
 		double eps = length(V)*length(V) / 2.0 - mu / length(R);
@@ -1353,7 +1249,7 @@ namespace OrbMech
 	{
 		SV sv1;
 
-		OrbMech::oneclickcoast(sv0.R, sv0.V, dt, sv1.R, sv1.V);
+		OrbMech::EnckeIntegrator(sv0.R, sv0.V, sv0.GMT, dt, sv1.R, sv1.V);
 		sv1.mass = sv0.mass;
 		sv1.GMT = sv0.GMT + dt;
 
@@ -2730,7 +2626,7 @@ namespace OrbMech
 		sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f", floor(MET / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 	}
 
-	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double deltat)
+	CoastIntegrator::CoastIntegrator(VECTOR3 R00, VECTOR3 V00, double T0, double deltat)
 	{
 		K = 0.3;
 		dt_lim = 4000;
@@ -2745,8 +2641,8 @@ namespace OrbMech
 		this->V00 = V00;
 		R0 = R00;
 		V0 = V00;
-		t_0 = 0;
-		t = 0;
+		t_0 = T0;
+		t = T0;
 		tau = 0;
 		t_F = t_0 + deltat;
 		delta = _V(0, 0, 0);

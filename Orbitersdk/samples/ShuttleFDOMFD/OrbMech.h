@@ -31,8 +31,9 @@ namespace OrbMech
 	const double LAUNCHSITE_LATITUDE[3] = { 28.60833333, 28.627, 34.580847 };
 	const double LAUNCHSITE_LONGITUDE[3] = { -80.60416667, -80.621, -120.62595 };
 
-	const double EARTH_RADIUS_EQUATOR = 6378166.0;
-	const double EARTH_RADIUS_GRAV = 6.37101e6;
+	const double EARTH_RADIUS_EQUATOR = 6378166.0;	// Equatorial radius of Earth used in the FSSR, shape of actual Earth
+	const double EARTH_RADIUS_ORBITER = 6.37101e6;	// Radius of the Earth in Orbiter, which still is always spherical
+	const double EARTH_RADIUS_GRAV = 6378140.0;		// Radius of Earth used for gravity calculations
 	const double mu_Earth = 398600439968871.2;
 	const double J2_Earth = 1082.6269e-6;
 	const double J3_Earth = -2.51e-6;
@@ -147,9 +148,8 @@ namespace OrbMech
 	};
 
 	//Trajectory computations
-	void oneclickcoast(VECTOR3 R0, VECTOR3 V0, double dt, VECTOR3 &R1, VECTOR3 &V1);
+	void EnckeIntegrator(VECTOR3 R0, VECTOR3 V0, double T0, double dt, VECTOR3 &R1, VECTOR3 &V1);
 	void rv_from_r0v0(VECTOR3 R0, VECTOR3 V0, double t, VECTOR3 &R1, VECTOR3 &V1, double mu, double x = 0.0);
-	void rv_from_r0v0_obla(VECTOR3 R1, VECTOR3 V1, double dt, VECTOR3 &R2, VECTOR3 &V2);
 	double kepler_U(double dt, double ro, double vro, double a, double mu, double x0);
 	void f_and_g(double x, double t, double ro, double a, double &f, double &g, double mu);
 	void fDot_and_gDot(double x, double r, double ro, double a, double &fdot, double &gdot, double mu);
@@ -180,7 +180,6 @@ namespace OrbMech
 	VECTOR3 gravityroutine(VECTOR3 R, bool nonspherical);
 	double GetSemiMajorAxis(VECTOR3 R, VECTOR3 V, double mu);
 	double GetMeanMotion(VECTOR3 R, VECTOR3 V, double mu);
-	bool impulsive(VECTOR3 R, VECTOR3 V, double GMT, double f_T, double f_av, double isp, double m, VECTOR3 DV, bool nonspherical, VECTOR3 &Llambda, double &t_slip, VECTOR3 &R_cutoff, VECTOR3 &V_cutoff, double &GMT_cutoff, double &m_cutoff);
 	//Apogee and Perigee Radius Magnitude
 	void PCHAPE(double R1, double R2, double R3, double U1, double U2, double U3, double &RAP, double RPE);
 	//Apogee/Perigee Magnitude Determination
@@ -271,7 +270,7 @@ namespace OrbMech
 	class CoastIntegrator
 	{
 	public:
-		CoastIntegrator(VECTOR3 R0, VECTOR3 V0, double dt);
+		CoastIntegrator(VECTOR3 R0, VECTOR3 V0, double T0, double dt);
 		~CoastIntegrator();
 		bool iteration();
 

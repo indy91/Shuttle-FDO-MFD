@@ -166,7 +166,9 @@ public:
 
 	// SUPERSIGHTER
 	int IDT_Input_Num;
-	InstrumentDefinitionTable::InstrumentDefinitionTableInputs IDT_Input;
+	std::string IDT_Input_Comment;
+	int IDT_Input_Type;
+	InstrumentDefinitionTableEntry IDT_Input;
 	InstrumentDefinitionTable IDT[25];
 	CelestialTargetFile CTF;
 	CelestialTargetFileEntry CTF_Input;
@@ -175,6 +177,7 @@ public:
 	GroundTargetFileEntry GTF_Input;
 	SupersighterInputs SSInputs;
 	SupersighterOutputs SSOutputs;
+	InstrumentMountMatrix InstMountMat[16];
 
 	// CHECKOUT MONITOR
 	double CO_MON_Time;

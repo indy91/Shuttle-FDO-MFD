@@ -169,6 +169,7 @@ public:
 	void menuSetInstrumentDefinitionPage();
 	void menuSetCheckoutMonitorPage();
 	void menuSetGroundTargetPage();
+	void menuSetMountMatrixTablePage();
 	void SetScreen(int s);
 	void menuCycleSubscreen();
 	void menuCycleMarkerUp();
@@ -219,6 +220,7 @@ public:
 	void MET2String(char *buf, double MET);
 	void MET2String2(char *buf, double MET);
 	void MET2String3(char* buf, double MET);
+	void MET2String4(char* buf, double MET);
 	void DMTMET2String(char *buf, double MET);
 	void GMT2String(char *buf, double GMT);
 	void GMT2String2(char *buf, double GMT);
@@ -240,7 +242,7 @@ protected:
 	void GetCharSize(oapi::Sketchpad* skp, int& CW, int& CH);
 
 	void GenericIntInput(int *val, char* message);
-	void GenericMETInput(double *get, char *message);
+	void GenericMETInput(double* get, char* message, char* default_string = NULL);
 	void GenericDoubleInput(double *val, char* message, double factor = 1.0);
 	void GenericDouble2Input(double* val1, double* val2, char* message, double factor1 = 1.0, double factor2 = 1.0);
 	void GenericStringInput(std::string *val, char* message);

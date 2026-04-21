@@ -1,32 +1,66 @@
 #include "InstrumentDefinitionTable.h"
 
-InstrumentDefinitionTable::InstrumentDefinitionTableInputs::InstrumentDefinitionTableInputs()
+InstrumentDefinitionTableEntry::InstrumentDefinitionTableEntry()
 {
-	INSTR_TYPE = 231;
-	Phi1 = Theta = Phi2 = 0.0;
-	A1_MIN = A2_MIN = 0.0;
-	A1_MAX = 360.0;
-	A2_MAX = 180.0;
-	RET_ID = false;
+	sprintf(Comment, "");
+	e[0] = e[1] = e[2] = 0;
+	Mount = 0;
+	Phi1 = 0.0;
+	Theta = 0.0;
+	Phi2 = 0.0;
+	A1_MIN = 0.0;
+	A1_MAX = 0.0;
+	A2_MIN = 0.0;
+	A2_MAX = 0.0;
+	RET_ID = 0;
+}
+
+int InstrumentDefinitionTableEntry::FormatInstrumentType() const
+{
+	// Format e vector (1-3 and -3 to -1) to original instrument type (1-6)
+	int ID, ITEMP;
+
+	ID = 0;
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (e[i] > 0)
+		{
+			ITEMP = e[i];
+		}
+		else
+		{
+			ITEMP = 3 - e[i];
+		}
+		if (i == 0)
+		{
+			ID += ITEMP * 100;
+		}
+		else if (i == 1)
+		{
+			ID += ITEMP * 10;
+		}
+		else
+		{
+			ID += ITEMP;
+		}
+	}
+	return ID;
 }
 
 InstrumentDefinitionTable::InstrumentDefinitionTable()
 {
 	Initialized = false;
-	e[0] = e[1] = e[2] = 0;
-	RET_ID = false;
-	A1_MIN = A1_MAX = A2_MIN = A2_MAX = 0.0;
-	M = N = _M(0, 0, 0, 0, 0, 0, 0, 0, 0);
-	I = J = K = L = SI = SJ = SK = S2 = 0;
 }
 
-int InstrumentDefinitionTable::BuildInstrumentData(const std::string& comment, int INSTR_TYPE, double Phi1, double Theta, double Phi2, double A1_MIN, double A1_MAX, double A2_MIN, double A2_MAX, bool RET_ID, MATRIX3 MT_MAT)
+int InstrumentDefinitionTable::BuildInstrumentData(const std::string& comment, int INSTR_TYPE, int Mount, double Phi1, double Theta, double Phi2, double A1_MIN, double A1_MAX, double A2_MIN, double A2_MAX, int RET_ID)
 {
 	// INPUTS:
 	// INSTR_TYPE: A three-digit number ABC that defines the rotation sequence of the instrument and the null axis of the instrument
 	// A - axis for 1st rotation
 	// B - axis for 2nd rotation
 	// C - null axis of the instrument
+	// Mount: ID of mount matrix (typically 1-16)
 	// Phi1: Euler angle of rotation about X mount axis to the X', Y', Z' coordinate system, degrees
 	// Theta: Euler angle of rotation about Y' axis to the X'', Y'', Z'' coordinate system, degrees
 	// Phi2: Euler angle of rotation about X'' axis to the instrument coordinate system
@@ -51,34 +85,20 @@ int InstrumentDefinitionTable::BuildInstrumentData(const std::string& comment, i
 		// Build e array
 		if (TYPE[i] >= 4)
 		{
-			e[i] = -(TYPE[i] - 3);
+			Inputs.e[i] = -(TYPE[i] - 3);
 		}
 		else
 		{
-			e[i] = TYPE[i];
+			Inputs.e[i] = TYPE[i];
 		}
 	}
 
-	// TBD: Additional error checks (illegal type)
+	// Additional error checks (TBD: illegal type)
+	if (Mount < 1 || Mount > 16) return 1;
 
-	this->RET_ID = RET_ID;
-
-	// Degrees to radians
-	this->A1_MIN = A1_MIN * RAD;
-	this->A1_MAX = A1_MAX * RAD;
-	this->A2_MIN = A2_MIN * RAD;
-	this->A2_MAX = A2_MAX * RAD;
-
-	// Matrix from Orbiter body coordinate system to instrument mount coordinate system
-	M = MT_MAT;
-	// Matrix from mount system to instrument system
-	N = mul(RotX(Phi2 * RAD), mul(RotY(Theta * RAD), RotX(Phi1 * RAD)));
-	// Compute parameters for the conversion between instrument computation frame and instrument null frame
-	ComputeINtoICConversion();
-
-	// Store inputs
-	Inputs.Comment = comment;
-	Inputs.INSTR_TYPE = INSTR_TYPE;
+	// Store other inputs
+	strncpy(Inputs.Comment, comment.c_str(), sizeof(Inputs.Comment));
+	Inputs.Mount = Mount;
 	Inputs.Phi1 = Phi1;
 	Inputs.Theta = Theta;
 	Inputs.Phi2 = Phi2;
@@ -92,19 +112,23 @@ int InstrumentDefinitionTable::BuildInstrumentData(const std::string& comment, i
 	return 0;
 }
 
-void InstrumentDefinitionTable::BodyVectorToInstrumentAngles(VECTOR3 u_BY, double& A1, double& A2, bool& Limit1, bool& Limit2) const
+void InstrumentDefinitionTable::BodyVectorToInstrumentAngles(InstrumentMountMatrix* MT, VECTOR3 u_BY, double& A1, double& A2, bool& Limit1, bool& Limit2) const
 {
 	// INPUTS:
 	// OUTPUTS:
 
+	InstrumentDefinitionTableVariable var;
 	VECTOR3 u_IN;
 
+	// Preliminary calculations
+	PreliminaryCalculations(var);
+
 	// Convert vector from body coordinates to instrument cordinates
-	u_IN = mul(mul(N, M), u_BY);
-	InstrumentVectorToInstrumentAngles(u_IN, A1, A2);
+	u_IN = mul(mul(var.N, MT[Inputs.Mount - 1].MAT), u_BY);
+	InstrumentVectorToInstrumentAngles(var, u_IN, A1, A2);
 
 	// Check limits
-	if (A1 < A1_MIN || A1 > A1_MAX)
+	if (A1 < Inputs.A1_MIN * RAD || A1 > Inputs.A1_MAX * RAD)
 	{
 		Limit1 = true;
 	}
@@ -112,7 +136,7 @@ void InstrumentDefinitionTable::BodyVectorToInstrumentAngles(VECTOR3 u_BY, doubl
 	{
 		Limit1 = false;
 	}
-	if (A2 < A2_MIN || A2 > A2_MAX)
+	if (A2 < Inputs.A2_MIN * RAD || A2 > Inputs.A2_MAX * RAD)
 	{
 		Limit2 = true;
 	}
@@ -122,7 +146,7 @@ void InstrumentDefinitionTable::BodyVectorToInstrumentAngles(VECTOR3 u_BY, doubl
 	}
 }
 
-VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToBodyVector(double A1, double A2) const
+VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToBodyVector(InstrumentMountMatrix* MT, double A1, double A2) const
 {
 	// INPUTS:
 	// A1: Instrument angle 1, radians
@@ -130,15 +154,19 @@ VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToBodyVector(double A1, doubl
 	// OUTPUTS:
 	// u_BY: Unit direction vector in body coordinates
 
+	InstrumentDefinitionTableVariable var;
 	VECTOR3 u_IN, u_BY;
 
-	u_IN = InstrumentAnglesToInstrumentCoordinates(A1, A2);
-	u_BY = tmul(mul(N, M), u_IN);
+	// Preliminary calculations
+	PreliminaryCalculations(var);
+
+	u_IN = InstrumentAnglesToInstrumentCoordinates(var, A1, A2);
+	u_BY = tmul(mul(var.N, MT[Inputs.Mount - 1].MAT), u_IN);
 
 	return u_BY;
 }
 
-void InstrumentDefinitionTable::InstrumentVectorToInstrumentAngles(VECTOR3 u_IN, double& A1, double& A2) const
+void InstrumentDefinitionTable::InstrumentVectorToInstrumentAngles(const InstrumentDefinitionTableVariable& var, VECTOR3 u_IN, double& A1, double& A2) const
 {
 	// INPUTS:
 	// u_IN: Unit vector in instrument coordinate system
@@ -147,32 +175,32 @@ void InstrumentDefinitionTable::InstrumentVectorToInstrumentAngles(VECTOR3 u_IN,
 	// A2: Instrument angle 2, radians (either 0-180° or -90° to 90°)
 
 	// TBD: Euler vs independent
-	InstrumentVectorToInstrumentAnglesEuler(u_IN, A1, A2);
+	InstrumentVectorToInstrumentAnglesEuler(var, u_IN, A1, A2);
 }
 
-void InstrumentDefinitionTable::InstrumentVectorToInstrumentAnglesEuler(VECTOR3 u_IN, double& A1, double& A2) const
+void InstrumentDefinitionTable::InstrumentVectorToInstrumentAnglesEuler(const InstrumentDefinitionTableVariable& var, VECTOR3 u_IN, double& A1, double& A2) const
 {
 	// Euler sequences
-	if (I == L)
+	if (var.I == var.L)
 	{
-		A1 = atan2(u_IN.data[K - 1] * (double)(S2 * SK), u_IN.data[J - 1] * (double)SJ);
-		A2 = acos(u_IN.data[I - 1] * (double)SI);
+		A1 = atan2(u_IN.data[var.K - 1] * (double)(var.S2 * var.SK), u_IN.data[var.J - 1] * (double)var.SJ);
+		A2 = acos(u_IN.data[var.I - 1] * (double)var.SI);
 	}
 	else
 	{
-		A1 = atan2(u_IN.data[J - 1] * (double)SJ, u_IN.data[I - 1] * (double)SI);
-		A2 = asin(-u_IN.data[K - 1] * (double)(S2 * SK));
+		A1 = atan2(u_IN.data[var.J - 1] * (double)var.SJ, u_IN.data[var.I - 1] * (double)var.SI);
+		A2 = asin(-u_IN.data[var.K - 1] * (double)(var.S2 * var.SK));
 	}
 }
 
-void InstrumentDefinitionTable::InstrumentVectorToInstrumentAnglesIndep(VECTOR3 u_IN, double& A1, double& A2) const
+void InstrumentDefinitionTable::InstrumentVectorToInstrumentAnglesIndep(const InstrumentDefinitionTableVariable& var, VECTOR3 u_IN, double& A1, double& A2) const
 {
 	// Independent sequences
-	A1 = atan2(u_IN.data[J - 1] * (double)SJ, u_IN.data[I - 1] * (double)SI);
-	A2 = atan2(u_IN.data[K - 1] * (double)SK, u_IN.data[I - 1] * (double)SI);
+	A1 = atan2(u_IN.data[var.J - 1] * (double)var.SJ, u_IN.data[var.I - 1] * (double)var.SI);
+	A2 = atan2(u_IN.data[var.K - 1] * (double)var.SK, u_IN.data[var.I - 1] * (double)var.SI);
 }
 
-VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinates(double A1, double A2) const
+VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinates(const InstrumentDefinitionTableVariable& var, double A1, double A2) const
 {
 	// INPUTS:
 	// A1: Instrument angle 1, radians
@@ -188,23 +216,23 @@ VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinates(doubl
 	SA2 = sin(A2);
 	CA2 = cos(A2);
 
-	if (I == L)
+	if (var.I == var.L)
 	{
-		u_IN.data[I - 1] = CA2 * (double)SI;
-		u_IN.data[J - 1] = CA1 * SA2 * (double)SJ;
-		u_IN.data[K - 1] = SA1 * SA2 * (double)(S2 * SK);
+		u_IN.data[var.I - 1] = CA2 * (double)var.SI;
+		u_IN.data[var.J - 1] = CA1 * SA2 * (double)var.SJ;
+		u_IN.data[var.K - 1] = SA1 * SA2 * (double)(var.S2 * var.SK);
 	}
 	else
 	{
-		u_IN.data[I - 1] = CA1 * CA2 * (double)SI;
-		u_IN.data[J - 1] = SA1 * CA2 * (double)SJ;
-		u_IN.data[K - 1] = -SA2 * (double)(S2 * SK);
+		u_IN.data[var.I - 1] = CA1 * CA2 * (double)var.SI;
+		u_IN.data[var.J - 1] = SA1 * CA2 * (double)var.SJ;
+		u_IN.data[var.K - 1] = -SA2 * (double)(var.S2 * var.SK);
 	}
 
 	return u_IN;
 }
 
-VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinatesIndep(double A1, double A2) const
+VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinatesIndep(const InstrumentDefinitionTableVariable& var, double A1, double A2) const
 {
 	// Independent instrument rotation sequence
 
@@ -216,9 +244,9 @@ VECTOR3 InstrumentDefinitionTable::InstrumentAnglesToInstrumentCoordinatesIndep(
 
 	VECTOR3 u_IN;
 
-	u_IN.data[I - 1] = (double)(SI);
-	u_IN.data[J - 1] = tan(A1) * (double)(SJ);
-	u_IN.data[K - 1] = tan(A2) * (double)(SK);
+	u_IN.data[var.I - 1] = (double)(var.SI);
+	u_IN.data[var.J - 1] = tan(A1) * (double)(var.SJ);
+	u_IN.data[var.K - 1] = tan(A2) * (double)(var.SK);
 
 	return unit(u_IN);
 }
@@ -228,7 +256,7 @@ bool InstrumentDefinitionTable::IsInitialized() const
 	return Initialized;
 }
 
-InstrumentDefinitionTable::InstrumentDefinitionTableInputs InstrumentDefinitionTable::GetInputs() const
+InstrumentDefinitionTableEntry InstrumentDefinitionTable::GetInputs() const
 {
 	return Inputs;
 }
@@ -269,35 +297,37 @@ int sign(int val)
 	else return -1;
 }
 
-void InstrumentDefinitionTable::ComputeINtoICConversion()
+void InstrumentDefinitionTable::PreliminaryCalculations(InstrumentDefinitionTableVariable& var) const
 {
 	int S, SL;
 
-	I = abs(e[2]);
-	K = L = abs(e[0]);
-	SI = sign(e[2]);
-	SK = SL = sign(e[0]);
-	S = sign(e[1]);
-	if (I == L)
+	var.N = mul(RotX(Inputs.Phi2 * RAD), mul(RotY(Inputs.Theta * RAD), RotX(Inputs.Phi1 * RAD)));
+
+	var.I = abs(Inputs.e[2]);
+	var.K = var.L = abs(Inputs.e[0]);
+	var.SI = sign(Inputs.e[2]);
+	var.SK = SL = sign(Inputs.e[0]);
+	S = sign(Inputs.e[1]);
+	if (var.I == var.L)
 	{
-		K = abs(e[1]);
-		SK = S;
+		var.K = abs(Inputs.e[1]);
+		var.SK = S;
 	}
-	J = 6 - I - K;
-	SJ = SI * SK;
-	if (I != (K + 1))
+	var.J = 6 - var.I - var.K;
+	var.SJ = var.SI * var.SK;
+	if (var.I != (var.K + 1))
 	{
-		if (I != (K - 2))
+		if (var.I != (var.K - 2))
 		{
-			SJ = -SJ;
+			var.SJ = -var.SJ;
 		}
 	}
-	if (I == L)
+	if (var.I == var.L)
 	{
-		S2 = SL * SI;
+		var.S2 = SL * var.SI;
 	}
 	else
 	{
-		S2 = SJ * S;
+		var.S2 = var.SJ * S;
 	}
 }

@@ -62,7 +62,7 @@ ShuttleFDOMFD::ShuttleFDOMFD(DWORD w, DWORD h, VESSEL *v, UINT im)
 	font = oapiCreateFont(w / 20, true, "Courier", FONT_NORMAL, 0);
 	font2 = oapiCreateFont(w / 30, true, "Courier", FONT_NORMAL, 0);
 	font3 = oapiCreateFont(w / 36, false, "fixed", FONT_NORMAL);
-	font4 = oapiCreateFont(-(hh / 32), false, "fixed", FONT_NORMAL, 0);
+	font4 = oapiCreateFont(-(hh / 36), false, "fixed", FONT_NORMAL, 0);
 	pen1 = oapiCreatePen(1, 1, 0x00FFFFFF);
 
 	// Add MFD initialisation here
@@ -1375,6 +1375,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->Text(1 * W / 16, 2 * H / 14, "Supersighter Display", 20);
 		skp->Text(1 * W / 16, 4 * H / 14, "Instrument Definition Table", 27);
 		skp->Text(1 * W / 16, 6 * H / 14, "Ground Targets", 14);
+		skp->Text(1 * W / 16, 8 * H / 14, "Instrument Mount Matrix Table", 29);
 		skp->Text(1 * W / 16, 12 * H / 14, "Checkout Monitor", 16);
 	}
 	else if (screen == 16)
@@ -1408,10 +1409,10 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			Text(skp, x + dx, xmax, y, ymax, Buffer);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Source matrix:");
-			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			Text(skp, x + dx, xmax, y, ymax, G->SSInputs.INMAT);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Desired matrix:");
-			Text(skp, x + dx, xmax, y, ymax, "TBD");
+			Text(skp, x + dx, xmax, y, ymax, G->SSInputs.OUTMAT);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Ephemeris ID:");
 			if (G->shuttle)
@@ -1713,6 +1714,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			Text2(skp, 37, 21, G->SSOutputs.OUTPUT_A_ATT[1][2]);
 			Text2(skp, 49, 21, G->SSOutputs.OUTPUT_A_ATT[2][2]);
 
+			Text2(skp, 55, 20, G->SSOutputs.OUTPUT_A_ATT_REF);
+
 			Text2(skp, 25, 23, G->SSOutputs.OUTPUT_A_ATT[3][0]);
 			Text2(skp, 37, 23, G->SSOutputs.OUTPUT_A_ATT[4][0]);
 			Text2(skp, 49, 23, G->SSOutputs.OUTPUT_A_ATT[5][0]);
@@ -1732,6 +1735,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			Text2(skp, 25, 31, G->SSOutputs.OUTPUT_B_ATT[0][2]);
 			Text2(skp, 37, 31, G->SSOutputs.OUTPUT_B_ATT[1][2]);
 			Text2(skp, 49, 31, G->SSOutputs.OUTPUT_B_ATT[2][2]);
+
+			Text2(skp, 55, 30, G->SSOutputs.OUTPUT_B_ATT_REF);
 
 			Text2(skp, 25, 33, G->SSOutputs.OUTPUT_B_ATT[3][0]);
 			Text2(skp, 37, 33, G->SSOutputs.OUTPUT_B_ATT[4][0]);
@@ -1806,7 +1811,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			Text2(skp, 2, 6, "ID       COMMENT     TYPE/MT/RP   P      T      P     MIN1   MAX1   MIN2   MAX2");
 			skp->SetTextAlign(oapi::Sketchpad::TAlign_horizontal::RIGHT);
 			int j = 0;
-			InstrumentDefinitionTable::InstrumentDefinitionTableInputs inp;
+			InstrumentDefinitionTableEntry inp;
 
 			for (int i = 0; i < 25; i++)
 			{
@@ -1815,9 +1820,9 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 				// Print, using j
 				sprintf_s(Buffer, "S%02d", i + 1);
 				Text2(skp, 5, 7 + j, Buffer);
-				sprintf_s(Buffer, "%-16s", inp.Comment.c_str());
+				sprintf_s(Buffer, "%-16s", inp.Comment);
 				Text2(skp, 22, 7 + j, Buffer);
-				sprintf_s(Buffer, "%03d  %1d  %02d", inp.INSTR_TYPE, 0, inp.RET_ID);
+				sprintf_s(Buffer, "%03d  %02d %02d", inp.FormatInstrumentType(), inp.Mount, inp.RET_ID);
 				Text2(skp, 33, 7 + j, Buffer);
 				sprintf_s(Buffer, "%06.2lf %06.2lf %06.2lf", inp.Phi1, inp.Theta, inp.Phi2);
 				Text2(skp, 54, 7 + j, Buffer);
@@ -1846,10 +1851,10 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			Text(skp, x + dx, xmax, y, ymax, Buffer);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Name:");
-			Text(skp, x + dx, xmax, y, ymax, G->IDT_Input.Comment);
+			Text(skp, x + dx, xmax, y, ymax, G->IDT_Input_Comment);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Type:");
-			sprintf_s(Buffer, "%03d", G->IDT_Input.INSTR_TYPE);
+			sprintf_s(Buffer, "%03d", G->IDT_Input_Type);
 			Text(skp, x + dx, xmax, y, ymax, Buffer);
 			y++;
 			Text(skp, x, xmax, y, ymax, "Phi 1:");
@@ -1898,9 +1903,6 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		GetCharSize(skp, CW, CH);
 		//skp->SetTextColor(COLOR_CYAN);
 
-		xmax = 62;
-		ymax = 34;
-
 		Text2(skp, 20, 1, "CHECKOUT MONITOR");
 		Text2(skp, 1, 4, "GMT");
 		Text2(skp, 1, 5, "MET");
@@ -1926,27 +1928,31 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		Text2(skp, 20, 5, "METHA");
 		Text2(skp, 20, 6, "HP");
 		Text2(skp, 20, 7, "METHP");
-		Text2(skp, 20, 9, "VI");
-		Text2(skp, 20, 10, "VREL");
-		Text2(skp, 20, 11, "GAMMA");
-		Text2(skp, 20, 12, "AZI REL");
-		Text2(skp, 20, 13, "AZI TEI");
-		Text2(skp, 20, 14, "LATC");
-		Text2(skp, 20, 15, "LATC");
-		Text2(skp, 20, 16, "LATD");
-		Text2(skp, 20, 17, "LATD");
-		Text2(skp, 20, 18, "LNG");
-		Text2(skp, 20, 19, "LNG");
-		Text2(skp, 20, 20, "HS");
-		Text2(skp, 20, 21, "HO");
-		Text2(skp, 20, 22, "HO");
+		Text2(skp, 20, 9, "Vi");
+		Text2(skp, 20, 10, "Vrel");
+		Text2(skp, 20, 11, "FPAi");
+		Text2(skp, 20, 12, "AZr");
+		Text2(skp, 20, 13, "AZi");
+		Text2(skp, 20, 14, "LATc");
+		Text2(skp, 20, 15, "LATc");
+		Text2(skp, 20, 16, "LATd");
+		Text2(skp, 20, 17, "LATd");
+		Text2(skp, 20, 18, "LONG");
+		Text2(skp, 20, 19, "LONG");
+		Text2(skp, 20, 20, "Hs");
+		Text2(skp, 20, 21, "Ho");
+		Text2(skp, 20, 22, "Ho");
 		Text2(skp, 20, 23, "R");
-		Text2(skp, 20, 25, "T AN");
-		Text2(skp, 20, 26, "LNG AN");
+		Text2(skp, 20, 25, "Tan");
+		Text2(skp, 20, 26, "Lam");
 		Text2(skp, 20, 27, "BETA ANG");
 		Text2(skp, 20, 28, "PERIOD");
-		Text2(skp, 20, 29, "RA M50");
-		Text2(skp, 20, 30, "DEC M50");
+		Text2(skp, 20, 29, "RAm50");
+		Text2(skp, 20, 30, "DECm50");
+
+		Text2(skp, 40, 8, "STOP OPTION");
+		Text2(skp, 40, 9, "GMTTH");
+		Text2(skp, 40, 10, "METTH");
 
 		Text2(skp, 40, 12, "REFDAY");
 		Text2(skp, 52, 12, "/");
@@ -1956,11 +1962,11 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		Text2(skp, 40, 20, "KEPLERIAN ELEMENTS");
 		Text2(skp, 40, 22, "A");
 		Text2(skp, 40, 23, "E");
-		Text2(skp, 40, 24, "I M50");
-		Text2(skp, 40, 25, "I TEI");
-		Text2(skp, 40, 26, "WP M50");
-		Text2(skp, 40, 27, "WP TEI");
-		Text2(skp, 40, 28, "RAAN M50");
+		Text2(skp, 40, 24, "Im50");
+		Text2(skp, 40, 25, "Iteg");
+		Text2(skp, 40, 26, "WPm50");
+		Text2(skp, 40, 27, "WPteg");
+		Text2(skp, 40, 28, "RAANm50");
 		Text2(skp, 40, 29, "N");
 		Text2(skp, 40, 30, "M");
 
@@ -1968,9 +1974,10 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		skp->SetTextColor(GetDefaultColour(2));
 
 		MET2String3(Buffer, G->CO_MON_Time);
-		Text2(skp, 19, 5, Buffer);
+		Text2(skp, 60, 10, Buffer);
 
 		Text2(skp, 19, 4, G->CO_DISP.GMT);
+		Text2(skp, 19, 5, G->CO_DISP.MET);
 		Text2(skp, 17, 12, G->CO_DISP.M50_POS_FT[0]);
 		Text2(skp, 17, 13, G->CO_DISP.M50_POS_FT[1]);
 		Text2(skp, 17, 14, G->CO_DISP.M50_POS_FT[2]);
@@ -2040,7 +2047,7 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			int j = 0;
 			skp->SetTextAlign(oapi::Sketchpad::TAlign_horizontal::RIGHT);
 
-			for (int i = 0; i < 25; i++)
+			for (int i = 0; i < 100; i++)
 			{
 				if (G->GTF.targets[i].Name == "") continue;
 				inp = &G->GTF.targets[i];
@@ -2092,6 +2099,31 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 			sprintf_s(Buffer, "%.0lf", G->GTF_Input.Alt);
 			Text(skp, x + dx, xmax, y, ymax, Buffer);
 			y++;
+		}
+	}
+	else if (screen == 20)
+	{
+		skp->SetFont(font3);
+		GetCharSize(skp, CW, CH);
+
+		Text2(skp, 15, 1, "INSTRUMENT MOUNT MATRIX TABLE");
+
+		Text2(skp, 1, 3, "ID COMMENT       MATRIX");
+
+		int j = 0;
+		for (int i = 0; i < 16; i++)
+		{
+			if (G->InstMountMat[i].Comment == "") continue;
+
+			sprintf(Buffer, "%02d %-8s %+.7lf %+.7lf %+.7lf %+.7lf", i + 1, G->InstMountMat[i].Comment.c_str(),
+				G->InstMountMat[i].MAT.m11, G->InstMountMat[i].MAT.m12, G->InstMountMat[i].MAT.m13, G->InstMountMat[i].MAT.m21);
+
+			Text2(skp, 1, 5 + j, Buffer);
+			sprintf(Buffer, "%+.7lf %+.7lf %+.7lf %+.7lf %+.7lf", G->InstMountMat[i].MAT.m22, G->InstMountMat[i].MAT.m23,
+				G->InstMountMat[i].MAT.m31, G->InstMountMat[i].MAT.m32, G->InstMountMat[i].MAT.m33);
+			Text2(skp, 1, 6 + j, Buffer);
+
+			j += 3;
 		}
 	}
 	return true;
@@ -2212,6 +2244,11 @@ void ShuttleFDOMFD::menuSetGroundTargetPage()
 	markermax = 4;
 }
 
+void ShuttleFDOMFD::menuSetMountMatrixTablePage()
+{
+	SetScreen(20);
+}
+
 void ShuttleFDOMFD::SetScreen(int s)
 {
 	screen = s;
@@ -2294,6 +2331,13 @@ void ShuttleFDOMFD::MET2String3(char* buf, double MET)
 	// Format: DDD:HH:MM:SS.SS
 	MET = round(MET * 100.0) / 100.0;
 	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%05.2f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
+}
+
+void ShuttleFDOMFD::MET2String4(char* buf, double MET)
+{
+	// Format: DDD:HH:MM:SS
+	MET = round(MET);
+	sprintf_s(buf, 100, "%03.0f:%02.0f:%02.0f:%02.0f", floor(MET / 86400.0), floor(fmod(MET, 86400.0) / 3600.0), floor(fmod(MET, 3600.0) / 60.0), fmod(MET, 60.0));
 }
 
 void ShuttleFDOMFD::DMTMET2String(char *buf, double MET)
@@ -2708,34 +2752,37 @@ void ShuttleFDOMFD::menuSetIDTInputs()
 		GenericIntInput(&G->IDT_Input_Num, "Instrument identification number (1-25):");
 		break;
 	case 1:
-		GenericStringInput(&G->IDT_Input.Comment, "Instrument identifier (16 char max):");
+		GenericStringInput(&G->IDT_Input_Comment, "Instrument identifier (16 char max):");
 		break;
 	case 2:
-		GenericIntInput(&G->IDT_Input.INSTR_TYPE, "Instrument type. 3 digits: first axis of rotation, second axis of rotation, axis along center FOV:");
+		GenericIntInput(&G->IDT_Input_Type, "Instrument type. 3 digits: first axis of rotation, second axis of rotation, axis along center FOV:");
 		break;
 	case 3:
-		GenericDoubleInput(&G->IDT_Input.Phi1, "Euler angle of rotation about X mount axis to the X', Y', Z' coordinate system:");
+		GenericIntInput(&G->IDT_Input.Mount, "ID from instrument mount matrix table (1 to 16):");
 		break;
 	case 4:
-		GenericDoubleInput(&G->IDT_Input.Theta, "Euler angle of rotation about Y' axis to the X'', Y'', Z'' coordinate system:");
+		GenericDoubleInput(&G->IDT_Input.Phi1, "Euler angle of rotation about X mount axis to the X', Y', Z' coordinate system:");
 		break;
 	case 5:
-		GenericDoubleInput(&G->IDT_Input.Phi2, "Euler angle of rotation about X'' axis to the instrument coordinate system:");
+		GenericDoubleInput(&G->IDT_Input.Theta, "Euler angle of rotation about Y' axis to the X'', Y'', Z'' coordinate system:");
 		break;
 	case 6:
-		GenericDoubleInput(&G->IDT_Input.A1_MIN, "The minimum angle limit for the first instrument rotation angle:");
+		GenericDoubleInput(&G->IDT_Input.Phi2, "Euler angle of rotation about X'' axis to the instrument coordinate system:");
 		break;
 	case 7:
-		GenericDoubleInput(&G->IDT_Input.A1_MAX, "The maximum angle limit for the first instrument rotation angle:");
+		GenericDoubleInput(&G->IDT_Input.A1_MIN, "The minimum angle limit for the first instrument rotation angle:");
 		break;
 	case 8:
-		GenericDoubleInput(&G->IDT_Input.A2_MIN, "The minimum angle limit for the second instrument rotation angle:");
+		GenericDoubleInput(&G->IDT_Input.A1_MAX, "The maximum angle limit for the first instrument rotation angle:");
 		break;
 	case 9:
-		GenericDoubleInput(&G->IDT_Input.A2_MAX, "The maximum angle limit for the second instrument rotation angle:");
+		GenericDoubleInput(&G->IDT_Input.A2_MIN, "The minimum angle limit for the second instrument rotation angle:");
 		break;
 	case 10:
-		G->IDT_Input.RET_ID = !G->IDT_Input.RET_ID;
+		GenericDoubleInput(&G->IDT_Input.A2_MAX, "The maximum angle limit for the second instrument rotation angle:");
+		break;
+	case 11:
+		GenericIntInput(&G->IDT_Input.RET_ID, "Reticle pattern of instrument (0 = no reticle, 1 = hor/vert)");
 		break;
 	}
 }
@@ -2744,10 +2791,10 @@ void ShuttleFDOMFD::IDTCalc()
 {
 	// Checks
 	if (G->IDT_Input_Num < 1 || G->IDT_Input_Num > 25) return;
-	if (G->IDT_Input.Comment.size() > 16) return;
+	if (G->IDT_Input_Comment.size() > 16) return;
 
-	G->IDT[G->IDT_Input_Num - 1].BuildInstrumentData(G->IDT_Input.Comment, G->IDT_Input.INSTR_TYPE, G->IDT_Input.Phi1, G->IDT_Input.Theta, G->IDT_Input.Phi2,
-		G->IDT_Input.A1_MIN, G->IDT_Input.A1_MAX, G->IDT_Input.A2_MIN, G->IDT_Input.A2_MAX, G->IDT_Input.RET_ID, _M(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
+	G->IDT[G->IDT_Input_Num - 1].BuildInstrumentData(G->IDT_Input_Comment, G->IDT_Input_Type, G->IDT_Input.Mount, G->IDT_Input.Phi1, G->IDT_Input.Theta, G->IDT_Input.Phi2,
+		G->IDT_Input.A1_MIN, G->IDT_Input.A1_MAX, G->IDT_Input.A2_MIN, G->IDT_Input.A2_MAX, G->IDT_Input.RET_ID);
 }
 
 void ShuttleFDOMFD::menuSetGroundTargetInputs()
@@ -2778,14 +2825,15 @@ void ShuttleFDOMFD::GroundTargetCalc()
 	if (G->GTF_Input_Num < 1 || G->GTF_Input_Num >100) return;
 	if (G->GTF_Input.Name == "") return;
 	if (G->GTF_Input.Lat < -90.0 || G->GTF_Input.Lat > 90.0) return;
-	if (G->GTF_Input.Lng < -180.0 || G->GTF_Input.Lat > 180.0) return;
+	if (G->GTF_Input.Lng < -180.0 || G->GTF_Input.Lng > 180.0) return;
 
 	G->GTF.targets[G->GTF_Input_Num - 1] = G->GTF_Input;
 }
 
 void ShuttleFDOMFD::menuSetCheckoutMonitorTime()
 {
-	GenericMETInput(&G->CO_MON_Time, "Enter desired time. Format: DDD:MM:SS.SSS");
+	MET2String3(Buffer, G->CO_MON_Time);
+	GenericMETInput(&G->CO_MON_Time, "Enter desired time. Format: DDD:MM:SS.SSS", Buffer);
 }
 
 void ShuttleFDOMFD::CalcCheckoutMonitor()
@@ -3945,8 +3993,32 @@ void ShuttleFDOMFD::menuSetSupersighterInputs()
 		else G->SSInputs.Mode = 1;
 		break;
 	case 1: // Source matrix
+		if (G->SSInputs.INMAT == "RLMT01")
+		{
+			G->SSInputs.INMAT = "RFMT01";
+		}
+		else if (G->SSInputs.INMAT == "RFMT01")
+		{
+			G->SSInputs.INMAT = "LPYR";
+		}
+		else if (G->SSInputs.INMAT == "LPYR")
+		{
+			G->SSInputs.INMAT = "LYPR";
+		}
+		else
+		{
+			G->SSInputs.INMAT = "RLMT01";
+		}
 		break;
 	case 2: // Desired matrix
+		if (G->SSInputs.OUTMAT == "RFMT01")
+		{
+			G->SSInputs.OUTMAT = "RLMT01";
+		}
+		else
+		{
+			G->SSInputs.OUTMAT = "RFMT01";
+		}
 		break;
 	case 3: // Ephemeris ID
 		break;
@@ -4027,10 +4099,10 @@ bool GenericStringInputBox(void *id, char *str, void *data)
 	return true;
 }
 
-void ShuttleFDOMFD::GenericMETInput(double *get, char *message)
+void ShuttleFDOMFD::GenericMETInput(double *get, char *message, char* default_string)
 {
 	bool GenericMETInputBox(void *id, char *str, void *data);
-	oapiOpenInputBox(message, GenericMETInputBox, 0, 25, (void*)(get));
+	oapiOpenInputBox(message, GenericMETInputBox, default_string, 25, (void*)(get));
 }
 
 bool GenericMETInputBox(void *id, char *str, void *data)

@@ -23,7 +23,7 @@
 
 LandingOpportunitiesProcessor::LandingOpportunitiesProcessor()
 {
-
+	ANG = 0.0;
 }
 
 void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)

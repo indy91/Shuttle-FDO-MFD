@@ -56,6 +56,7 @@ SupersighterInputs::SupersighterInputs()
 	StartTime = 0.0;
 
 	IDT = NULL;
+	IMT = NULL;
 	CTF = NULL;
 	GTF = NULL;
 	sescnst = NULL;
@@ -66,6 +67,7 @@ Supersighter::Supersighter()
 {
 	sprintf(Buffer, "");
 	R_GS_EF = _V(0, 0, 0);
+	TargetNumber = 0;
 }
 
 void Supersighter::RUN(const SupersighterInputs& in, SupersighterOutputs& out)
@@ -136,7 +138,7 @@ void Supersighter::MODE1()
 	}
 
 	// Calculate body attitude matrix
-	if (CalculateBodyMatrixFromAttitude(inp.ATT*RAD, B_M50_BY))
+	if (CalculateBodyMatrixFromAttitude(sv_AOS, B_M50_BY))
 	{
 		// TBD: Error
 		return;
@@ -144,14 +146,13 @@ void Supersighter::MODE1()
 
 	// Format outputs from inputs
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ATT_SOURCE = "MED";
 	outp.ATT_SENSE = FormatAttSense();
 	outp.INPUT_ATT[0] = FormatAttitude(inp.ATT.x);
 	outp.INPUT_ATT[1] = FormatAttitude(inp.ATT.y);
 	outp.INPUT_ATT[2] = FormatAttitude(inp.ATT.z);
-	outp.OUTPUT_A_ATT[0][0] = FormatAttitude(inp.ATT.x);
-	outp.OUTPUT_A_ATT[0][1] = FormatAttitude(inp.ATT.y);
-	outp.OUTPUT_A_ATT[0][2] = FormatAttitude(inp.ATT.z);
 	outp.ELV = FormatInstrumentAngle(inp.ELV);
 
 	// Calculate instrument pointing angles
@@ -205,6 +206,12 @@ void Supersighter::MODE1()
 	// Common outputs
 	CommonCalculations(sv_AOS, B_M50_BY);
 
+	if (CalculateAttitudeFromBodyMatrix(sv_AOS, B_M50_BY, true))
+	{
+		// TBD: Error
+		return;
+	}
+
 	// Optional second target
 	if (inp.TGT2 != "")
 	{
@@ -247,7 +254,7 @@ void Supersighter::MODE2()
 	int inst;
 	bool Limit1, Limit2;
 
-	if (CalculateBodyMatrixFromAttitude(inp.ATT * RAD, B_M50_BY))
+	if (CalculateBodyMatrixFromAttitude(sv_ST, B_M50_BY))
 	{
 		// TBD: Error
 		return;
@@ -267,6 +274,8 @@ void Supersighter::MODE2()
 
 	// Format outputs
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ATT_SOURCE = "MED";
 	outp.ATT_SENSE = FormatAttSense();
 	outp.INPUT_ATT[0] = FormatAttitude(inp.ATT.x);
@@ -298,8 +307,9 @@ void Supersighter::MODE3()
 	int TGT_TYP, TGT_NUM, INST_NUM;
 
 	// Calculate initial attitude
-	if (CalculateBodyMatrixFromAttitude(inp.ATT * RAD, B0_M50_BY))
+	if (CalculateBodyMatrixFromAttitude(sv_ST, B0_M50_BY))
 	{
+		// TBD: Error
 		return;
 	}
 
@@ -312,6 +322,8 @@ void Supersighter::MODE3()
 
 	// Output formatting
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ATT_SOURCE = "MED";
 	outp.ATT_SENSE = FormatAttSense();
 	outp.EIGEN_VECTOR_P = FormatAttitude(inp.EIG.x);
@@ -428,8 +440,9 @@ void Supersighter::MODE4()
 	double GMT_TCA, GMT_LOS;
 
 	// Calculate initial attitude
-	if (CalculateBodyMatrixFromAttitude(inp.ATT * RAD, B0_M50_BY))
+	if (CalculateBodyMatrixFromAttitude(sv_ST, B0_M50_BY))
 	{
+		// TBD: Error
 		return;
 	}
 
@@ -463,6 +476,8 @@ void Supersighter::MODE4()
 
 	// Output formatting
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ATT_SOURCE = "MED";
 	outp.ATT_SENSE = FormatAttSense();
 	outp.INPUT_ATT[0] = FormatAttitude(inp.ATT.x);
@@ -542,6 +557,8 @@ void Supersighter::MODE4()
 
 void Supersighter::MODE5()
 {
+	// Fixed line-of-sight/MGA Mode
+
 	MATRIX3 B_M50_BY_A, B_M50_BY_B;
 	VECTOR3 u_TGT_TEG, u_TGT_M50, u_BY, AttA, AttB;
 	int inst, TGT_TYP, TGT_NUM;
@@ -579,11 +596,13 @@ void Supersighter::MODE5()
 	}
 
 	// Calculate body matrices
-	CalculateBodyMatrixFromAttitude(AttA, B_M50_BY_A);
-	CalculateBodyMatrixFromAttitude(AttB, B_M50_BY_B);
+	B_M50_BY_A = OrbMech::tmat(PYRAnglesToMatrix(AttA.x, AttA.y, AttA.z));
+	B_M50_BY_B = OrbMech::tmat(PYRAnglesToMatrix(AttB.x, AttB.y, AttB.z));
 
 	// Format outputs
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.MGA = FormatAttitude(inp.MGA);
 	outp.ELV = FormatInstrumentAngle(inp.ELV);
 	outp.ATT_SENSE = FormatAttSense();
@@ -720,6 +739,8 @@ void Supersighter::MODE5()
 
 void Supersighter::MODE6()
 {
+	// Optimum Second Line-of-Sight Mode
+
 	MATRIX3 B_M50_BY;
 	VECTOR3 P1_BY, P2_BY, T1_TEG, T1_M50, T2_TEG, T2_M50, u_BY;
 	double A1, A2;
@@ -784,6 +805,8 @@ void Supersighter::MODE6()
 
 	// Format outputs
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ELV = FormatInstrumentAngle(inp.ELV);
 	outp.IA1 = inp.IA1;
 	outp.IA1_A1 = FormatInstrumentAngle(inp.IA1_A1);
@@ -792,6 +815,7 @@ void Supersighter::MODE6()
 
 	if (CalculateAttitudeFromBodyMatrix(sv_AOS, B_M50_BY, true))
 	{
+		// TBD: Error
 		return;
 	}
 
@@ -836,6 +860,7 @@ void Supersighter::MODE6()
 
 void Supersighter::MODE7()
 {
+	// Fixed Line-of-Sight Omicron Mode
 	// Mode 7 computes an Orbiter attitude (output A) given a specific Omicron angle and instrument IA1 ID and instrument angles to point at target 1 for
 	// AOS of target 1. Optionally, instrument pointing angles may be requested for the IA2 instrument ID. A target 2 will also be input corresponding to IA2.
 
@@ -877,6 +902,8 @@ void Supersighter::MODE7()
 
 	// Format outputs
 	outp.MODE = std::to_string(inp.Mode);
+	outp.INMAT = inp.INMAT;
+	outp.OUTMAT = inp.OUTMAT;
 	outp.ELV = FormatInstrumentAngle(inp.ELV);
 	outp.IA1 = inp.IA1;
 	outp.IA1_A1 = FormatInstrumentAngle(inp.IA1_A1);
@@ -957,12 +984,12 @@ void Supersighter::MODE7()
 
 void Supersighter::GetInstrumentAnglesFromVector(VECTOR3 u_BY, int n, double& A1, double& A2, bool& Limit1, bool& Limit2) const
 {
-	inp.IDT[n].BodyVectorToInstrumentAngles(u_BY, A1, A2, Limit1, Limit2);
+	inp.IDT[n].BodyVectorToInstrumentAngles(inp.IMT, u_BY, A1, A2, Limit1, Limit2);
 }
 
 VECTOR3 Supersighter::GetVectorFromInstrumentAngles(int n, double A1, double A2) const
 {
-	return inp.IDT[n].InstrumentAnglesToBodyVector(A1, A2);
+	return inp.IDT[n].InstrumentAnglesToBodyVector(inp.IMT, A1, A2);
 }
 
 void Supersighter::CommonCalculations(const OrbMech::SV& sv, const MATRIX3& B_M50_BY)
@@ -1047,30 +1074,68 @@ void Supersighter::VectorToPhiTheta(VECTOR3 u_BY, double& Phi, double& Theta) co
 	Theta = OrbMech::acos2(u_BY.x);
 }
 
-int Supersighter::CalculateBodyMatrixFromAttitude(const VECTOR3& Att, MATRIX3& B_M50_BY) const
+int Supersighter::CalculateBodyMatrixFromAttitude(const OrbMech::SV& sv, MATRIX3& B_M50_BY) const
 {
 	std::string INMATType;
+	VECTOR3 Att;
 
+	Att = inp.ATT * RAD;
 	INMATType = inp.INMAT.substr(0, 4);
 
 	if (INMATType == "RLMT")
 	{
+		// BY = Body, SA = Sense axis, AX = +X sense
+		MATRIX3 M_M50_AX, M_ATTSENSE, M_BY_SA, M_BY_AX;
+
 		// ADI attitude
 		// Take ATTSENSE into account
+
+		if (GetRELMAT(inp.INMAT, M_M50_AX)) return 1;
+
+		// Get body to ADI (att sense) matrix
+		M_BY_SA = PYRAnglesToMatrix(Att.x, Att.y, Att.z);
+
+		// Convert att sense
+		M_ATTSENSE = ADIAttSenseConversion(inp.ATTSense, 0);
+		M_BY_AX = mul(M_BY_SA, M_ATTSENSE);
+
+		// Calculate M50 to body matrix
+		B_M50_BY = mul(OrbMech::tmat(M_BY_AX), M_M50_AX);
 	}
 	else if (INMATType == "RFMT")
 	{
 		// IMU attitude
 		MATRIX3 M_M50_IMU, M_BY_IMU;
 		if (GetREFSMMAT(inp.INMAT, M_M50_IMU)) return 1;
-		M_BY_IMU = DirectionCosineMatrix(Att.x, Att.y, Att.z);
+		M_BY_IMU = PYRAnglesToMatrix(Att.x, Att.y, Att.z);
 
 		B_M50_BY = mul(OrbMech::tmat(M_BY_IMU), M_M50_IMU);
 	}
 	else if (INMATType == "LPYR" || INMATType == "LYPR")
 	{
 		// LVLH attitude
-		// Bias matrix
+		MATRIX3 M_BY_LVLH, M_M50_LVLH, M_ATTSENSE;
+		VECTOR3 R_M50, V_M50;
+
+		M_ATTSENSE = ADIAttSenseConversion(inp.ATTSense, 0);
+
+		if (INMATType == "LPYR")
+		{
+			M_BY_LVLH = PYRAnglesToMatrix(Att.x, Att.y, Att.z);
+		}
+		else
+		{
+			M_BY_LVLH = YPRAnglesToMatrix(Att.x, Att.y, Att.z);
+		}
+		M_BY_LVLH = mul(M_BY_LVLH, M_ATTSENSE);
+
+		R_M50 = mul(inp.sescnst->M_TEG_TO_M50, sv.R);
+		V_M50 = mul(inp.sescnst->M_TEG_TO_M50, sv.V);
+		M_M50_LVLH = LVLH_Matrix(R_M50, V_M50);
+
+		B_M50_BY = mul(OrbMech::tmat(M_BY_LVLH), M_M50_LVLH);
+
+		// TBD: Bias matrix
 	}
 	else return 1;
 
@@ -1083,25 +1148,101 @@ int Supersighter::CalculateAttitudeFromBodyMatrix(const OrbMech::SV& sv, MATRIX3
 	// Pitch, Yaw, Roll sequence but output is RPY
 
 	std::string Att[6][3];
-	MATRIX3 M_M50_LVLH, M_LVLH_BY;
-	VECTOR3 R_M50, V_M50, M50Att, LVLHAtt;
+	std::string INMATType, OUTMATType, AttRef;
+	MATRIX3 M_M50_LVLH, M_LVLH_BY, M_AX_BY;
+	VECTOR3 R_M50, V_M50, AttTemp;
 	unsigned int i, j;
+	bool PrintOtherAttSenses;
+
+	// Determine output att sense
+	INMATType = inp.INMAT.substr(0, 4);
+	OUTMATType = inp.OUTMAT.substr(0, 4);
+	if (INMATType == "RFMT")
+	{
+		PrintOtherAttSenses = false;
+	}
+	else
+	{
+		PrintOtherAttSenses = true;
+	}
+	if (OUTMATType == "RFMT")
+	{
+		AttRef = "IMU";
+	}
+	else if (OUTMATType == "RLMT")
+	{
+		AttRef = "ADI";
+	}
+	else return 1;
 
 	R_M50 = mul(inp.sescnst->M_TEG_TO_M50, sv.R);
 	V_M50 = mul(inp.sescnst->M_TEG_TO_M50, sv.V);
 	M_M50_LVLH = LVLH_Matrix(R_M50, V_M50);
 	M_LVLH_BY = mul(B_M50_BY, OrbMech::tmat(M_M50_LVLH));
 
-	M50Att = ExtractPYRAngles(B_M50_BY);
-	LVLHAtt = ExtractPYRAngles(M_LVLH_BY);
+	if (OUTMATType == "RFMT")
+	{
+		// RFMT
+		MATRIX3 M_M50_IMU, M_IMU_BY;
 
-	Att[0][0] = FormatAttitude(M50Att.x * DEG);
-	Att[0][1] = FormatAttitude(M50Att.y * DEG);
-	Att[0][2] = FormatAttitude(M50Att.z * DEG);
+		if (GetREFSMMAT(inp.OUTMAT, M_M50_IMU)) return 1;
 
-	Att[3][0] = FormatAttitude(LVLHAtt.x * DEG);
-	Att[3][1] = FormatAttitude(LVLHAtt.y * DEG);
-	Att[3][2] = FormatAttitude(LVLHAtt.z * DEG);
+		M_IMU_BY = mul(B_M50_BY, OrbMech::tmat(M_M50_IMU));
+		M_AX_BY = M_IMU_BY;
+	}
+	else
+	{
+		// RLMT
+		MATRIX3 M_M50_ADI, M_ADI_BY;
+
+		if (GetRELMAT(inp.OUTMAT, M_M50_ADI)) return 1;
+
+		M_ADI_BY = mul(B_M50_BY, OrbMech::tmat(M_M50_ADI));
+		M_AX_BY = M_ADI_BY;
+	}
+
+	AttTemp = MatrixToPYRAngles(M_AX_BY);
+	Att[0][0] = FormatAttitude(AttTemp.x * DEG);
+	Att[0][1] = FormatAttitude(AttTemp.y * DEG);
+	Att[0][2] = FormatAttitude(AttTemp.z * DEG);
+
+	AttTemp = MatrixToPYRAngles(M_LVLH_BY);
+	Att[3][0] = FormatAttitude(AttTemp.x * DEG);
+	Att[3][1] = FormatAttitude(AttTemp.y * DEG);
+	Att[3][2] = FormatAttitude(AttTemp.z * DEG);
+
+	if (PrintOtherAttSenses)
+	{
+		MATRIX3 M_TEMP;
+
+		// Convert to IMU/ADI -X
+		M_TEMP = mul(ADIAttSenseConversion(1, 0), M_AX_BY);
+		AttTemp = MatrixToPYRAngles(M_TEMP);
+		Att[1][0] = FormatAttitude(AttTemp.x * DEG);
+		Att[1][1] = FormatAttitude(AttTemp.y * DEG);
+		Att[1][2] = FormatAttitude(AttTemp.z * DEG);
+		
+		// Convert to IMU/ADI -Z
+		M_TEMP = mul(ADIAttSenseConversion(2, 0), M_AX_BY);
+		AttTemp = MatrixToPYRAngles(M_TEMP);
+		Att[2][0] = FormatAttitude(AttTemp.x * DEG);
+		Att[2][1] = FormatAttitude(AttTemp.y * DEG);
+		Att[2][2] = FormatAttitude(AttTemp.z * DEG);
+
+		// Convert to LVLH -X
+		M_TEMP = mul(ADIAttSenseConversion(1, 0), M_LVLH_BY);
+		AttTemp = MatrixToPYRAngles(M_TEMP);
+		Att[4][0] = FormatAttitude(AttTemp.x * DEG);
+		Att[4][1] = FormatAttitude(AttTemp.y * DEG);
+		Att[4][2] = FormatAttitude(AttTemp.z * DEG);
+
+		// Convert to LVLH -Z
+		M_TEMP = mul(ADIAttSenseConversion(2, 0), M_LVLH_BY);
+		AttTemp = MatrixToPYRAngles(M_TEMP);
+		Att[5][0] = FormatAttitude(AttTemp.x * DEG);
+		Att[5][1] = FormatAttitude(AttTemp.y * DEG);
+		Att[5][2] = FormatAttitude(AttTemp.z * DEG);
+	}
 
 	for (i = 0; i < 6; i++)
 	{
@@ -1116,6 +1257,16 @@ int Supersighter::CalculateAttitudeFromBodyMatrix(const OrbMech::SV& sv, MATRIX3
 				outp.OUTPUT_B_ATT[i][j] = Att[i][j];
 			}
 		}
+	}
+
+	// Output attitude reference
+	if (IsAttitudeA)
+	{
+		outp.OUTPUT_A_ATT_REF = AttRef;
+	}
+	else
+	{
+		outp.OUTPUT_B_ATT_REF = AttRef;
 	}
 
 	return 0;
@@ -1134,7 +1285,7 @@ int Supersighter::Mode2EarthIntersection(VECTOR3 R_C, double GMT, VECTOR3 u_M, d
 	VECTOR3 R_L, R_L_EF;
 	double r0, r_C, C, rho;
 
-	r0 = OrbMech::EARTH_RADIUS_GRAV;
+	r0 = OrbMech::EARTH_RADIUS_ORBITER;
 
 	r_C = length(R_C);
 	C = -dotp(u_M, R_C) / r_C;
@@ -1334,8 +1485,10 @@ MATRIX3 Supersighter::Mode7Attitude(VECTOR3 R_M50, VECTOR3 V_M50, VECTOR3 P_BY, 
 
 int Supersighter::GetRELMAT(std::string relmat, MATRIX3& mat) const
 {
-	// TBD
-	mat = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	// RELMAT: M50 to ADI coordinate system conversion
+	// TBD: Only starball RELMAT
+	//mat = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	mat = _M(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0);
 	return 0;
 }
 
@@ -1353,10 +1506,10 @@ int Supersighter::GetLVLHBiasMatrix(std::string relmat, MATRIX3& mat) const
 	return 0;
 }
 
-MATRIX3 Supersighter::DirectionCosineMatrix(double R, double P, double Y) const
+MATRIX3 Supersighter::PYRAnglesToMatrix(double R, double P, double Y) const
 {
 	// Sequence: Pitch, Yaw, Roll
-	// Body to IMU
+	// Usually body to IMU
 
 	MATRIX3 mat;
 	double o, i, m;
@@ -1364,6 +1517,8 @@ MATRIX3 Supersighter::DirectionCosineMatrix(double R, double P, double Y) const
 	o = R;
 	i = P;
 	m = Y;
+
+	// o = phi, i = theta, m = psi
 
 	mat.m11 = cos(i) * cos(m);
 	mat.m12 = -cos(i) * sin(m) * cos(o) + sin(i) * sin(o);
@@ -1378,17 +1533,93 @@ MATRIX3 Supersighter::DirectionCosineMatrix(double R, double P, double Y) const
 	return mat;
 }
 
+MATRIX3 Supersighter::YPRAnglesToMatrix(double R, double P, double Y) const
+{
+	// Sequence: Yaw, Pitch, Roll
+	// Usually body to IMU
+
+	MATRIX3 mat;
+	double o, i, m;
+
+	o = R;
+	i = P;
+	m = Y;
+
+	// o = phi, i = theta, m = psi
+
+	mat.m11 = cos(m) * cos(i);
+	mat.m12 = cos(m) * sin(i) * sin(o) - sin(m) * cos(o);
+	mat.m13 = cos(m) * sin(i) * cos(o) + sin(m) * sin(o);
+	mat.m21 = sin(m) * cos(i);
+	mat.m22 = sin(m) * sin(i) * sin(o) + cos(m) * cos(o);
+	mat.m23 = sin(m) * sin(i) * cos(o) - cos(m) * sin(o);
+	mat.m31 = -sin(i);
+	mat.m32 = cos(i) * sin(o);
+	mat.m33 = cos(i) * cos(o);
+
+	return mat;
+}
+
 MATRIX3 Supersighter::ADIAttSenseConversion(int intype, int outtype) const
 {
 	//Types: 0 = +X, 1 = -X, 2 = -Z
-	if (intype == 0 && outtype == 1) return _M(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
-	else if (intype == 0 && outtype == 2) return _M(0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0);
-	else if (intype == 1 && outtype == 0) return _M(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
+	if ((intype == 0 && outtype == 1) || (intype == 1 && outtype == 0)) return _M(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
+	else if ((intype == 0 && outtype == 2) || (intype == 2 && outtype == 0)) return _M(0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0);
 	else if (intype == 1 && outtype == 2) return _M(0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0);
-	else if (intype == 2 && outtype == 0) return _M(0.0, 0.0, -1.0, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0);
 	else if (intype == 2 && outtype == 1) return _M(0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0);
 
 	return _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
+}
+
+VECTOR3 Supersighter::MatrixToPYRAngles(const MATRIX3& M_XXX_BY) const
+{
+	// INPUTS:
+	// M_XXX_BY: Matrix from X coordinate system to body
+	// OUTPUTS:
+	// Att: Attitude (output is RPY in Pitch, Yaw, Roll extraction sequence), radians
+
+	VECTOR3 Att;
+
+	Att.x = atan2(-M_XXX_BY.m32, M_XXX_BY.m22);
+	Att.y = atan2(-M_XXX_BY.m13, M_XXX_BY.m11);
+	Att.z = OrbMech::asin2(M_XXX_BY.m12);
+
+	if (Att.x < 0.0) Att.x += PI2;
+	if (Att.y < 0.0) Att.y += PI2;
+	if (Att.z < 0.0) Att.z += PI2;
+
+	return Att;
+}
+
+VECTOR3 Supersighter::MatrixToYPRAngles(const MATRIX3& M_XXX_BY) const
+{
+	// INPUTS:
+	// M_XXX_BY: Matrix from X coordinate system to body
+	// OUTPUTS:
+	// Att: Attitude (output is RPY in Yaw, Pitch, Roll extraction sequence), radians
+
+	VECTOR3 Att;
+
+	Att.x = atan2(M_XXX_BY.m23, M_XXX_BY.m33);
+	Att.y = asin(-M_XXX_BY.m13);
+	Att.z = atan2(M_XXX_BY.m12, M_XXX_BY.m11);
+
+	if (Att.x < 0.0) Att.x += PI2;
+	if (Att.y < 0.0) Att.y += PI2;
+	if (Att.z < 0.0) Att.z += PI2;
+
+	return Att;
+}
+
+MATRIX3 Supersighter::LVLH_Matrix(VECTOR3 R, VECTOR3 V) const
+{
+	// Rotation matrix from inertial to LVLH
+
+	VECTOR3 i, j, k;
+	j = unit(crossp(V, R));
+	k = unit(-R);
+	i = crossp(j, k);
+	return _M(i.x, i.y, i.z, j.x, j.y, j.z, k.x, k.y, k.z);
 }
 
 VECTOR3 Supersighter::CalculateEigenAxis(double P, double Y) const
@@ -1488,71 +1719,6 @@ double Supersighter::TwoSineCosineEquations(double a, double b, double c, double
 	return atan2((a * f - c * d) / (a * e - b * d), (c * e - b * f) / (a * e - b * d));
 }
 
-VECTOR3 Supersighter::ExtractPYRAngles(const MATRIX3& M_XXX_BY) const
-{
-	// INPUTS:
-	// M_XXX_BY: Matrix from X coordinate system to body
-	// OUTPUTS:
-	// Att: Attitude (output is RPY in Pitch, Yaw, Roll extraction sequence), radians
-
-	VECTOR3 Att;
-	double cos_yaw, arg;
-
-	Att.z = OrbMech::asin2(M_XXX_BY.m12);
-	cos_yaw = cos(Att.z);
-
-	if (abs(cos_yaw) < 0.005)
-	{
-		Att.x = 0.0;
-		Att.y = atan2(M_XXX_BY.m31, M_XXX_BY.m33);
-	}
-	else
-	{
-		Att.x = atan2(-M_XXX_BY.m32, M_XXX_BY.m22);
-		Att.y = atan2(-M_XXX_BY.m13, M_XXX_BY.m11);
-	}
-
-	if (Att.x < 0.0) Att.x += PI2;
-	if (Att.y < 0.0) Att.y += PI2;
-	if (Att.z < 0.0) Att.z += PI2;
-
-	/*
-	arg = M_XXX_BY.m11 / cos_yaw;
-	if (abs(arg) > 1.0)
-	{
-		arg = arg / abs(arg);
-	}
-	Att.y = acos(arg);
-	if (-M_XXX_BY.m13 / cos_yaw < 0.0)
-	{
-		Att.y = PI2 - Att.y;
-	}
-
-	arg = M_XXX_BY.m22 / cos_yaw;
-	if (abs(arg) > 1.0)
-	{
-		arg = arg / abs(arg);
-	}
-	Att.x = acos(arg);
-	if (-M_XXX_BY.m32 / cos_yaw < 0.0)
-	{
-		Att.x = PI2 - Att.x;
-	}
-	*/
-	return Att;
-}
-
-MATRIX3 Supersighter::LVLH_Matrix(VECTOR3 R, VECTOR3 V) const
-{
-	// Rotation matrix from inertial to LVLH
-
-	VECTOR3 i, j, k;
-	j = unit(crossp(V, R));
-	k = unit(-R);
-	i = crossp(j, k);
-	return _M(i.x, i.y, i.z, j.x, j.y, j.z, k.x, k.y, k.z);
-}
-
 VECTOR3 Supersighter::GetTargetDirection(const OrbMech::SV& sv, int type, int number) const
 {
 	// INPUTS:
@@ -1613,7 +1779,7 @@ VECTOR3 Supersighter::MOON(double GMT) const
 VECTOR3 Supersighter::GroundTargetTEG(double GMT, int number) const
 {
 	// Calculation position vector of ground target in TEG coordinates
-	VECTOR3 R_EF = OrbMech::r_from_latlong(inp.GTF->targets[number].Lat * RAD, inp.GTF->targets[number].Lng * RAD, (OrbMech::EARTH_RADIUS_GRAV + inp.GTF->targets[number].Alt * OrbMech::FPS2MPS));
+	VECTOR3 R_EF = OrbMech::r_from_latlong(inp.GTF->targets[number].Lat * RAD, inp.GTF->targets[number].Lng * RAD, (OrbMech::EARTH_RADIUS_ORBITER + inp.GTF->targets[number].Alt * OrbMech::FPS2MPS));
 	MATRIX3 M_TEG_EF = OrbMech::TEG_to_EF_Matrix(OrbMech::w_Earth, GMT);
 	return tmul(M_TEG_EF, R_EF);
 }
@@ -1708,7 +1874,7 @@ int Supersighter::FindAOS(const OrbMech::SV& sv, int type, int number, OrbMech::
 
 		Lat = inp.GTF->targets[number].Lat * RAD;
 		Lng = inp.GTF->targets[number].Lng * RAD;
-		Radius = inp.GTF->targets[number].Alt * OrbMech::FPS2MPS + OrbMech::EARTH_RADIUS_GRAV;
+		Radius = inp.GTF->targets[number].Alt * OrbMech::FPS2MPS + OrbMech::EARTH_RADIUS_ORBITER;
 
 		R_GS_EF = OrbMech::r_from_latlong(Lat, Lng, Radius);
 	}
@@ -1847,7 +2013,7 @@ double Supersighter::GeneralElevationCalc(double GMT)
 		ang1 = acos(dotp(-unit(sv_temp.R), u_dir));
 
 		// Angle from local vertical to horizon
-		ang2 = PI05 - OrbMech::acos2(OrbMech::EARTH_RADIUS_GRAV / length(sv_temp.R));
+		ang2 = PI05 - OrbMech::acos2(OrbMech::EARTH_RADIUS_ORBITER / length(sv_temp.R));
 
 		// Calculate elevation above horizon
 		Elev = ang1 - ang2;
@@ -2001,12 +2167,12 @@ std::string Supersighter::FormatAttitude(double Att)
 		Att = 0.0;
 	}
 
-	return FormatString("%06.2lf", Att);
+	return FormatString("%.2lf", Att);
 }
 
 std::string Supersighter::FormatInstrumentAngle(double Ang)
 {
-	return FormatString("%+07.2lf", Ang);
+	return FormatString("%+.2lf", Ang);
 }
 
 std::string Supersighter::FormatInstrumentLimit(bool Limit)

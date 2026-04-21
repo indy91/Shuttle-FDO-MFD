@@ -56,7 +56,8 @@ void CheckoutMonitor::RUN(const OrbMech::SV& sv, bool useNonSphericalGravity, Ch
 	V_REL = sv.V - crossp(_V(0, 0, 1), sv.R) * OrbMech::w_Earth;
 	OrbMech::PICSSC(true, R_EF, V_EF, r, v, lat, lng, gamma, azi);
 	OrbMech::PICSSC(true, R_TEG, V_REL, r_rel, v_rel, lat_rel, lng_rel, gamma_rel, azi_rel);
-	HS = HO = r - OrbMech::EARTH_RADIUS_EQUATOR;
+	HO = r - OrbMech::EARTH_RADIUS_ORBITER; // Should be height above oblate Earth, for now height above Orbiter radius
+	HS = r - OrbMech::EARTH_RADIUS_EQUATOR;
 	beta = asin(dotp(H_TEG, u_SUN_TEG));
 	T_P = OrbMech::REVTIM(sv.R, sv.V, useNonSphericalGravity);
 	OrbMech::latlong_from_r(R_M50, DEC_M50, RA_M50);
@@ -96,8 +97,8 @@ void CheckoutMonitor::RUN(const OrbMech::SV& sv, bool useNonSphericalGravity, Ch
 	disp.LAMBDA[0] = FormatLongitude(lng);
 	disp.LAMBDA[1] = FormatString("%.6lf", lng * DEG);
 	disp.h_s = FormatString("%.5lf", HS / OrbMech::NM2M);
-	disp.h_o[0] = FormatString("%.5lf", HS / OrbMech::NM2M);
-	disp.h_o[1] = FormatString("%.2lf", HS / OrbMech::FPS2MPS);
+	disp.h_o[0] = FormatString("%.5lf", HO / OrbMech::NM2M);
+	disp.h_o[1] = FormatString("%.2lf", HO / OrbMech::FPS2MPS);
 	disp.R = FormatString("%.5lf", r / OrbMech::NM2M);
 	// TBD: T_an, lambda_an
 	disp.BETA_ANG = FormatString("%.3lf", beta * DEG);

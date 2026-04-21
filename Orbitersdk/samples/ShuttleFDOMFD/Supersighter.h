@@ -115,12 +115,16 @@ struct SupersighterInputs
 
 	// Instrument Definitions
 	InstrumentDefinitionTable* IDT;
+	// Instrument Mount Matrix Table
+	InstrumentMountMatrix* IMT;
 	// Celestial targets
 	CelestialTargetFile* CTF;
 	// Ground targets
 	GroundTargetFile* GTF;
 	// RELMAT, REFSMMAT, BIAS
 	OrbMech::SessionConstants *sescnst;
+
+	// Gravit selection
 	bool useNonSphericalGravity;
 };
 
@@ -145,7 +149,9 @@ struct SupersighterOutputs
 	std::string MODE2_LAT;
 	std::string MODE2_LON;
 	std::string OUTPUT_A_ATT[6][3];
+	std::string OUTPUT_A_ATT_REF;
 	std::string OUTPUT_B_ATT[6][3];
+	std::string OUTPUT_B_ATT_REF;
 	std::string TGT1;
 	std::string TGT1_RA;
 	std::string TGT1_DEC;
@@ -191,10 +197,15 @@ private:
 	void MODE1();
 	// Fixed Attitude/Fixed Line-of-Sight Mode
 	void MODE2();
+	// Fixed Line-of-Sight Rotation Mode
 	void MODE3();
+	// Minimum Maneuver Mode
 	void MODE4();
+	// Fixed line-of-sight/MGA Mode
 	void MODE5();
+	// Optimum Second Line-of-Sight Mode
 	void MODE6();
+	// Fixed Line-of-Sight Omicron Mode
 	void MODE7();
 
 	// SUBROUTINES
@@ -219,23 +230,31 @@ private:
 	MATRIX3 Mode7Attitude(VECTOR3 R_M50, VECTOR3 V_M50, VECTOR3 P_BY, VECTOR3 T_M50, double OMICRON) const;
 
 	// Input and output attitude
-	int CalculateBodyMatrixFromAttitude(const VECTOR3 &Att, MATRIX3 &B_M50_BY) const;
+	int CalculateBodyMatrixFromAttitude(const OrbMech::SV& sv, MATRIX3 &B_M50_BY) const;
 	int CalculateAttitudeFromBodyMatrix(const OrbMech::SV& sv, MATRIX3 B_M50_BY, bool IsAttitudeA);
 
 	// More utility functions
 	int GetRELMAT(std::string relmat, MATRIX3 &mat) const;
 	int GetREFSMMAT(std::string relmat, MATRIX3& mat) const;
 	int GetLVLHBiasMatrix(std::string relmat, MATRIX3& mat) const;
-	MATRIX3 DirectionCosineMatrix(double R, double P, double Y) const;
+
+	// Attitude conversions
+	MATRIX3 PYRAnglesToMatrix(double R, double P, double Y) const;
+	MATRIX3 YPRAnglesToMatrix(double R, double P, double Y) const;
 	MATRIX3 ADIAttSenseConversion(int intype, int outtype) const;
+	VECTOR3 MatrixToPYRAngles(const MATRIX3& M_XXX_BY) const;
+	VECTOR3 MatrixToYPRAngles(const MATRIX3& M_XXX_BY) const;
+	MATRIX3 LVLH_Matrix(VECTOR3 R, VECTOR3 V) const;
+
+	// Eigen angle
 	VECTOR3 CalculateEigenAxis(double P, double Y) const;
 	void CalculateEigenAxisPY(VECTOR3 e, double& P, double& Y) const;
 	MATRIX3 RotationAroundAxis(VECTOR3 e, double theta) const;
+
+	// Mode 5 helper functions
 	int HarmonicAdditionSolver(double a, double b, double f, double &theta1, double &theta2) const;
 	double CalculateIGA(double MGA, double OGA, VECTOR3 u_BY, VECTOR3 u_SM) const;
 	double TwoSineCosineEquations(double a, double b, double c, double d, double e, double f) const;
-	VECTOR3 ExtractPYRAngles(const MATRIX3& M_XXX_BY) const;
-	MATRIX3 LVLH_Matrix(VECTOR3 R, VECTOR3 V) const;
 
 	// Target calculations
 	VECTOR3 GetTargetDirection(const OrbMech::SV& sv, int type, int number) const;

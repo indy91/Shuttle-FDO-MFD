@@ -540,7 +540,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "Supersighter Display", 0, 'C' },
 		{ "Instrument Defintion", 0, 'E' },
 		{ "Ground Targets", 0, 'M' },
-		{ "", 0, ' ' },
+		{ "Mount Matrix Table", 0, 'D' },
 		{ "", 0, ' ' },
 		{ "Checkout Monitor", 0, 'A' },
 
@@ -557,7 +557,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("SS", OAPI_KEY_C, &ShuttleFDOMFD::menuSetSupersighterDisplayPage);
 	RegisterFunction("IDT", OAPI_KEY_E, &ShuttleFDOMFD::menuSetInstrumentDefinitionPage);
 	RegisterFunction("GT", OAPI_KEY_M, &ShuttleFDOMFD::menuSetGroundTargetPage);
-	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("MNT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetMountMatrixTablePage);
 	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("CO", OAPI_KEY_A, &ShuttleFDOMFD::menuSetCheckoutMonitorPage);
 
@@ -699,6 +699,40 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterFunction("PAG", OAPI_KEY_C, &ShuttleFDOMFD::menuCycleSubscreen);
 	RegisterFunction("CLC", OAPI_KEY_T, &ShuttleFDOMFD::GroundTargetCalc);
+	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetAttitudeAndPointingPage);
+
+
+	static const MFDBUTTONMENU mnu20[] =
+	{
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "", 0, ' ' },
+		{ "Back to menu", 0, 'B' },
+	};
+
+	RegisterPage(mnu20, sizeof(mnu20) / sizeof(MFDBUTTONMENU));
+
+	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_P, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_N, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);
+
+	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("", OAPI_KEY_T, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_F, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_G, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);

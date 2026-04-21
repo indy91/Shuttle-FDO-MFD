@@ -36,12 +36,12 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 
 	hEarth = oapiGetObjectByName("Earth");
 	mu = GGRAV * oapiGetMass(hEarth);
-	
+
 	shuttlenumber = -1;
 	shuttle = vessel;
 
 	OBJHANDLE hShuttle = shuttle->GetHandle();
-	for (unsigned i = 0;i < oapiGetVesselCount();i++)
+	for (unsigned i = 0; i < oapiGetVesselCount(); i++)
 	{
 		if (hShuttle == oapiGetVesselByIndex(i))
 		{
@@ -56,7 +56,7 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	if (hTarget)
 	{
 		target = oapiGetVesselInterface(hTarget);
-		for (unsigned i = 0;i < oapiGetVesselCount();i++)
+		for (unsigned i = 0; i < oapiGetVesselCount(); i++)
 		{
 			if (hTarget == oapiGetVesselByIndex(i))
 			{
@@ -178,29 +178,29 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	DMT.DV_M = 0.0;
 
 	LWP_Settings.NS = 0;
-	LWP_Settings.TSTART = -5.0*60.0;
-	LWP_Settings.TEND = 5.0*60.0;
-	LWP_Settings.DTOPT = -(5.0*60.0 + 40.0);
+	LWP_Settings.TSTART = -5.0 * 60.0;
+	LWP_Settings.TEND = 5.0 * 60.0;
+	LWP_Settings.DTOPT = -(5.0 * 60.0 + 40.0);
 	LWP_Settings.WRAP = 0;
 	LWP_Settings.NEGTIV = 0;
-	LWP_Settings.GAMINS = 0.6*RAD;
-	LWP_Settings.LATLS = 28.6084030*RAD;
-	LWP_Settings.LONGLS = -80.6232502*RAD;
-	LWP_Settings.PFA = 14.4*RAD;
-	LWP_Settings.PFT = 8.0*60.0 + 39.0;
-	LWP_Settings.RINS = 21241700.0*0.3048;
-	LWP_Settings.VINS = 25818.88*0.3048;//25928.0*0.3048;
-	LWP_Settings.YSMAX = 14.0*RAD;
+	LWP_Settings.GAMINS = 0.6 * RAD;
+	LWP_Settings.LATLS = 28.6084030 * RAD;
+	LWP_Settings.LONGLS = -80.6232502 * RAD;
+	LWP_Settings.PFA = 14.4 * RAD;
+	LWP_Settings.PFT = 8.0 * 60.0 + 39.0;
+	LWP_Settings.RINS = 21241700.0 * 0.3048;
+	LWP_Settings.VINS = 25818.88 * 0.3048;//25928.0*0.3048;
+	LWP_Settings.YSMAX = 14.0 * RAD;
 	LWP_Settings.DELNO = 0.0;
-	LWP_Settings.CWHT = 251679.0*LBM2KG;
-	LWP_Settings.OMS1.DTIG = 2.0*60.0;
-	LWP_Settings.OMS1.HTGT = 120.0*1852.0;
-	LWP_Settings.OMS1.THETA = 133.0*RAD;
+	LWP_Settings.CWHT = 251679.0 * LBM2KG;
+	LWP_Settings.OMS1.DTIG = 2.0 * 60.0;
+	LWP_Settings.OMS1.HTGT = 120.0 * 1852.0;
+	LWP_Settings.OMS1.THETA = 133.0 * RAD;
 	LWP_Settings.OMS1.C1 = 0.0;
 	LWP_Settings.OMS1.C2 = 0.0;
-	LWP_Settings.OMS2.DTIG = 29.0*60.0 + 18.0;
-	LWP_Settings.OMS2.HTGT = 111.0*1852.0;
-	LWP_Settings.OMS2.THETA = 315.0*RAD;
+	LWP_Settings.OMS2.DTIG = 29.0 * 60.0 + 18.0;
+	LWP_Settings.OMS2.HTGT = 111.0 * 1852.0;
+	LWP_Settings.OMS2.THETA = 315.0 * RAD;
 	LWP_Settings.OMS2.C1 = 0.0;
 	LWP_Settings.OMS2.C2 = 0.0;
 	LWP_Settings.DirectInsertion = true;
@@ -218,14 +218,29 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	ErrorCode = 0;
 
 	// SUPERSIGHTER
-	IDT[0].BuildInstrumentData("+X BODY (R,P)", 121, 0.0, 0.0, 0.0, 0.0, 360.0, 0.0, 180.0, false, identity());
-	//IDT[1].BuildInstrumentData("-Z STAR TRACKER", 453, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, true, _M(-0.0056491, 0.9994101, -0.0338744, 0.9894338, 0.0006786, -0.1449833, -0.1448747, -0.0343355, - 0.988854));
-	//IDT[2].BuildInstrumentData("-Y STAR TRACKER", 453, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, true, _M(-0.9662658, -0.1833851, 0.1808317, -0.1839513, 0.0, -0.9829353, 0.1802558, -0.9830411, -0.0337339));
-	IDT[3].BuildInstrumentData("+X BODY (P,Y)", 231, 0.0, 0.0, 0.0, 0.0, 360.0, -90.0, 90.0, false, identity());
-	IDT[12].BuildInstrumentData("-Z COAS", 243, 90.0, 90.0, 90.0, -10.0, 10.0, -10.0, 10.0, true, identity());
+
+	// Mount matrices
+	InstMountMat[0].Comment = "BODY";
+	InstMountMat[0].MAT = _M(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+	InstMountMat[1].Comment = "-Z ST";
+	InstMountMat[1].MAT = _M(6.785415503147796e-04, 9.994101000000000e-01, -3.433550476597798e-02, 9.992193315146595e-01, 6.786000000000000e-04, 3.949847324552144e-02,
+		3.949856503135383e-02, -3.433550000000000e-02, -9.986294484825460e-01);
+	InstMountMat[2].Comment = "-Y ST";
+	InstMountMat[2].MAT = _M(-0.983041134482076, -0.183385190013243, 0.0, 0.0, 0.0, -1.0, 0.183385190013243, -0.983041134482076, 0.0);
+
+	// Instruments
+	IDT[0].BuildInstrumentData("+X BODY (R,P)", 121, 1, 0.0, 0.0, 0.0, 0.0, 360.0, 0.0, 180.0, 0);
+	IDT[1].BuildInstrumentData("-Z STAR TRACKER", 453, 2, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, 1);
+	IDT[2].BuildInstrumentData("-Y STAR TRACKER", 453, 3, 0.0, 0.0, 0.0, -5.0, 5.0, -5.0, 5.0, 1);
+	IDT[3].BuildInstrumentData("+X BODY (P,Y)", 231, 1, 0.0, 0.0, 0.0, 0.0, 360.0, -90.0, 90.0, 0);
+	IDT[11].BuildInstrumentData("+X COAS", 231, 1, 0.0, 0.0, 0.0, -10.0, 10.0, -10.0, 10.0, 1);
+	IDT[12].BuildInstrumentData("-Z COAS", 243, 1, 90.0, 90.0, 90.0, -10.0, 10.0, -10.0, 10.0, 1);
+	IDT[17].BuildInstrumentData("KU BAND ANT", 321, 1, 180.0, 270.0, 0.0, -180.0, 180.0, -80.0, 80.0, 0);
 
 	IDT_Input_Num = 1;
+	IDT_Input_Type = 0;
 	GTF_Input_Num = 1;
+
 	// Ground Targets (for now just the STDN sites)
 	GTF.Set(1, "Antigua", 17.137222, -61.775833, 0.0 / OrbMech::FPS2MPS); // TBD
 	GTF.Set(2, "Ascension", -7.94354, -14.37105, 528.0 / OrbMech::FPS2MPS);
@@ -241,7 +256,6 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 
 	// Initialize celestial targets
 	ReadStarCatalog(CTF);
-	// Initialize ground targets
 
 	CO_MON_Time = 0.0;
 }
@@ -283,7 +297,7 @@ SV ShuttleFDOCore::StateVectorCalc(VESSEL *v, double SVGMT)
 	if (SVGMT != 0.0)
 	{
 		dt = SVGMT - sv.GMT;
-		sv1 = coast(sv, dt);
+		sv1 = coast_auto(sv, dt, useNonSphericalGravity);
 	}
 	else
 	{
@@ -784,6 +798,7 @@ int ShuttleFDOCore::subThread()
 		Supersighter ss;
 
 		SSInputs.IDT = IDT;
+		SSInputs.IMT = InstMountMat;
 		SSInputs.CTF = &CTF;
 		SSInputs.GTF = &GTF;
 		SSInputs.sescnst = &sescnst;
@@ -815,7 +830,7 @@ int ShuttleFDOCore::subThread()
 		
 		sv1 = StateVectorCalc(shuttle);
 		dt = GMTfromGET(CO_MON_Time) - sv1.GMT;
-		sv2 = coast_auto(sv1, dt, useNonSphericalGravity);
+		sv2 = OrbMech::coast_auto(sv1, dt, useNonSphericalGravity);
 
 		CheckoutMonitor cm(sescnst);
 
