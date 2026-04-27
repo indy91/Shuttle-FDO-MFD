@@ -52,14 +52,6 @@ namespace OrbMech
 		double mass = 0.0;
 	};
 
-	struct GlobalConstants
-	{
-		GlobalConstants()
-		{
-
-		}
-	};
-
 	struct SessionConstants
 	{
 		SessionConstants()
