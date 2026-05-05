@@ -2673,7 +2673,7 @@ void ShuttleFDOMFD::menuDeleteOMPManeuver()
 	if (G->MCT.Table.size() == 0U) return;
 
 	bool DeleteOMPManeuverInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Delete specified maneuver: ", DeleteOMPManeuverInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Delete specified maneuver (0 to delete all maneuvers):", DeleteOMPManeuverInput, 0, 20, (void*)this);
 }
 
 bool DeleteOMPManeuverInput(void *id, char *str, void *data)
@@ -2689,12 +2689,20 @@ bool DeleteOMPManeuverInput(void *id, char *str, void *data)
 
 bool ShuttleFDOMFD::delete_OMPManeuver(unsigned num)
 {
-	if (num >= 1 && num <= G->MCT.Table.size())
+	if (num >= 0 && num <= G->MCT.Table.size())
 	{
 		MCTScroll = 0;
 		METScroll = 0;
 		MCTSelectedManeuver = 0;
-		G->MCT.Table.erase(G->MCT.Table.begin() + num - 1);
+		if (num == 0)
+		{
+			// Delete all
+			G->MCT.Table.clear();
+		}
+		else
+		{
+			G->MCT.Table.erase(G->MCT.Table.begin() + num - 1);
+		}
 		return true;
 	}
 

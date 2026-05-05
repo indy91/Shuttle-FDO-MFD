@@ -1460,7 +1460,8 @@ namespace OMP
 		}
 		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NSR)
 		{
-			ManeuverData[CurMan].dv_table = NSRManeuver(ManeuverData[CurMan].sv_A_bef_table, ManeuverData[CurMan].sv_P_bef_table);
+			Error = NSRManeuver(ManeuverData[CurMan].sv_A_bef_table, ManeuverData[CurMan].sv_P_bef_table, ManeuverData[CurMan].dv_table);
+			if (Error) return Error;
 		}
 		else if (MCT.Table[CurMan].type == OMPDefs::MANTYPE::NOSH)
 		{
@@ -2532,37 +2533,52 @@ namespace OMP
 		return Y_A_dot;
 	}
 
-	VECTOR3 OrbitalManeuverProcessor::NSRManeuver(OrbMech::SV sv_A, OrbMech::SV sv_P) const
+	int OrbitalManeuverProcessor::NSRManeuver(OrbMech::SV sv_A, OrbMech::SV sv_P, VECTOR3& DV_LVLH) const
 	{
-		//Assume both SVs are at TIG
-		VECTOR3 R_P2, V_P2, R_A2, V_A2, R_PC, V_PC, u, V_A2_apo, DV2, X, Y, Z;
-		double DH_CDH, r_PC, r_A2, v_PV, a_A, a_P, v_A2, v_AV, v_AH;
+		// Calculate coelliptic maneuver
+		// INPUTS:
+		// sv_A = Active vehicle state vector at TIG
+		// sv_P = Passive vehicle state vector
+		// OUTPUTS:
+		// DV_LVLH = DV of maneuver in LVLH coordinates
 
-		R_A2 = sv_A.R;
-		r_A2 = length(R_A2);
-		V_A2 = sv_A.V;
-		v_A2 = length(V_A2);
-		R_P2 = sv_P.R;
-		V_P2 = sv_P.V;
-		u = unit(crossp(R_P2, V_P2));
-		R_A2 = unit(R_A2 - u * dotp(R_A2, u)) * r_A2;
-		V_A2 = unit(V_A2 - u * dotp(V_A2, u)) * v_A2;
 
-		OrbMech::RADUP(R_P2, V_P2, R_A2, OrbMech::mu_Earth, R_PC, V_PC);
-		a_P = OrbMech::GetSemiMajorAxis(R_PC, V_PC, OrbMech::mu_Earth);
+		OrbMech::SV sv_P2;
+		VECTOR3 U_R, U_H, V_AC, DV2;
+		double r_A, r_P, dh, a_P, a_A, r_P_dot, r_A_dot, V_AH;
+		int err;
 
-		r_PC = length(R_PC);
-		DH_CDH = r_PC - r_A2;
-		v_PV = dotp(V_PC, R_A2) / r_A2;
-		a_A = a_P - DH_CDH;
-		v_AV = v_PV * pow(a_P / a_A, 1.5);
-		v_AH = sqrt(OrbMech::mu_Earth * (2.0 / r_A2 - 1.0 / a_A) - v_AV * v_AV);
-		V_A2_apo = unit(crossp(u, R_A2)) * v_AH + unit(R_A2) * v_AV;
-		DV2 = V_A2_apo - V_A2;
-		Z = unit(-R_A2);
-		Y = -u;
-		X = unit(crossp(Y, Z));
-		return tmul(_M(X.x, Y.x, Z.x, X.y, Y.y, Z.y, X.z, Y.z, Z.z), DV2);
+		// Bring passive vehicle state vector to phase match
+		err = PositionMatch(sv_A, sv_P, sv_P2);
+		if (err)
+		{
+			return err;
+		}
+
+		// Common variable
+		r_A = length(sv_A.R);
+		r_P = length(sv_P2.R);
+
+		// Calculate DH
+		dh = r_P - length(sv_A.R);
+
+		// Compute the radial and horizontal velocity values needed to produce a coelliptic orbit
+		a_P = 1.0 / (2.0 / r_P - dotp(sv_P2.V, sv_P2.V) / OrbMech::mu_Earth);
+		a_A = a_P - dh;
+		r_P_dot = dotp(sv_P2.R, sv_P2.V) / r_P;
+		r_A_dot = r_P_dot * pow(a_P / a_A, 1.5);
+		V_AH = sqrt(OrbMech::mu_Earth * (2.0 / r_A - 1.0 / a_A) - r_A_dot * r_A_dot);
+
+		// Compute the coelliptic orbit velocity vector
+		U_R = unit(sv_A.R);
+		U_H = unit(crossp(crossp(U_R, sv_A.V), U_R));
+		V_AC = U_H * V_AH + U_R * r_A_dot;
+
+		// Calculate LVLH DV
+		DV2 = V_AC - sv_A.V;
+		DV_LVLH = mul(OrbMech::LVLH_Matrix(sv_A.R, sv_A.V), DV2);
+
+		return 0;
 	}
 
 	VECTOR3 OrbitalManeuverProcessor::NodeShiftManeuver(OrbMech::SV sv0, double dh_D) const
