@@ -25,7 +25,96 @@ CheckoutMonitor::CheckoutMonitor(OrbMech::SessionConstants& scnst) : sesconst(sc
 	sprintf_s(Buffer, "");
 }
 
-void CheckoutMonitor::RUN(const OrbMech::SV& sv, bool useNonSphericalGravity, CheckoutMonitorDisplay& disp)
+int CheckoutMonitor::RUN(const OrbMech::SV& sv_in, double GMT_TH, int Condition, double ConditionValue, bool useNonSphericalGravity, CheckoutMonitorDisplay& disp)
+{
+	// INPUTS:
+	// sv_in: Input state vector
+	// GMT_TH: Threshold time
+	// Condition: 0 = Time, 1 = Radius, 2 = Altitude, 3 = flight-path angle, 4 = argument of latitude, 5 = longitude, 6 = latitude
+	// ConditionValue: Value for condition
+
+	OrbMech::CoastIntegratorNewInputs in;
+	OrbMech::CoastIntegratorNewOutputs out;
+	OrbMech::CoastIntegratorNew coast;
+	OrbMech::SV sv_TH, sv_final;
+
+	// Reset error message
+	disp.ErrorMessage = "";
+
+	// Coast integrator input constants
+	if (useNonSphericalGravity)
+	{
+		in.GMD = in.GMO = 7;
+	}
+	else
+	{
+		in.GMD = in.GMO = 0;
+	}
+	in.KFactor = 1.0;
+	in.DRAG = false;
+	in.sescnst = &sesconst;
+
+	// Update to threshold time
+	in.R0 = sv_in.R;
+	in.V0 = sv_in.V;
+	in.GMT0 = sv_in.GMT;
+	in.dt_min = 0.0;
+	in.dt_max = GMT_TH - sv_in.GMT;
+	in.HMULT = 1.0;
+	if (in.dt_max < 0.0)
+	{
+		in.dt_max = abs(in.dt_max);
+		in.HMULT = -1.0;
+	}
+	
+	in.IntegTermInd = 0;
+	in.STOPVA = 0.0;
+
+	coast.CALC(in, out);
+
+	sv_TH = sv_in;
+	sv_TH.R = out.R1;
+	sv_TH.V = out.V1;
+	sv_TH.GMT = out.GMT1;
+	
+	if (Condition != 0)
+	{
+		// Update to desired condition
+		in.R0 = sv_TH.R;
+		in.V0 = sv_TH.V;
+		in.GMT0 = sv_TH.GMT;
+		in.dt_min = 0.0;
+		in.dt_max = 10.0 * 24.0 * 3600.0;
+		in.HMULT = 1.0;
+		in.IntegTermInd = Condition;
+		in.STOPVA = ConditionValue;
+
+		coast.CALC(in, out);
+
+		if (out.ISTOPS != in.IntegTermInd)
+		{
+			 // Error
+			disp.ErrorMessage = "Condition not found within time limit";
+			return 1;
+		}
+
+		sv_final = sv_in;
+		sv_final.R = out.R1;
+		sv_final.V = out.V1;
+		sv_final.GMT = out.GMT1;
+	}
+	else
+	{
+		// Time
+		sv_final = sv_TH;
+	}
+
+	CalculateDisplay(sv_final, useNonSphericalGravity, disp);
+
+	return 0;
+}
+
+void CheckoutMonitor::CalculateDisplay(const OrbMech::SV& sv, bool useNonSphericalGravity, CheckoutMonitorDisplay& disp)
 {
 	MATRIX3 M_TEG_EF;
 	VECTOR3 R_TEG, V_TEG, R_M50, V_M50, u_SUN_TEG, V_REL, R_EF, V_EF, H_TEG;

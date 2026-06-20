@@ -64,6 +64,8 @@ struct CheckoutMonitorDisplay
 	std::string RAAN_M50;
 	std::string N;
 	std::string M;
+
+	std::string ErrorMessage;
 };
 
 class CheckoutMonitor
@@ -71,9 +73,11 @@ class CheckoutMonitor
 public:
 	CheckoutMonitor(OrbMech::SessionConstants& scnst);
 
-	void RUN(const OrbMech::SV &sv, bool useNonSphericalGravity, CheckoutMonitorDisplay &disp);
+	int RUN(const OrbMech::SV &sv_in, double GMT_TH, int Condition, double ConditionValue, bool useNonSphericalGravity, CheckoutMonitorDisplay &disp);
 
 protected:
+
+	void CalculateDisplay(const OrbMech::SV& sv, bool useNonSphericalGravity, CheckoutMonitorDisplay& disp);
 
 	// Output formatting
 	std::string FormatString(const char* _Format, double Val);

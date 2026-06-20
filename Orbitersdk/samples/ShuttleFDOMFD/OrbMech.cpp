@@ -2762,4 +2762,616 @@ namespace OrbMech
 		return a_d;
 	}
 
+	KeplerBeta::KeplerBeta()
+	{
+		R0 = V0 = _V(0, 0, 0);
+		r0 = alpha = sqrt_alpha = sigma = sqrt_mu = 0.0;
+		w = z = u = U0 = U1 = U2 = r = 0.0;
+	}
+
+	void KeplerBeta::Init(const VECTOR3& R0, const VECTOR3& V0, double sqrt_mu)
+	{
+		this->sqrt_mu = sqrt_mu;
+		this->R0 = R0;
+		this->V0 = V0;
+
+		r0 = length(R0);
+		alpha = 2.0 / r0 - dotp(V0, V0) / (sqrt_mu * sqrt_mu);
+		sigma = dotp(R0, V0) / sqrt_mu;
+
+		if (alpha > 0.0)
+		{
+			sqrt_alpha = sqrt(alpha);
+		}
+		else if (alpha < 0.0)
+		{
+			sqrt_alpha = sqrt(-alpha);
+		}
+		else
+		{
+			sqrt_alpha = 0.0;
+		}
+	}
+
+	void KeplerBeta::Update(double beta, VECTOR3& R1, VECTOR3& V1, double& dt)
+	{
+		// Calculate Shepperd's w function
+		if (alpha > 0.0)
+		{
+			// Elliptical
+			w = tan(sqrt_alpha * beta * 0.25) / sqrt_alpha;
+		}
+		else if (alpha < 0.0)
+		{
+			// Hyperbolic
+			w = tanh(sqrt_alpha * beta * 0.25) / sqrt_alpha;
+		}
+		else
+		{
+			// Parabolic
+			w = beta * 0.25;
+		}
+
+		// Intermediate calculations
+		z = alpha * w * w;
+		z = z / (1.0 + z);
+		U0 = 1.0 - 8.0 * z * (1.0 - z);
+		U1 = 4.0 * (1.0 - 2.0 * z) * (1.0 - z) * w;
+		U2 = 8.0 * pow(1.0 - z, 2) * w * w;
+
+		// Final state
+		R1 = R0 * (1.0 - 1.0 / r0 * U2) + V0 / sqrt_mu * (r0 * U1 + sigma * U2);
+		r = length(R1);
+		V1 = R0 * (-sqrt_mu / (r * r0) * U1) + V0 * (1.0 - 1.0 / r * U2);
+
+		// Final time
+		if (alpha != 0.0)
+		{
+			// Elliptical and hyperbolic
+			dt = 1.0 / alpha * (beta - (1.0 - z) * (-8.0 * sigma * z + 4.0 * (1.0 - alpha * r0) * (1.0 - 2.0 * z) * w));
+		}
+		else
+		{
+			// Parabolic
+			dt = r0 * beta + sigma * 0.5 * beta * beta + (1.0 / 6.0) * beta * beta * beta;
+		}
+		dt = dt / sqrt_mu;
+	}
+
+	PinesGravity::PinesGravity()
+	{
+		G_VEC = UR = R_EF = _V(0, 0, 0);
+		R_INV = R0_ZERO = R0_N = F1 = F2 = F3 = F4 = DNM = AUXILIARY = 0.0;
+		I = J = L = N = N1 = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			ZETA_REAL[i] = ZETA_IMAG[i] = 0.0;
+			for (int j = 0; j < 2; j++)
+			{
+				MAT_A[i][j] = 0.0;
+			}
+		}
+	}
+
+	VECTOR3 PinesGravity::Calc(const MATRIX3& Rot, const VECTOR3& RSTATE, const double& MU, const double& R_E, const int& GMO, const int& GMD, const double* ZONAL, const double* CCOEF, const double* SCOEF)
+	{
+		//This function is based on the Space Shuttle onboard navigation (JSC internal note 79-FM-10)
+		//INPUTS: Rot and RSTATE
+		//OUTPUTS: G_VEC and R_EF
+
+		//Null gravitation acceleration vector
+		G_VEC = _V(0, 0, 0);
+		//Transform position vector to planet fixed coordinates
+		R_EF = mul(Rot, RSTATE);
+		//Components of the planet fixed position unit vector
+		R_INV = 1.0 / length(RSTATE);
+		UR = R_EF * R_INV;
+		//Starting values for recursive relations used in Pines formulation
+		R0_ZERO = R_E * R_INV;
+		R0_N = R0_ZERO * MU * R_INV * R_INV;
+		MAT_A[0][1] = 3.0 * UR.z;
+		MAT_A[1][1] = 3.0;
+		ZETA_REAL[0] = 1.0;
+		ZETA_IMAG[0] = 0.0;
+		L = 1;
+		AUXILIARY = 0.0;
+		//Effects of tesseral harmonics, terms that depend on the vehicle's longitude
+		for (I = 1; I <= GMO; I++)
+		{
+			ZETA_REAL[I] = UR.x * ZETA_REAL[I - 1] - UR.y * ZETA_IMAG[I - 1];
+			ZETA_IMAG[I] = UR.x * ZETA_IMAG[I - 1] + UR.y * ZETA_REAL[I - 1];
+		}
+		for (N = 2; N <= GMD; N++)
+		{
+			//Derived Legendre functions by means of recursion formulas, multiplied by appropiate combinations of tesseral harmonics (Legendre polynomials shall be multiplied by
+			//zonal harmonics coefficients), and stored as certain auxiliary variables F1-F4.
+			MAT_A[N][0] = 0.0;
+			MAT_A[N][1] = (2.0 * (double)N + 1.0) * MAT_A[N - 1][1];
+			MAT_A[N - 1][0] = MAT_A[N - 1][1];
+			MAT_A[N - 1][1] = UR.z * MAT_A[N][1];
+			for (J = 2; J <= N; J++)
+			{
+				MAT_A[N - J][0] = MAT_A[N - J][1];
+				MAT_A[N - J][1] = (UR.z * MAT_A[N - J + 1][1] - MAT_A[N - J + 1][0]) / ((double)J);
+			}
+			F1 = 0.0;
+			F2 = 0.0;
+			F3 = -MAT_A[0][0] * ZONAL[N - 1];
+			F4 = -MAT_A[0][1] * ZONAL[N - 1];
+			//If the maximum order of tesserals wanted has not been attained, do for N1=1 to N (these take into account contributions of tesseral and sectorial harmonics):
+			if (N <= GMO)
+			{
+				for (N1 = 1; N1 <= N; N1++)
+				{
+					F1 = F1 + (double)N1 * MAT_A[N1 - 1][0] * (CCOEF[L - 1] * ZETA_REAL[N1 - 1] + SCOEF[L - 1] * ZETA_IMAG[N1 - 1]);
+					F2 = F2 + (double)N1 * MAT_A[N1 - 1][0] * (SCOEF[L - 1] * ZETA_REAL[N1 - 1] - CCOEF[L - 1] * ZETA_IMAG[N1 - 1]);
+					DNM = CCOEF[L - 1] * ZETA_REAL[N1] + SCOEF[L - 1] * ZETA_IMAG[N1];
+					F3 = F3 + DNM * MAT_A[N1][0];
+					F4 = F4 + DNM * MAT_A[N1][1];
+					L++;
+				}
+			}
+			//Multiply the sum of zonal and tesseral effects by appropiate distance-related factors, store the results as components of the acceleration vector G_VEC, and prepare for 
+			//final computation by obtaining the intermediate scalar variable AUXILIARY, which accounts for an additional effect proportional to the unit radius vector UR.
+			R0_N = R0_N * R0_ZERO;
+			G_VEC.x = G_VEC.x + R0_N * F1;
+			G_VEC.y = G_VEC.y + R0_N * F2;
+			G_VEC.z = G_VEC.z + R0_N * F3;
+			AUXILIARY = AUXILIARY + R0_N * F4;
+		}
+		//Lastly, the planet fixed acceleration vector shall be obtained and rotated to inertial coordinates
+		G_VEC = G_VEC - UR * AUXILIARY;
+		G_VEC = tmul(Rot, G_VEC);
+
+		return G_VEC;
+	}
+
+	CoastIntegratorNewInputs::CoastIntegratorNewInputs()
+	{
+		R0 = V0 = _V(0, 0, 0);
+		GMT0 = 0.0;
+		dt_min = 0.0;
+		dt_max = 24.0 * 3600.0;
+		HMULT = 1.0;
+		KFactor = 1.0;
+		DRAG = false;
+		IntegTermInd = 0;
+		STOPVA = 0.0;
+		GMD = 7;
+		GMO = 7;
+
+		sescnst = NULL;
+	}
+
+	CoastIntegratorNew::CoastIntegratorNew()
+	{
+		H = T = HRK = HP = HD2 = H2D2 = H2D8 = HD6 = 0.0;
+		Y = YP = YPP = A_D = _V(0, 0, 0);
+		RSTATE = VSTATE = _V(0, 0, 0);
+		R_EM = R_ES = _V(0, 0, 0);
+		TSTART = TIME = TRECT = DELT = 0.0;
+		Q = RTBMAG = SIGMAC = 0.0;
+		RTB = RDTB = _V(0, 0, 0);
+		FUNCT = POLD = PNEW = GOLD = TS = 0.0;
+		ISTOPS = INITE = 0;
+		INITF = IEND = false;
+		Rot = _M(0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+		MU = 3.98601e14;// OrbMech::mu_Earth;
+		SQRT_MU = sqrt(MU);
+		R_E = OrbMech::EARTH_RADIUS_GRAV;
+
+		ZONAL[0] = -0.000000000e+00;
+		ZONAL[1] = 1.082626684e-03;
+		ZONAL[2] = -2.532656485e-06;
+		ZONAL[3] = -1.619621591e-06;
+		ZONAL[4] = -2.272960829e-07;
+		ZONAL[5] = 5.406812391e-07;
+		ZONAL[6] = -3.523599084e-07;
+
+		CCOEF[0] = -2.414000000e-10;
+		CCOEF[1] = 1.574460375e-06;
+		CCOEF[2] = 2.192638529e-06;
+		CCOEF[3] = 3.089892069e-07;
+		CCOEF[4] = 1.005487781e-07;
+		CCOEF[5] = -5.087993604e-07;
+		CCOEF[6] = 7.841758598e-08;
+		CCOEF[7] = 5.920994026e-08;
+		CCOEF[8] = -3.984074118e-09;
+		CCOEF[9] = -5.318030150e-08;
+		CCOEF[10] = 1.055871684e-07;
+		CCOEF[11] = -1.493006375e-08;
+		CCOEF[12] = -2.299300290e-09;
+		CCOEF[13] = 4.308224621e-10;
+		CCOEF[14] = -5.986566987e-08;
+		CCOEF[15] = 5.992912385e-09;
+		CCOEF[16] = 1.185420727e-09;
+		CCOEF[17] = -3.263617781e-10;
+		CCOEF[18] = -2.155941069e-10;
+		CCOEF[19] = 2.254349708e-12;
+		CCOEF[20] = 2.048459953e-07;
+		CCOEF[21] = 3.284327027e-08;
+		CCOEF[22] = 3.527091516e-09;
+		CCOEF[23] = -5.842135770e-10;
+		CCOEF[24] = 6.857781011e-13;
+		CCOEF[25] = -2.490816435e-11;
+		CCOEF[26] = 2.025442967e-14;
+
+		SCOEF[0] = 1.543100000e-09;
+		SCOEF[1] = -9.038038066e-07;
+		SCOEF[2] = 2.684248903e-07;
+		SCOEF[3] = -2.114376124e-07;
+		SCOEF[4] = 1.972225590e-07;
+		SCOEF[5] = -4.491448728e-07;
+		SCOEF[6] = 1.481778683e-07;
+		SCOEF[7] = -1.200776676e-08;
+		SCOEF[8] = 6.525714254e-09;
+		SCOEF[9] = -8.085869477e-08;
+		SCOEF[10] = -5.232919362e-08;
+		SCOEF[11] = -7.097342369e-09;
+		SCOEF[12] = 3.867123359e-10;
+		SCOEF[13] = -1.648182626e-09;
+		SCOEF[14] = 2.068411751e-08;
+		SCOEF[15] = -4.649303571e-08;
+		SCOEF[16] = 1.871636850e-10;
+		SCOEF[17] = -1.784502850e-09;
+		SCOEF[18] = -4.329813372e-10;
+		SCOEF[19] = -5.526093665e-11;
+		SCOEF[20] = 6.985030964e-08;
+		SCOEF[21] = 9.269671138e-09;
+		SCOEF[22] = -3.059438805e-09;
+		SCOEF[23] = -2.628938427e-10;
+		SCOEF[24] = 6.277781719e-12;
+		SCOEF[25] = 1.053569303e-11;
+		SCOEF[26] = 4.534042272e-13;
+	}
+
+	void CoastIntegratorNew::CALC(const CoastIntegratorNewInputs& in, CoastIntegratorNewOutputs& out)
+	{
+		Init(in);
+		//Initialization pass in forcing function and editor
+		EffectiveForcesRoutine();
+		IntegrationTerminationControlRoutine();
+		while (IEND == false)
+		{
+			//Step
+			Step();
+			//Edit
+			IntegrationTerminationControlRoutine();
+		}
+
+		out.R1 = RSTATE;
+		out.V1 = VSTATE;
+		out.GMT1 = TIME;
+		out.ISTOPS = ISTOPS;
+		out.IERROR = 0;
+	}
+
+	void CoastIntegratorNew::Init(const CoastIntegratorNewInputs& in)
+	{
+		inp = in;
+
+		IEND = false;
+
+		H = 0.0625 * sqrt(6378165.0) * in.HMULT;
+		HP = HD2 = H2D2 = H2D8 = HD6 = 0.0;
+
+		TSTART = in.GMT0;
+		T = 0.0;
+		TRECT = 0.0;
+		Y = YP = _V(0, 0, 0);
+		INITF = false;
+		INITE = 0;
+		ISTOPS = in.IntegTermInd;
+
+		kepler.Init(in.R0, in.V0, SQRT_MU);
+	}
+
+	void CoastIntegratorNew::IntegrationTerminationControlRoutine()
+	{
+		if (INITE != 1)
+		{
+			// Check for rectification
+			double TEMP1;
+			if (dotp(Y, Y) / dotp(RSTATE, RSTATE) > EPSQR)
+			{
+				Rectification();
+			}
+			else
+			{
+				TEMP1 = dotp(YP, YP);
+				TEMP1 *= MU / dotp(RTB, RTB);
+
+				if (TEMP1 / dotp(VSTATE, VSTATE) > EPSQV)
+				{
+					Rectification();
+				}
+			}
+		}
+
+		// Write ephemeris here?
+
+		// TERMINATION CONTROL
+		// Calculate total time since TSTART
+		double TTIME = abs(TRECT + DELT);
+		if (TTIME < inp.dt_min)
+		{
+			IEND = false;
+			return;
+		}
+
+		// Branch on stop indicator
+		if (ISTOPS == 0)
+		{
+			// Time
+			PNEW = TTIME - inp.dt_max;
+		}
+		else if (ISTOPS == 4 || ISTOPS == 5)
+		{
+			if (ISTOPS == 4)
+			{
+				// Argument of latitude
+				FUNCT = OrbMech::ArgLat(RSTATE, VSTATE);
+				PNEW = FUNCT - inp.STOPVA;
+			}
+			else
+			{
+				// Longitude
+				double lat;
+				OrbMech::latlong_from_r(RSTATE, lat, FUNCT);
+				PNEW = FUNCT - inp.STOPVA - OrbMech::w_Earth * TIME;
+			}
+
+			// Modulo between -PI and PI
+			if (PNEW > 0)
+			{
+				PNEW = fmod(PNEW + PI, PI2) - PI;
+			}
+			else
+			{
+				PNEW = fmod(PNEW - PI, PI2) + PI;
+			}
+		}
+		else
+		{
+			if (ISTOPS == 1)
+			{
+				// Radius
+				FUNCT = length(RSTATE);
+			}
+			else if (ISTOPS == 2)
+			{
+				// Altitude
+				FUNCT = length(RSTATE) - OrbMech::EARTH_RADIUS_ORBITER;
+			}
+			else if (ISTOPS == 3)
+			{
+				// Sine of flight path angle
+				FUNCT = dotp(unit(RSTATE), unit(VSTATE));
+			}
+			else
+			{
+				// Latitude
+				double lng;
+				OrbMech::latlong_from_r(RSTATE, FUNCT, lng);
+			}
+			PNEW = FUNCT - inp.STOPVA;
+		}
+
+		// Check if RCALC or H is small enough
+		if (abs(PNEW) < 3.6e-7 || abs(H) < 1e-8)
+		{
+			IEND = true;
+			return;
+		}
+
+		POLD = GOLD;
+		GOLD = PNEW;
+
+		if (INITE == 0)
+		{
+			// First pass
+			INITE = -1;
+		}
+		else if (INITE == -1)
+		{
+			// Not bounded
+			if (PNEW * POLD < 0.0)
+			{
+				// Found it
+				INITE = 1;
+				// Calculate new step
+				H = -H * (1.0 + POLD / (PNEW - POLD));
+				// Perform rectification
+				Rectification();
+			}
+			else
+			{
+				// Bound has not occured
+				// Check for maximum time
+				if (TTIME > inp.dt_max)
+				{
+					// Switch to time mode
+					ISTOPS = 0;
+					// Step back
+					POLD = GOLD = TTIME - inp.dt_max;
+					H = -H;
+				}
+			}
+		}
+		else
+		{
+			// Bounded
+			// Calculate new step
+			H = -H * (1.0 + POLD / (PNEW - POLD));
+		}
+	}
+
+	void CoastIntegratorNew::Step()
+	{
+		// Take 4 steps
+		HRK = H / 4.0;
+
+		NystromLear();
+		NystromLear();
+		NystromLear();
+		NystromLear();
+	}
+
+	void CoastIntegratorNew::NystromLear()
+	{
+		VECTOR3 YS, YPS, F1, F2, F3;
+
+		// Fourth-order Runge-Kutta method
+		if (HRK != HP)
+		{
+			HD2 = HRK / 2.0;
+			H2D2 = HD2 * HRK;
+			H2D8 = H2D2 / 4.0;
+			HD6 = HRK / 6.0;
+			HP = HRK;
+		}
+
+		// Save base and build state for 2nd derivative (2nd term)
+		F1 = YPP;
+		YS = Y;
+		YPS = YP;
+		Y = YS + YPS * HD2 + F1 * H2D8;
+		YP = YPS + F1 * HD2;
+		T = T + HD2;
+		// Get 2nd derivative (F2)
+		EffectiveForcesRoutine();
+		//Save F2 and build state for 2nd deriv evaluation F3
+		F2 = YPP;
+		YP = YPS + F2 * HD2;
+		EffectiveForcesRoutine();
+		F3 = YPP;
+		Y = YS + YPS * HRK + F3 * H2D2;
+		YP = YPS + F3 * HRK;
+		T = T + HD2;
+		// Get 2nd deriv F4
+		EffectiveForcesRoutine();
+		// Weighted sum for state at T + HRK
+		Y = YS + (YPS + (F1 + F2 + F3) * HD6) * HRK;
+		YP = YPS + (F1 + (F2 + F3) * 2.0 + YPP) * HD6;
+		// Final acceleration
+		EffectiveForcesRoutine();
+	}
+
+	void CoastIntegratorNew::EffectiveForcesRoutine()
+	{
+		//Calculates YPP (acceleration vector) and other derived variables
+
+		//First calculate the real state vector
+		UpdateState();
+		//Then update the perturbing acceleration vector A_D
+		AccelerationRoutine();
+		//Finally calculate YPP
+		CalculateSecondDerivative();
+	}
+
+	void CoastIntegratorNew::UpdateState()
+	{
+		//Given Y, YP and T calculate RSTATE, VSTATE, TIME, Rot and solar/lunar ephemerides
+		if (INITF == false || T != TS)
+		{
+			if (INITF == false)
+			{
+				// TBD
+				INITF = true;
+			}
+
+			// Store current independent variable
+			TS = T;
+
+			// Update two-body solution
+			kepler.Update(T, RTB, RDTB, DELT);
+			RTBMAG = length(RTB);
+
+			// Calculate current time
+			TIME = TSTART + TRECT + DELT;
+			// Update ephemerides, rotation matrices etc.
+			UpdateEphemerides();
+		}
+
+		// Calculate actual position vector
+		RSTATE = RTB + Y;
+		// Encke-Beta
+		VSTATE = RDTB + YP * SQRT_MU / RTBMAG;
+	}
+
+	void CoastIntegratorNew::AccelerationRoutine()
+	{
+		// Given RSTATE, VSTATE, TIME, calculate disturbing acceleration A_D
+		A_D = _V(0, 0, 0);
+		A_D += GeopotentialRoutine();
+		A_D += MoonAcceleration();
+		A_D += SunAcceleration();
+		A_D += DragAcceleration();
+	}
+
+	void CoastIntegratorNew::CalculateSecondDerivative()
+	{
+		Q = dotp((Y - RSTATE * 2.0), Y) / pow(length(RSTATE), 2.0);
+		SIGMAC = dotp(RTB, RDTB) / SQRT_MU;
+		YPP = (YP * SIGMAC - Y - RSTATE * fq(Q)) / RTBMAG + A_D * RTBMAG * RTBMAG / MU;
+	}
+
+	VECTOR3 CoastIntegratorNew::GeopotentialRoutine()
+	{
+		return pines.Calc(Rot, RSTATE, MU, R_E, inp.GMO, inp.GMD, ZONAL, CCOEF, SCOEF);
+	}
+
+	VECTOR3 CoastIntegratorNew::MoonAcceleration()
+	{
+		VECTOR3 R_MC, a_dM;
+		double q_M;
+
+		R_MC = RSTATE - R_EM;
+		q_M = dotp(RSTATE - R_EM * 2.0, RSTATE) / dotp(R_EM, R_EM);
+		a_dM = -(R_EM * fq(q_M) + RSTATE) * mu_Moon / pow(length(R_MC), 3);
+		return a_dM;
+	}
+
+	VECTOR3 CoastIntegratorNew::SunAcceleration()
+	{
+		VECTOR3 R_SC, a_dS;
+		double q_S;
+
+		R_SC = RSTATE - R_ES;
+		q_S = dotp(RSTATE - R_ES * 2.0, RSTATE) / dotp(R_ES, R_ES);
+		a_dS = -(R_ES * fq(q_S) + RSTATE) * mu_Sun / pow(length(R_SC), 3);
+		return a_dS;
+	}
+
+	VECTOR3 CoastIntegratorNew::DragAcceleration()
+	{
+		// TBD
+		return _V(0, 0, 0);
+	}
+
+	void CoastIntegratorNew::UpdateEphemerides()
+	{
+		// Rotation matrix from inertial to Earth-fixed
+		Rot = OrbMech::TEG_to_EF_Matrix(OrbMech::w_Earth, TIME);
+		// Ephemerides
+		R_ES = OrbMech::SUN(inp.sescnst->GMTBASE, TIME, inp.sescnst->M_TEG_TO_M50);
+		R_EM = OrbMech::MOON(inp.sescnst->GMTBASE, TIME, inp.sescnst->M_TEG_TO_M50);
+	}
+
+	void CoastIntegratorNew::Rectification()
+	{
+		kepler.Init(RSTATE, VSTATE, SQRT_MU);
+		Y = YP = _V(0, 0, 0);
+		TRECT = TRECT + DELT;
+		T = 0.0;
+		INITF = false;
+		EffectiveForcesRoutine();
+	}
+
+	double CoastIntegratorNew::fq(double q) const
+	{
+		//Encke-Term
+		return q * (3.0 + 3.0 * q + q * q) / (1.0 + pow(1.0 + q, 1.5));
+	}
 }

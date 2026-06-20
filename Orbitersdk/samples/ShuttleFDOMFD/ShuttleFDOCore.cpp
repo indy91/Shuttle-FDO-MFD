@@ -258,6 +258,9 @@ ShuttleFDOCore::ShuttleFDOCore(VESSEL* v) :
 	ReadStarCatalog(CTF);
 
 	CO_MON_Time = 0.0;
+	CO_MON_Stop_Option = 0;
+	CO_MON_Stop_Value_NM = 0.0;
+	CO_MON_Stop_Value_DEG = 0.0;
 }
 
 ShuttleFDOCore::~ShuttleFDOCore()
@@ -825,16 +828,28 @@ int ShuttleFDOCore::subThread()
 			Result = 0;
 			break;
 		}
-		OrbMech::SV sv1, sv2;
-		double dt;
+		OrbMech::SV sv1;
+		double ConditionValue;
 		
 		sv1 = StateVectorCalc(shuttle);
-		dt = GMTfromGET(CO_MON_Time) - sv1.GMT;
-		sv2 = OrbMech::coast_auto(sv1, dt, useNonSphericalGravity);
 
 		CheckoutMonitor cm(sescnst);
 
-		cm.RUN(sv2, useNonSphericalGravity, CO_DISP);
+		if (CO_MON_Stop_Option == 0)
+		{
+			// Unused
+			ConditionValue = 0.0;
+		}
+		else if (CO_MON_Stop_Option == 1 || CO_MON_Stop_Option == 2)
+		{
+			ConditionValue = CO_MON_Stop_Value_NM * 1852.0;
+		}
+		else
+		{
+			ConditionValue = CO_MON_Stop_Value_DEG * RAD;
+		}
+
+		cm.RUN(sv1, GMTfromGET(CO_MON_Time), CO_MON_Stop_Option, ConditionValue, useNonSphericalGravity, CO_DISP);
 
 		Result = 0;
 	}

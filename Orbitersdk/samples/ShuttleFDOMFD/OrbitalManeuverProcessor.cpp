@@ -204,6 +204,7 @@ namespace OMP
 		else if (buf == "YAW") return OMP::OMPDefs::SECONDARIES::YAW;
 		else if (buf == "PHA") return OMP::OMPDefs::SECONDARIES::PHA;
 		else if (buf == "WEDG") return OMP::OMPDefs::SECONDARIES::WEDG;
+		else if (buf == "ELA") return OMP::OMPDefs::SECONDARIES::ELA;
 		else return OMP::OMPDefs::SECONDARIES::NOSEC;
 	}
 
@@ -501,6 +502,10 @@ namespace OMP
 						else if (MCT.Table[k].secondaries[j].type == OMPDefs::PHA)
 						{
 							found = 2;
+						}
+						else if (MCT.Table[k].secondaries[j].type == OMPDefs::ELA)
+						{
+							found = 3;
 						}
 						if (found) break;
 					}
@@ -867,11 +872,17 @@ namespace OMP
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::DEC;
 					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
-				//Latitude
+				//Altitude
 				else if (MCT.Table[i].secondaries[j].type == OMPDefs::ALT)
 				{
 					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::ALT;
 					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * 1852.0;
+				}
+				// Elevation angle
+				else if (MCT.Table[i].secondaries[j].type == OMPDefs::EL)
+				{
+					ManeuverData[i].tigmodifiers.type = OMPDefs::SECONDARIES::EL;
+					ManeuverData[i].tigmodifiers.value = MCT.Table[i].secondaries[j].value * RAD;
 				}
 				//Maneuver vehicle and thruster
 				else if (MCT.Table[i].secondaries[j].type == OMPDefs::SECONDARIES::VFIL)
@@ -1104,6 +1115,10 @@ namespace OMP
 
 				Error = GeneralTrajectoryPropagation(ManeuverData[CurMan].sv_A_bef_table, 2, U_D, crossings, ManeuverData[CurMan].sv_A_bef_table);
 			}
+			else if (ManeuverData[CurMan].tigmodifiers.type == OMPDefs::SECONDARIES::EL)
+			{
+				Error = TELEV(ManeuverData[CurMan].sv_A_bef_table, ManeuverData[CurMan].sv_P_bef_table, ManeuverData[CurMan].tigmodifiers.value, ManeuverData[CurMan].sv_A_bef_table);
+			}
 		}
 
 		if (Error) return Error;
@@ -1136,7 +1151,7 @@ namespace OMP
 
 						notconverged = (abs(iterstate[l].err) > ompvariables.RangeTolerance);
 					}
-					else
+					else if (iterators[l].constrtype == 2)
 					{
 						//Phase angle (PH)
 
@@ -1144,6 +1159,30 @@ namespace OMP
 
 						phase = OrbMech::PHSANG(ManeuverData[CurMan].sv_P_bef_table.R, ManeuverData[CurMan].sv_P_bef_table.V, ManeuverData[CurMan].sv_A_bef_table.R);
 						iterstate[l].err = iterators[l].value - phase;
+
+						notconverged = (abs(iterstate[l].err) > 0.001 * RAD);
+					}
+					else
+					{
+						//Elevation
+						VECTOR3 Rtemp, Vtemp;
+						double dh;
+
+						//Calculate the dh for QRDTPI
+						OrbMech::SV SV_ACON = ManeuverData[CurMan].sv_A_bef_table;
+						OrbMech::SV SV_PCON = ManeuverData[CurMan].sv_P_bef_table;
+
+						u = unit(crossp(SV_PCON.R, SV_PCON.V));
+						SV_ACON.R = unit(SV_ACON.R - u * dotp(SV_ACON.R, u)) * length(SV_ACON.R);
+						OrbMech::RADUP(SV_PCON.R, SV_PCON.V, SV_ACON.R, OrbMech::mu_Earth, Rtemp, Vtemp);
+
+						dh = length(Rtemp) - length(SV_ACON.R);
+
+						//Then calculate the state above the maneuver point
+						if (QRDTPI(ManeuverData[CurMan].sv_P_bef_table, dh, iterators[l].value, SV_PCON)) return 1001;
+
+						//Then the phase angle to it
+						iterstate[l].err = OrbMech::PHSANG(SV_PCON.R, SV_PCON.V, ManeuverData[CurMan].sv_A_bef_table.R);
 
 						notconverged = (abs(iterstate[l].err) > 0.001 * RAD);
 					}
@@ -1717,6 +1756,7 @@ namespace OMP
 		case 32:	buf = "Error: Wrong vehicle code in VFIL secondary";			break;
 		case 33:	buf = "Error: Wrong thruster code in VFIL secondary";			break;
 		case 34:	buf = "Error: Chaser and target states identical";				break;
+		case 35:	buf = "Error: Too many iterations in elevation angle search";	break;
 		case 100:	buf = "Error: No target vessel.";								break;
 		case 1001:	buf = "Error: Trajectory became reentrant.";					break;
 		case 1002:	buf = "Error: Kepler error in integrator.";						break;
@@ -2106,6 +2146,100 @@ namespace OMP
 		return false;
 	}
 
+	int OrbitalManeuverProcessor::TELEV(OrbMech::SV sv_A, OrbMech::SV sv_P, double e_L, OrbMech::SV& sv_A2) const
+	{
+		OrbMech::SV sv_A1, sv_P1;
+		VECTOR3 i_LOS, i, i_H;
+		double r_A, r_P, e_LN, e, C, C2, p, t_i, t, e0, eps5, eps6, dt_max;
+		int C1, s_F, skip, Error;
+
+		// Constants
+		eps5 = 0.0001;
+		eps6 = 50.0;
+		dt_max = 900.0;
+
+		C = 0.0;
+		C1 = s_F = 0;
+		sv_A1 = sv_A;
+		sv_P1 = sv_P;
+		t_i = sv_A.GMT;
+
+		do
+		{
+			// Calculate common variables
+			r_A = length(sv_A1.R);
+			r_P = length(sv_P1.R);
+			// Unit vector between the primary and target vehicles
+			i_LOS = unit(sv_P1.R - sv_A1.R);
+			// Projection of i_LOS into orbital plane
+			i = unit(i_LOS - sv_A1.R * dotp(i_LOS, sv_A1.R) / (r_A * r_A));
+			// Unit vector perpendicular to R_A in the orbital plane of the primary target
+			i_H = unit(crossp(crossp(sv_A1.R, sv_A1.V), sv_A1.R));
+			// Computed elevation angle
+			e_LN = acos(dotp(i_LOS, i * OrbMech::sign(dotp(i, i_H))));
+			if (dotp(i_LOS, sv_A1.R) < 0.0)
+			{
+				e_LN = PI2 - e_LN;
+			}
+
+			skip = 0;
+			if (C1 == 0)
+			{
+				// First pass
+				// Perform test to determine if input elevation angle and the differential altitude are consistent
+				if ((e_L - PI) * (r_A - r_P) < 0.0)
+				{
+					// Inconsistent. Drive dependent variable to zero if possible
+					e = r_P - r_A + OrbMech::sign(r_P - r_A) * eps6;
+					skip = 1;
+				}
+				else
+				{
+					// Consistent
+					// Set consistency flag to 1
+					C1 = 1;
+					if (C != 0.0)
+					{
+						C = 0.0;
+						C2 = OrbMech::sign(t_i - t);
+						t = t_i;
+						t_i = t_i + 10.0 * C2;
+						skip = 2;
+					}
+				}
+			}
+
+			if (skip == 0)
+			{
+				e = e_L - e_LN;
+				if (abs(e) <= eps5)
+				{
+					// Success
+					sv_A2 = sv_A1;
+					return 0;
+				}
+			}
+			if (skip <= 1)
+			{
+				OrbMech::ITER(C, s_F, e, p, t_i, e0, t, -10.0);
+				if (s_F)
+				{
+					// Too many iterations
+					return 35;
+				}
+				if (abs(t_i - t) > dt_max)
+				{
+					t_i = t + dt_max * OrbMech::sign(t_i - t);
+				}
+			}
+			// Update
+			Error = coast_auto(sv_A1, t_i - t, sv_A1);
+			if (Error) return Error;
+			Error = coast_auto(sv_P1, t_i - t, sv_P1);
+			if (Error) return Error;
+		} while (true);
+	}
+
 	int OrbitalManeuverProcessor::SEARMT(OrbMech::SV sv0, int opt, double val, OrbMech::SV& sv1) const
 	{
 		double K_AD, dtheta, dt, l_dot;
@@ -2190,6 +2324,49 @@ namespace OMP
 		sv_P2 = sv_P1;
 
 		return 0;
+	}
+
+	int OrbitalManeuverProcessor::QRDTPI(OrbMech::SV sv_P, double dh, double E_L, OrbMech::SV& sv_P2)
+	{
+		// Determines the target state vector radially above the chaser at the TPI time
+		// INPUTS:
+		// sv_P: Target state vector at the TPI time
+		// dh: Altitude between the target orbit and the chaser orbit at the TPI time
+		// E_L: Elevation angle
+		// OUTPUTS:
+		// sv_P2: Target state vector radially above chaser TPI position vector
+		// return value: error if non-zero
+
+		double c, e_T, p, dt, e_To, dto, r_j, r;
+		int s_F;
+
+		sv_P2 = sv_P;
+		c = dt = 0.0;
+		s_F = 0;
+		r = length(sv_P.R);
+
+		if (E_L > PI)
+		{
+			E_L = E_L - PI;
+		}
+
+		while (1)
+		{
+			r_j = length(sv_P2.R);
+			e_T = PI05 - E_L - asin((r_j - dh) * cos(E_L) / r) - OrbMech::acos2(dotp(unit(sv_P.R), unit(sv_P2.R))) * OrbMech::sign(dotp(crossp(sv_P2.R, sv_P.R), crossp(sv_P.R, sv_P.V)));
+
+			if (abs(e_T) < 0.0001 * RAD)
+			{
+				return 0;
+			}
+			OrbMech::ITER(c, s_F, e_T, p, dt, e_To, dto);
+			if (coast_auto(sv_P, dt, sv_P2))
+			{
+				return 1;
+			}
+			if (s_F) break;
+		}
+		return 1;
 	}
 
 	int OrbitalManeuverProcessor::Sunrise(OrbMech::SV sv0, bool rise, bool midnight, OrbMech::SV& sv1) const

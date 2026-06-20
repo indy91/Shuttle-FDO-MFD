@@ -639,9 +639,9 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	static const MFDBUTTONMENU mnu18[] =
 	{
+		{ "Stop option", 0, 'E' },
 		{ "Desired time", 0, 'I' },
-		{ "", 0, ' ' },
-		{ "", 0, ' ' },
+		{ "Stop value", 0, 'M' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
@@ -656,9 +656,9 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 
 	RegisterPage(mnu18, sizeof(mnu18) / sizeof(MFDBUTTONMENU));
 
-	RegisterFunction("MET", OAPI_KEY_I, &ShuttleFDOMFD::menuSetCheckoutMonitorTime);
-	RegisterFunction("", OAPI_KEY_E, &ShuttleFDOMFD::menuVoid);
-	RegisterFunction("", OAPI_KEY_M, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("OPT", OAPI_KEY_E, &ShuttleFDOMFD::menuCycleCheckoutMonitorStopOption);
+	RegisterFunction("THT", OAPI_KEY_I, &ShuttleFDOMFD::menuSetCheckoutMonitorTime);
+	RegisterFunction("VAL", OAPI_KEY_M, &ShuttleFDOMFD::menuCycleCheckoutMonitorStopValue);
 	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_L, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_A, &ShuttleFDOMFD::menuVoid);

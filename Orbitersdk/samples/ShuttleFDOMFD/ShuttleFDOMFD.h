@@ -146,7 +146,9 @@ public:
 	void menuSetGroundTargetInputs();
 	void GroundTargetCalc();
 
+	void menuCycleCheckoutMonitorStopOption();
 	void menuSetCheckoutMonitorTime();
+	void menuCycleCheckoutMonitorStopValue();
 	void CalcCheckoutMonitor();
 
 	void menuSetMainMenu();

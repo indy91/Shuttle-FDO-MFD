@@ -181,6 +181,9 @@ public:
 
 	// CHECKOUT MONITOR
 	double CO_MON_Time;
+	int CO_MON_Stop_Option; // 0 = Time, 1 = Radius, 2 = Altitude, 3 = flight-path angle, 4 = argument of latitude, 5 = longitude, 6 = latitude
+	double CO_MON_Stop_Value_NM; // For Altitude and radius
+	double CO_MON_Stop_Value_DEG; // For latitude, longitude, flight-path-angle, argument of latitude
 	CheckoutMonitorDisplay CO_DISP;
 
 	// SUBTHREAD MANAGEMENT

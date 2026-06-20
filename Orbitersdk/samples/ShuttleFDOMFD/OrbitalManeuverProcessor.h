@@ -37,7 +37,7 @@ namespace OMP
 		typedef enum { NOTHR, THRES_APS, THRES_CAN, THRES_DLT, THRES_DT, THRES_DTL, THRES_M, THRES_REV, THRES_T, THRES_N, THRES_WT } THRESHOLD;
 		typedef enum {
 			NOSEC, A, ALT, APO, SEC_APS, ARG, ASC, CN, DEC, DSC, EL, LAT, LON, N, NA, NP, OPT, P, PER, RAS, TGTA, TGTP, U,
-			LITI, LITM, LITO, NITI, NITM, NITO, CXYZ, DH, DNOD, DPC, DR, DV, DVLS, DVLV, HD, ITSR, MREV, SEC_NULL, PHA, PIT, VFIL, WEDG, YAW
+			LITI, LITM, LITO, NITI, NITM, NITO, CXYZ, DH, DNOD, DPC, DR, DV, DVLS, DVLV, HD, ITSR, MREV, SEC_NULL, PHA, PIT, VFIL, WEDG, YAW, ELA
 		} SECONDARIES;
 	};
 
@@ -107,7 +107,7 @@ namespace OMP
 		int type = 0;			//type of iterator (1 = NC, 2 = NH, 3 = NPC)
 		unsigned man = 0;		//maneuver that is applying the DV
 		unsigned constr = 0;	//maneuver for which the constraint is applied
-		int constrtype = 0;		//For NC: 1 = DR, 2 = PHA
+		int constrtype = 0;		//For NC: 1 = DR, 2 = PHA, 3 = ELA
 		double value = 0.0;		//Value of the constraint
 	};
 
@@ -258,9 +258,12 @@ namespace OMP
 		double TLON(VECTOR3 R, VECTOR3 V, double t, double lng, int C, double w_E) const;
 		//Computation of the travel angle to a desired altitude
 		bool TALT(VECTOR3 R, VECTOR3 V, double rad, int C, double mu, double& dtheta) const;
+		// Search for input elevation angle
+		int TELEV(OrbMech::SV sv_A, OrbMech::SV sv_P, double e_L, OrbMech::SV& sv_A2) const;
 		//Search for maneuver time routine
 		int SEARMT(OrbMech::SV sv0, int opt, double val, OrbMech::SV& sv1) const;
 		int PositionMatch(OrbMech::SV sv_A, OrbMech::SV sv_P, OrbMech::SV& sv_P2) const;
+		int QRDTPI(OrbMech::SV sv_P, double dh, double E_L, OrbMech::SV& sv_P2);
 
 		//TIG modifiers
 		int Sunrise(OrbMech::SV sv0, bool rise, bool midnight, OrbMech::SV& sv1) const;

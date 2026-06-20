@@ -282,4 +282,180 @@ namespace OrbMech
 		VECTOR3 U_Z;
 	};
 
+	// Class for solving Kepler's problem with eccentric anomaly (beta) instead of time
+	class KeplerBeta
+	{
+	public:
+		KeplerBeta();
+
+		void Init(const VECTOR3& R0, const VECTOR3& V0, double sqrt_mu);
+		void Update(double beta, VECTOR3& R1, VECTOR3& V1, double& dt);
+	protected:
+		// Stored variables
+		VECTOR3 R0, V0;
+		double r0, alpha, sqrt_alpha, sigma, sqrt_mu;
+		// Temporary variables
+		double w, z, u, U0, U1, U2, r;
+	};
+
+	class PinesGravity
+	{
+	public:
+		PinesGravity();
+		VECTOR3 Calc(const MATRIX3& Rot, const VECTOR3& RSTATE, const double& MU, const double& R_E, const int& GMO, const int& GMD, const double* ZONAL, const double* CCOEF, const double* SCOEF);
+	protected:
+		VECTOR3 G_VEC, UR, R_EF;
+		double R_INV, R0_ZERO, R0_N, F1, F2, F3, F4, DNM, MAT_A[8][2], ZETA_REAL[8], ZETA_IMAG[8], AUXILIARY;
+		int I, J, L, N, N1;
+	};
+
+	struct CoastIntegratorNewInputs
+	{
+		CoastIntegratorNewInputs();
+
+		VECTOR3 R0;
+		VECTOR3 V0;
+		double GMT0;
+		// Minimum DT of integration
+		double dt_min;
+		// Maximum DT of integration
+		double dt_max;
+		// Step size control multiplier
+		double HMULT;
+		// K-Factor
+		double KFactor;
+		// Drag indicator
+		bool DRAG;
+		// Integration termination indicator (0 = Time, 1 = Radius, 2 = Altitude, 3 = flight-path angle, 4 = ascending node, 5 = longitude, 6 = latitude)
+		int IntegTermInd;
+		// Desired ending condition
+		double STOPVA;
+		// Gravity model. Maximum 7x7
+		int GMD, GMO;
+		// Constants
+		OrbMech::SessionConstants* sescnst;
+	};
+
+	struct CoastIntegratorNewOutputs
+	{
+		VECTOR3 R1;
+		VECTOR3 V1;
+		double GMT1;
+		int ISTOPS;
+		int IERROR;
+	};
+
+	// Elliptical only, Encke-Beta, Nystrom, 7x7 gravity model, Sun+Moon gravity, TEG coordinate system
+	class CoastIntegratorNew
+	{
+	public:
+		CoastIntegratorNew();
+
+		void CALC(const CoastIntegratorNewInputs& in, CoastIntegratorNewOutputs& out);
+	protected:
+		// Initialization function
+		void Init(const CoastIntegratorNewInputs& in);
+
+		// EDITOR
+		void IntegrationTerminationControlRoutine();
+
+		// INTEGRATION
+		// Given H, update Y and YP
+		void Step();
+		void NystromLear();
+
+		// ACCELERATIONS
+		// Calculates YPP
+		void EffectiveForcesRoutine();
+		// Calculates RSTATE, VSTATE
+		void UpdateState();
+		// Given RSTATE, VSTATE, TIME, calculate disturbing acceleration A_D
+		void AccelerationRoutine();
+		// Given Y, YP, RSTATE, VSTATE, RTB, RDTB and A_D calculate YPP
+		void CalculateSecondDerivative();
+		VECTOR3 GeopotentialRoutine();
+		VECTOR3 MoonAcceleration();
+		VECTOR3 SunAcceleration();
+		VECTOR3 DragAcceleration();
+		void UpdateEphemerides();
+		void Rectification();
+
+		// UTILITIES
+		// Encke function
+		double fq(double q) const;
+
+		KeplerBeta kepler;
+		PinesGravity pines;
+
+		// Integration step length. Beta step (Encke-Beta)
+		double H;
+		// Independent variable, beta since rectification
+		double T;
+		// Position deviation vector (Encke), dependent variable
+		VECTOR3 Y;
+		// Velocity deviation vector (Encke), first derivative
+		VECTOR3 YP;
+		// Pperturbed acceleration (Encke), second derivative
+		VECTOR3 YPP;
+
+		// STATE
+		// Current position and velocity vector
+		VECTOR3 RSTATE, VSTATE;
+		// Time of initial state vector
+		double TSTART;
+		// Actual time associated with state
+		double TIME;
+		// Latest conic state vector propagated from R0, V0 (Encke)
+		VECTOR3 RTB, RDTB;
+		//Time of last rectification relative to TSTART (Encke)
+		double TRECT;
+
+		// INTERNAL
+		// true = stop integration, false = continue
+		bool IEND;
+		// Encke Q
+		double Q;
+		// Length of RTB (Encke)
+		double RTBMAG;
+		// Sigma(?) of RTB, RDTB (Encke)
+		double SIGMAC;
+		// Time since rectification (Encke)
+		double DELT;
+		// Disturbing acceleration (without central body gravity)
+		VECTOR3 A_D;
+		// Runge-Kutta step
+		double HRK;
+		double HP, HD2, H2D2, H2D8, HD6;
+		// Bounding flag. 0 = 1st pass, -1 = Not bounded, not first pass, 1 = Bounded
+		int INITE;
+		// true = parameters initialized. Reset for rectification or reference switch
+		bool INITF;
+		// Stored time of last EffectiveForcesRoutine initialization
+		double TS;
+		// Integration stop indicator (0 = Time, 1 = Radius, 2 = Altitude, 3 = flight-path angle, 4 = ascending node, 5 = longitude, 6 = latitude)
+		int ISTOPS;
+		// Function variable
+		double FUNCT;
+		// Difference between current and desired values
+		double PNEW, POLD, GOLD;
+
+		// DERIVED VARIABLES
+		// Rotation from inertial to Earth-fixed coordinates
+		MATRIX3 Rot;
+		// Earth to Sun vector
+		VECTOR3 R_ES;
+		// Earth to Moon vector
+		VECTOR3 R_EM;
+
+		// INPUTS
+		CoastIntegratorNewInputs inp;
+
+		// CONSTANTS
+		double MU, SQRT_MU, R_E, ZONAL[7], CCOEF[27], SCOEF[27];
+		const double mu_Moon = 0.4902778e13;
+		const double mu_Sun = 0.13271244e21;
+		// Rectification thresholds
+		const double EPSQR = 0.0001;
+		const double EPSQV = 0.0001;
+	};
 }

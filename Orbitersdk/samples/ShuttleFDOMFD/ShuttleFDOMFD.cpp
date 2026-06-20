@@ -1950,7 +1950,8 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		Text2(skp, 20, 29, "RAm50");
 		Text2(skp, 20, 30, "DECm50");
 
-		Text2(skp, 40, 8, "STOP OPTION");
+		Text2(skp, 40, 7, "STOP OPTION");
+		Text2(skp, 40, 8, "STOP VALUE");
 		Text2(skp, 40, 9, "GMTTH");
 		Text2(skp, 40, 10, "METTH");
 
@@ -1970,8 +1971,33 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 		Text2(skp, 40, 29, "N");
 		Text2(skp, 40, 30, "M");
 
+		Text2(skp, 1, 3, G->CO_DISP.ErrorMessage);
+
 		skp->SetTextAlign(oapi::Sketchpad::RIGHT);
 		skp->SetTextColor(GetDefaultColour(2));
+
+		switch (G->CO_MON_Stop_Option)
+		{
+		case 0: sprintf_s(Buffer, "TIM"); break;
+		case 1: sprintf_s(Buffer, "RAD"); break;
+		case 2: sprintf_s(Buffer, "ALT"); break;
+		case 3: sprintf_s(Buffer, "FPA"); break;
+		case 4: sprintf_s(Buffer, "ARG"); break;
+		case 5: sprintf_s(Buffer, "LON"); break;
+		case 6: sprintf_s(Buffer, "LAT"); break;
+		}
+		Text2(skp, 60, 7, Buffer);
+
+		if (G->CO_MON_Stop_Option == 1 || G->CO_MON_Stop_Option == 2)
+		{
+			sprintf_s(Buffer, "%.3lf", G->CO_MON_Stop_Value_NM);
+			Text2(skp, 60, 8, Buffer);
+		}
+		else if (G->CO_MON_Stop_Option != 0)
+		{
+			sprintf_s(Buffer, "%.3lf", G->CO_MON_Stop_Value_DEG);
+			Text2(skp, 60, 8, Buffer);
+		}
 
 		MET2String3(Buffer, G->CO_MON_Time);
 		Text2(skp, 60, 10, Buffer);
@@ -2838,10 +2864,34 @@ void ShuttleFDOMFD::GroundTargetCalc()
 	G->GTF.targets[G->GTF_Input_Num - 1] = G->GTF_Input;
 }
 
+void ShuttleFDOMFD::menuCycleCheckoutMonitorStopOption()
+{
+	if (G->CO_MON_Stop_Option < 6)
+	{
+		G->CO_MON_Stop_Option++;
+	}
+	else
+	{
+		G->CO_MON_Stop_Option = 0;
+	}
+}
+
 void ShuttleFDOMFD::menuSetCheckoutMonitorTime()
 {
 	MET2String3(Buffer, G->CO_MON_Time);
-	GenericMETInput(&G->CO_MON_Time, "Enter desired time. Format: DDD:MM:SS.SSS", Buffer);
+	GenericMETInput(&G->CO_MON_Time, "Enter desired threshold time for stop condition. Format: DDD:MM:SS.SSS", Buffer);
+}
+
+void ShuttleFDOMFD::menuCycleCheckoutMonitorStopValue()
+{
+	if (G->CO_MON_Stop_Option == 1 || G->CO_MON_Stop_Option == 2)
+	{
+		GenericDoubleInput(&G->CO_MON_Stop_Value_NM, "Enter desired radius or altitude in nautical miles:");
+	}
+	else if (G->CO_MON_Stop_Option != 0)
+	{
+		GenericDoubleInput(&G->CO_MON_Stop_Value_DEG, "Enter desired value in degrees:");
+	}
 }
 
 void ShuttleFDOMFD::CalcCheckoutMonitor()
@@ -3007,7 +3057,7 @@ bool ShuttleFDOMFD::insert_OMPManeuver(char *type, char *name)
 void ShuttleFDOMFD::menuSetLaunchDay()
 {
 	bool LaunchDayInput(void *id, char *str, void *data);
-	oapiOpenInputBox("Set launch day (YYYY:DD) or leave blank for current day", LaunchDayInput, 0, 20, (void*)this);
+	oapiOpenInputBox("Set launch year and day-of-year (YYYY:DD) or leave blank for current day", LaunchDayInput, 0, 20, (void*)this);
 }
 
 bool LaunchDayInput(void *id, char *str, void *data)
