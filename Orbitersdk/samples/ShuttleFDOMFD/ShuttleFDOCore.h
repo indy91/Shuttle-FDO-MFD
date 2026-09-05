@@ -145,7 +145,7 @@ public:
 	void GetDMTManeuverID(char *buf, const char *name);
 
 	void SetLaunchDay();
-	void SetLaunchDay(int Y, int D);
+	void SetLaunchDay(int Y, int D, double EDT);
 	void SetLaunchTime(int H, int M, double S);
 	double GETfromGMT(double GMT) { return GMT - sescnst.GMTLO; }
 	double GMTfromGET(double GET) { return GET + sescnst.GMTLO; }

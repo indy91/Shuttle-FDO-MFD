@@ -829,12 +829,13 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 	{
 		skp->Text(14 * W / 32, 1 * H / 32, "Config", 6);
 
-		skp->Text(1 * W / 8, 2 * H / 14, "Chaser:", 7);
-		skp->Text(1 * W / 8, 4 * H / 14, "Target:", 7);
-		skp->Text(1 * W / 8, 6 * H / 14, "Liftoff Time:", 13);
-		skp->Text(1 * W / 8, 8 * H / 14, "Propagation:", 13);
-		skp->Text(1 * W / 8, 10 * H / 14, "Save to file", 12);
-		skp->Text(1 * W / 8, 12 * H / 14, "Load from file", 14);
+		skp->Text(1 * W / 16, 2 * H / 14, "Chaser:", 7);
+		skp->Text(1 * W / 16, 4 * H / 14, "Target:", 7);
+		skp->Text(1 * W / 16, 6 * H / 14, "Liftoff Time:", 13);
+		skp->Text(1 * W / 16, 7 * H / 14, "ET - UTC Constant:", 18);
+		skp->Text(1 * W / 16, 8 * H / 14, "Propagation:", 13);
+		skp->Text(1 * W / 16, 10 * H / 14, "Save to file", 12);
+		skp->Text(1 * W / 16, 12 * H / 14, "Load from file", 14);
 
 		if (G->chaserSVOption)
 		{
@@ -856,6 +857,9 @@ bool ShuttleFDOMFD::Update(oapi::Sketchpad *skp)
 
 		sprintf(Buffer, "%04d:%03d:%02d:%02d:%06.3f", G->sescnst.Year, G->sescnst.DayOfYear, G->sescnst.Hours, G->sescnst.Minutes, G->sescnst.launchdateSec);
 		skp->Text(4 * W / 8, 6 * H / 14, Buffer, strlen(Buffer));
+
+		sprintf(Buffer, "%.3lf", G->sescnst.EDT);
+		skp->Text(4 * W / 8, 7 * H / 14, Buffer, strlen(Buffer));
 
 		if (G->useNonSphericalGravity)
 		{
@@ -3066,7 +3070,7 @@ bool LaunchDayInput(void *id, char *str, void *data)
 
 	if (sscanf_s(str, "%d:%d", &yy, &dd) == 2)
 	{
-		((ShuttleFDOMFD*)data)->set_LaunchDay(yy, dd);
+		((ShuttleFDOMFD*)data)->set_LaunchDay(yy, dd, 0.0);
 		return true;
 	}
 	else if (sscanf_s(str, "") == 0)
@@ -3082,9 +3086,45 @@ void ShuttleFDOMFD::set_LaunchDay()
 	G->SetLaunchDay();
 }
 
-void ShuttleFDOMFD::set_LaunchDay(int YY, int DD)
+void ShuttleFDOMFD::set_LaunchDay(int YY, int DD, double EDT)
 {
-	G->SetLaunchDay(YY, DD);
+	G->SetLaunchDay(YY, DD, EDT);
+}
+
+void ShuttleFDOMFD::menuSetEphemerisDT()
+{
+	bool EphemerisDTInput(void* id, char* str, void* data);
+	oapiOpenInputBox("Set Ephemeris Time minus Universal Time constant in seconds (leave blank for automatic calculation from date):", EphemerisDTInput, 0, 20, (void*)this);
+}
+
+bool EphemerisDTInput(void* id, char* str, void* data)
+{
+	return ((ShuttleFDOMFD*)data)->set_EphemerisDT(str);
+}
+
+bool ShuttleFDOMFD::set_EphemerisDT(char* str)
+{
+	double EDT;
+
+	if (sscanf_s(str, "%lf", &EDT) == 1)
+	{
+		// Input value
+	}
+	else if (sscanf_s(str, "") == 0)
+	{
+		// Calculate value
+		if (OrbMech::GetEphemerisDT(G->sescnst.GMTBASE, EDT))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		return false;
+	}
+
+	set_LaunchDay(G->sescnst.Year, G->sescnst.DayOfYear, EDT);
+	return true;
 }
 
 void ShuttleFDOMFD::menuSetLaunchTime()
@@ -3202,6 +3242,7 @@ bool ShuttleFDOMFD::SaveState(char *filename)
 		papiWriteLine_int(myfile, "LAUNCHDATE2", G->sescnst.Hours);
 		papiWriteLine_int(myfile, "LAUNCHDATE3", G->sescnst.Minutes);
 		papiWriteLine_double(myfile, "LAUNCHDATE4", G->sescnst.launchdateSec);
+		papiWriteLine_double(myfile, "EDT", G->sescnst.EDT);
 		if (G->shuttle)
 			papiWriteLine_string(myfile, "SHUTTLE", G->shuttle->GetName());
 		if (G->target)
@@ -3249,7 +3290,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 		G->MCT.Header.Name.assign(filename);
 
 		int Year, Day, Hour, Minute;
-		double launchdateSec;
+		double launchdateSec, EDT = 0.0;
 		bool founddate = false, foundtime = false;
 
 		std::string line;
@@ -3260,6 +3301,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE2", Hour)) foundtime = true;
 			if (papiReadScenario_int(line.c_str(), "LAUNCHDATE3", Minute)) foundtime = true;
 			if (papiReadScenario_double(line.c_str(), "LAUNCHDATE4", launchdateSec)) foundtime = true;
+			papiReadScenario_double(line.c_str(), "EDT", EDT);
 			if (papiReadScenario_string(line.c_str(), "SHUTTLE", shuttlebuff))
 			{
 				G->chaserSVOption = false;
@@ -3301,7 +3343,7 @@ bool ShuttleFDOMFD::LoadState(char *filename)
 		myfile.close();
 
 		//Process times
-		if (founddate) G->SetLaunchDay(Year, Day);
+		if (founddate) G->SetLaunchDay(Year, Day, EDT);
 		if (foundtime) G->SetLaunchTime(Hour, Minute, launchdateSec);
 
 		return true;

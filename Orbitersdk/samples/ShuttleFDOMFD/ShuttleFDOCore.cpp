@@ -617,7 +617,7 @@ int ShuttleFDOCore::subThread()
 	break;
 	case 3: //Deorbit Opportunities
 	{
-		LandingOpportunitiesProcessor lop;
+		LandingOpportunitiesProcessor lop(sescnst);
 		LOPTInput opt;
 
 		ReadDOPSLandingSiteData(opt.sites, DOPS_ConUS);
@@ -629,10 +629,7 @@ int ShuttleFDOCore::subThread()
 			opt.GETF = DOPS_GETF;
 			opt.INORB = DOPS_InitialRev;
 			opt.SVPROP = useNonSphericalGravity;
-			opt.GMTR = sescnst.GMTLO;
 			opt.XRNG = DOPS_MaxXRNG;
-			opt.BaseMJD = sescnst.GMTBASE;
-			opt.RM = sescnst.M_TEG_TO_M50;
 
 			lop.LOPT(opt, DODS_Output);
 
@@ -1520,20 +1517,18 @@ void ShuttleFDOCore::SetLaunchDay()
 
 	OrbMech::mjd2ydoy(MJD, Y, D, H, M, S);
 
-	SetLaunchDay(Y, D);
+	SetLaunchDay(Y, D, 0.0);
 }
 
-void ShuttleFDOCore::SetLaunchDay(int Y, int D)
+void ShuttleFDOCore::SetLaunchDay(int Y, int D, double EDT)
 {
 	double stemp;
 	int Ytemp, htemp, mtemp;
 
 	// Calculate base MJD
-	sescnst.GMTBASE = OrbMech::Date2MJD(Y, D, 0, 0, 0.0);
+	sescnst.GMTBASE = OrbMech::Date2MJD(Y, D, 0, 0, 0.0) + EDT / (24.0 * 3600.0);
 	// Calculate month and day of month
 	OrbMech::mjd2date(sescnst.GMTBASE, Ytemp, sescnst.Month, sescnst.Day, htemp, mtemp, stemp);
-	// Reset launch time to zero
-	sescnst.GMTLO = 0.0;
 
 	// TEG to J2000 ecliptic (left handed)
 	MATRIX3 M_EFTOECL_AT_EPOCH = OrbMech::GetRotationMatrix(sescnst.GMTBASE);
@@ -1546,8 +1541,7 @@ void ShuttleFDOCore::SetLaunchDay(int Y, int D)
 
 	sescnst.Year = Y;
 	sescnst.DayOfYear = D;
-	sescnst.Hours = sescnst.Minutes = 0;
-	sescnst.launchdateSec = 0.0;
+	sescnst.EDT = EDT;
 
 	ErrorCode = 0;
 }

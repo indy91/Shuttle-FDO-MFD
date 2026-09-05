@@ -57,25 +57,27 @@ namespace OrbMech
 		SessionConstants()
 		{
 			M_TEG_TO_M50 = M_TEG_TO_J2000 = _M(1, 0, 0, 0, 1, 0, 0, 0, 1);
-			GMTBASE = GMTLO = launchdateSec = 0.0;
+			GMTBASE = EDT = GMTLO = launchdateSec = 0.0;
 			Year = Month = Day = DayOfYear = Hours = Minutes = 0;
 		}
-		//MJD at midnight before launch, days
+		// MJD (TDB) at midnight GMT before launch, days
 		double GMTBASE;
-		//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, right handed
+		// Ephemeris Time minus Universal Time, seconds
+		double EDT;
+		// Rotation matrix from TEG (true-equator and Greenwich meridian of date) to M50, right handed
 		MATRIX3 M_TEG_TO_M50;
-		//Rotation matrix from TEG (true-equator and Greenwich meridian of date) to J2000 ecliptic, right handed
+		// Rotation matrix from TEG (true-equator and Greenwich meridian of date) to J2000 ecliptic, right handed
 		MATRIX3 M_TEG_TO_J2000;
-		//GMT of liftoff on launch day, seconds
+		// GMT of liftoff on launch day, seconds
 		double GMTLO;
-		//Date
+		// Date
 		int Year;
 		int Month;
 		int Day;
 		int DayOfYear;
 		int Hours;
 		int Minutes;
-		//Seconds of liftoff
+		// Seconds of liftoff
 		double launchdateSec;
 	};
 
@@ -194,8 +196,8 @@ namespace OrbMech
 	CELEMENTS CartesianToKeplerian(VECTOR3 R, VECTOR3 V, double mu);
 	double ArgLat(VECTOR3 R, VECTOR3 V);
 	void KeplerianToCartesian(CELEMENTS coe, double mu, VECTOR3 &R, VECTOR3 &V);
-	MATRIX3 GetRotationMatrix(double t, bool earth = true);
-	MATRIX3 GetObliquityMatrix(double t, bool earth = true);
+	MATRIX3 GetRotationMatrix(double MJD_TDB, bool earth = true);
+	MATRIX3 GetObliquityMatrix(double MJD_TDB, bool earth = true);
 	VECTOR3 Polar2Cartesian(double r, double lat, double lng);
 	VECTOR3 Polar2CartesianVel(double r, double lat, double lng, double r_dot, double lat_dot, double lng_dot);
 	void PICSSC(bool vecinp, VECTOR3& R, VECTOR3& V, double& r, double& v, double& lat, double& lng, double& gamma, double& azi);
@@ -220,6 +222,7 @@ namespace OrbMech
 	void days2hms(double days, int &hour, int &minute, double &second);
 	int dayofyear(int year, int month, int day);
 	bool isleapyear(int a);
+	int GetEphemerisDT(double GMTBASE, double& EDT);
 	CELEMENTS BrouwerMeanLongToOsculatingElements(CELEMENTS mean);
 	CELEMENTS CartesianToBrouwerMeanLong(VECTOR3 R, VECTOR3 V, double mu);
 	CELEMENTS OsculatingToBrouwerMeanLong(CELEMENTS osc, double mu);

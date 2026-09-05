@@ -83,6 +83,8 @@ public:
 	void menuDeleteOMPSecondary();
 	void menuSetLaunchDay();
 	void menuSetLaunchTime();
+	void menuSetEphemerisDT();
+	bool set_EphemerisDT(char* str);
 	void set_target();
 	void set_shuttle();
 	void menuCycleGravityOption();
@@ -189,7 +191,7 @@ public:
 	bool delete_OMPSecondary(unsigned sec);
 	bool insert_OMPManeuver(char *type, char *name);
 	void set_LaunchDay();
-	void set_LaunchDay(int YY, int DD);
+	void set_LaunchDay(int YY, int DD, double EDT);
 	void set_LiftoffTime(int HH, int MM, double SS);
 	void WriteMCTLine(std::ofstream &file, OMP::ManeuverConstraints &constr);
 	void ReadMCTLine(const char *line);

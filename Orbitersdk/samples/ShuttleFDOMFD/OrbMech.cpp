@@ -180,7 +180,7 @@ namespace OrbMech
 		return xi_x;
 	}
 
-	MATRIX3 GetRotationMatrix(double t, bool earth)
+	MATRIX3 GetRotationMatrix(double MJD_TDB, bool earth)
 	{
 		double t0, T_p, L_0, e_rel, phi_0, T_s, e_ref, L_ref, L_rel, phi;
 		MATRIX3 Rot1, Rot2, R_ref, Rot3, Rot4, R_rel, R_rot, R, Rot;
@@ -211,18 +211,18 @@ namespace OrbMech
 		Rot1 = _M(cos(L_ref), 0, -sin(L_ref), 0, 1, 0, sin(L_ref), 0, cos(L_ref));
 		Rot2 = _M(1, 0, 0, 0, cos(e_ref), -sin(e_ref), 0, sin(e_ref), cos(e_ref));
 		R_ref = mul(Rot1, Rot2);
-		L_rel = L_0 + PI2 * (t - t0) / T_p;
+		L_rel = L_0 + PI2 * (MJD_TDB - t0) / T_p;
 		Rot3 = _M(cos(L_rel), 0, -sin(L_rel), 0, 1, 0, sin(L_rel), 0, cos(L_rel));
 		Rot4 = _M(1, 0, 0, 0, cos(e_rel), -sin(e_rel), 0, sin(e_rel), cos(e_rel));
 		R_rel = mul(Rot3, Rot4);
-		phi = phi_0 + PI2 * (t - t0) / T_s + (L_0 - L_rel)*cos(e_rel);
+		phi = phi_0 + PI2 * (MJD_TDB - t0) / T_s + (L_0 - L_rel)*cos(e_rel);
 		R_rot = _M(cos(phi), 0, -sin(phi), 0, 1, 0, sin(phi), 0, cos(phi));
 		Rot = mul(R_rel, R_rot);
 		R = mul(R_ref, Rot);
 		return R;
 	}
 
-	MATRIX3 GetObliquityMatrix(double t, bool earth)
+	MATRIX3 GetObliquityMatrix(double MJD_TDB, bool earth)
 	{
 		double t0, T_p, L_0, e_rel, phi_0, T_s, e_ref, L_ref, L_rel, phi, e_ecl, L_ecl;
 		MATRIX3 Rot1, Rot2, Rot3, Rot4, Rot5, Rot6, R_ref, R_rel, R_rot, Rot;
@@ -251,14 +251,14 @@ namespace OrbMech
 			L_ref = 0.4643456618;					//Precession LAN
 		}
 
-		L_rel = L_0 + PI2 * (t - t0) / T_p;
+		L_rel = L_0 + PI2 * (MJD_TDB - t0) / T_p;
 		Rot1 = _M(cos(L_ref), 0.0, -sin(L_ref), 0.0, 1.0, 0.0, sin(L_ref), 0.0, cos(L_ref));
 		Rot2 = _M(1.0, 0.0, 0.0, 0.0, cos(e_ref), -sin(e_ref), 0.0, sin(e_ref), cos(e_ref));
 		R_ref = mul(Rot1, Rot2);
 		Rot3 = _M(cos(L_rel), 0.0, -sin(L_rel), 0.0, 1.0, 0.0, sin(L_rel), 0.0, cos(L_rel));
 		Rot4 = _M(1.0, 0.0, 0.0, 0.0, cos(e_rel), -sin(e_rel), 0.0, sin(e_rel), cos(e_rel));
 		R_rel = mul(Rot3, Rot4);
-		phi = phi_0 + PI2 * (t - t0) / T_s + (L_0 - L_rel)*cos(e_rel);
+		phi = phi_0 + PI2 * (MJD_TDB - t0) / T_s + (L_0 - L_rel)*cos(e_rel);
 		R_rot = _M(cos(phi), 0.0, -sin(phi), 0.0, 1.0, 0.0, sin(phi), 0.0, cos(phi));
 		Rot = mul(R_ref, mul(R_rel, R_rot));
 		s = mul(Rot, _V(0.0, 1.0, 0.0));
@@ -1688,6 +1688,42 @@ namespace OrbMech
 	double mjd2jd(double mjd)
 	{
 		return mjd + 2400000.5;
+	}
+
+	int GetEphemerisDT(double GMTBASE, double& EDT)
+	{
+		// INPUTS:
+		// GMTBASE: MJD at midnight before liftoff, days
+		// OUTPUTS:
+		// EDT: Ephemeris delta time, seconds
+		// return value: non-zero if out-of-range of leap seconds table
+
+		static const double MJD[] = { 41317.0, 41499.0, 41683.0, 42048.0, 42413.0, 42778.0, 43144.0, 43509.0, 43874.0, 44239.0, 44786.0, 45151.0, 45516.0, 46247.0,
+			47161.0, 47892.0, 48257.0, 48804.0, 49169.0, 49534.0, 50083.0, 50630.0, 51179.0, 53736.0, 54832.0, 56109.0, 57204.0, 57754.0 };
+		static const int NMAX = 28;
+
+		// Out of bounds check
+		if (GMTBASE < MJD[0])
+		{
+			return 1;
+		}
+
+		double DAT;
+		int i;
+
+		i = 0;
+		DAT = 9.0;
+
+		while (i < NMAX && GMTBASE > MJD[i])
+		{
+			DAT += 1.0;
+			i++;
+		}
+
+		// TAI to TT
+		EDT = DAT + 32.184;
+
+		return 0;
 	}
 
 	OELEMENTS coe_from_sv(VECTOR3 R, VECTOR3 V, double mu)

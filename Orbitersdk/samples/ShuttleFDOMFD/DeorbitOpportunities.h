@@ -37,8 +37,6 @@ struct LOPTInput
 {
 	//Input state vector in TEG coordinates
 	OrbMech::SV sv_in;
-	//Reference time for GET computations
-	double GMTR;
 	//Start and end time for search in GET
 	double GETS, GETF;
 	//Initial orbit counter, corresponds to the orbit counter for GETS
@@ -46,10 +44,6 @@ struct LOPTInput
 	//false = conic, true = integrated
 	bool SVPROP;
 	std::vector<LOPTSite> sites;
-	//Base MJD
-	double BaseMJD;
-	//Rotation matrix from desired system to ecliptic
-	MATRIX3 RM;
 
 	//Constants
 	//Crossrange constraint (NM)
@@ -93,7 +87,7 @@ struct LOPTOutput
 class LandingOpportunitiesProcessor
 {
 public:
-	LandingOpportunitiesProcessor();
+	LandingOpportunitiesProcessor(OrbMech::SessionConstants& scnst);
 	void LOPT(const LOPTInput &in, LOPTOutput &out);
 protected:
 	OrbMech::SV UPDATE(OrbMech::SV sv0, double dt);
@@ -104,6 +98,7 @@ protected:
 	double CalculateLandingTime(double T_CA, double R);
 
 	LOPTInput opt;
+	OrbMech::SessionConstants& sesconst;
 
 	//Crossrange constraint angle
 	double ANG;

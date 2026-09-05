@@ -21,7 +21,7 @@
 #include <algorithm>
 #include "DeorbitOpportunities.h"
 
-LandingOpportunitiesProcessor::LandingOpportunitiesProcessor()
+LandingOpportunitiesProcessor::LandingOpportunitiesProcessor(OrbMech::SessionConstants& scnst) : sesconst(scnst)
 {
 	ANG = 0.0;
 }
@@ -40,8 +40,8 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 
 	//Convert crossrange to angle
 	ANG = opt.XRNG *1852.0 / OrbMech::EARTH_RADIUS_EQUATOR;
-	GMTS = opt.GETS + opt.GMTR;
-	GMTF = opt.GETF + opt.GMTR;
+	GMTS = opt.GETS + sesconst.GMTLO;
+	GMTF = opt.GETF + sesconst.GMTLO;
 
 	//Generate a table which contains the times and longitudes of the ascending nodes for all orbits
 	//Get state vector at beginning time
@@ -163,8 +163,8 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 							//Begin storing data
 							temp.Site = opt.sites[i].name;
 							temp.Rev = opt.INORB + j;
-							temp.TIG_MET = T_TIG - opt.GMTR;
-							temp.Landing_MET = T_LAND - opt.GMTR;
+							temp.TIG_MET = T_TIG - sesconst.GMTLO;
+							temp.Landing_MET = T_LAND - sesconst.GMTLO;
 							temp.Landing_GMT = T_LAND;
 
 							char Buffer[16];
@@ -192,7 +192,7 @@ void LandingOpportunitiesProcessor::LOPT(const LOPTInput &in, LOPTOutput &out)
 							temp.XRNG.assign(Buffer);
 
 							//Calculate local sun angle
-							R_SUN = OrbMech::SUN(opt.BaseMJD, T_LAND, opt.RM);
+							R_SUN = OrbMech::SUN(sesconst.GMTBASE, T_LAND, sesconst.M_TEG_TO_M50);
 							OrbMech::latlong_from_r(R_SUN, SLAT, SLON);
 							SLON -= T_LAND * OrbMech::w_Earth;
 							SLON = OrbMech::normalize_angle(SLON, 0.0, PI2);

@@ -240,7 +240,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 		{ "", 0, ' ' },
 		{ "", 0, ' ' },
 		{ "Set launch time", 0, 'F' },
-		{ "", 0, ' ' },
+		{ "Ephemeris DT", 0, 'D' },
 		{ "", 0, ' ' },
 		{ "Back to menu", 0, 'B' },
 	};
@@ -257,7 +257,7 @@ ShuttleFDOMFDButtons::ShuttleFDOMFDButtons()
 	RegisterFunction("", OAPI_KEY_I, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("", OAPI_KEY_C, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("TLO", OAPI_KEY_F, &ShuttleFDOMFD::menuSetLaunchTime);
-	RegisterFunction("", OAPI_KEY_D, &ShuttleFDOMFD::menuVoid);
+	RegisterFunction("EDT", OAPI_KEY_D, &ShuttleFDOMFD::menuSetEphemerisDT);
 	RegisterFunction("", OAPI_KEY_H, &ShuttleFDOMFD::menuVoid);
 	RegisterFunction("BCK", OAPI_KEY_B, &ShuttleFDOMFD::menuSetMainMenu);
 
